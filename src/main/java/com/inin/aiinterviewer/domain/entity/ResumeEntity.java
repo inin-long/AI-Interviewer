@@ -1,0 +1,49 @@
+package com.inin.aiinterviewer.domain.entity;
+
+import com.inin.aiinterviewer.domain.enums.ResumeStatus;
+
+import java.time.LocalDateTime;
+
+public class ResumeEntity {
+    private Long id;
+    private Long userId;
+    private String originalName;
+    private String storageName;
+    private String storagePath;
+    private String fileType;
+    private long fileSize;
+    private ResumeStatus status;
+    private String parsedText;
+    private String errorMessage;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+    private boolean deleted;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+    public String getOriginalName() { return originalName; }
+    public void setOriginalName(String originalName) { this.originalName = originalName; }
+    public String getStorageName() { return storageName; }
+    public void setStorageName(String storageName) { this.storageName = storageName; }
+    public String getStoragePath() { return storagePath; }
+    public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
+    public String getFileType() { return fileType; }
+    public void setFileType(String fileType) { this.fileType = fileType; }
+    public long getFileSize() { return fileSize; }
+    public void setFileSize(long fileSize) { this.fileSize = fileSize; }
+    public ResumeStatus getStatus() { return status; }
+    public void setStatus(ResumeStatus status) { this.status = status; }
+    public String getParsedText() { return parsedText; }
+    public void setParsedText(String parsedText) { this.parsedText = parsedText; }
+    public String getErrorMessage() { return errorMessage; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    public LocalDateTime getCreateTime() { return createTime; }
+    public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
+    public LocalDateTime getUpdateTime() { return updateTime; }
+    public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+    public boolean isDeleted() { return deleted; }
+    public void setDeleted(boolean deleted) { this.deleted = deleted; }
+}
+

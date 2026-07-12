@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.MainWindowController"
+            styleClass="app-root">
+    <left>
+        <VBox prefWidth="216" spacing="6" styleClass="sidebar">
+            <padding><Insets top="22" right="14" bottom="18" left="14"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="sidebar-brand">
+                <Label text="AI" styleClass="brand-mark-small"/>
+                <Label text="AI Interviewer" styleClass="window-brand"/>
+            </HBox>
+            <Region prefHeight="24"/>
+            <Button text="首页" onAction="#showDashboard" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button text="面试方案" onAction="#showPlans" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button text="面试记录" onAction="#showHistory" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button text="简历" onAction="#showResumes" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button text="知识库" onAction="#showKnowledge" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button text="设置" onAction="#showSettings" maxWidth="Infinity" styleClass="nav-button"/>
+            <Region VBox.vgrow="ALWAYS"/>
+            <Label fx:id="aiStatusLabel" text="AI 尚未配置" styleClass="sidebar-status" wrapText="true"/>
+            <Label text="版本 0.1.0" styleClass="fine-print"/>
+        </VBox>
+    </left>
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="14" styleClass="topbar">
+            <padding><Insets top="12" right="24" bottom="12" left="28"/></padding>
+            <Label fx:id="contentTitleLabel" text="首页" styleClass="topbar-title"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="usernameLabel" text="用户" styleClass="user-chip"/>
+            <Button text="退出" onAction="#logout" styleClass="text-button"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
+            <content>
+                <VBox spacing="22" styleClass="page-content">
+                    <padding><Insets top="28" right="28" bottom="28" left="28"/></padding>
+                    <VBox spacing="8" styleClass="welcome-panel">
+                        <padding><Insets top="28" right="30" bottom="28" left="30"/></padding>
+                        <Label fx:id="greetingLabel" text="你好" styleClass="page-title"/>
+                        <Label text="准备开始一次专注、可恢复的 AI 模拟面试。" styleClass="hero-subtitle"/>
+                    </VBox>
+                    <HBox spacing="16">
+                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
+                            <Label text="工程状态" styleClass="summary-label"/>
+                            <Label text="基础骨架已就绪" styleClass="summary-value"/>
+                        </VBox>
+                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
+                            <Label text="本地数据" styleClass="summary-label"/>
+                            <Label text="SQLite 已连接" styleClass="summary-value"/>
+                        </VBox>
+                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
+                            <Label text="下一里程碑" styleClass="summary-label"/>
+                            <Label text="简历与面试方案" styleClass="summary-value"/>
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="12" styleClass="content-card">
+                        <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+                        <Label fx:id="contentDescriptionLabel" wrapText="true" styleClass="content-description"/>
+                        <Separator/>
+                        <Label text="数据目录" styleClass="field-label"/>
+                        <Label fx:id="dataPathLabel" wrapText="true" styleClass="monospace-text"/>
+                        <Label text="当前版本仅展示已经真实接通的功能，不填充演示数据。"
+                               styleClass="secondary-text" wrapText="true"/>
+                    </VBox>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>
+

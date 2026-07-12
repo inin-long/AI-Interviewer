@@ -1,0 +1,21 @@
+target/
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# Local runtime data and secrets
+runtime-data/
+AI-Interviewer/
+application-local.yml
+*.db
+*.db-shm
+*.db-wal
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+

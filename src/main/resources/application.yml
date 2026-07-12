@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: AI Interviewer
+  main:
+    web-application-type: none
+    banner-mode: off
+  config:
+    import: optional:file:${ai.interviewer.home}/config/application-local.yml
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+app:
+  name: AI Interviewer
+  version: 0.1.0
+  data-root: ${ai.interviewer.home}
+
+storage:
+  root-path: ${ai.interviewer.home}/users
+
+llm:
+  base-url: ${AI_LLM_BASE_URL:https://api.openai.com}
+  api-key: ${AI_LLM_API_KEY:}
+  chat-model: ${AI_LLM_CHAT_MODEL:}
+  embedding-model: ${AI_LLM_EMBEDDING_MODEL:}
+  timeout: 60s
+
+task:
+  worker-count: 2
+  retry-count: 3
+
+rag:
+  chunk-size: 1000
+  overlap: 100
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+    default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
+
+logging:
+  config: classpath:logback-spring.xml
+

@@ -1,0 +1,10 @@
+# Copy this file to:
+# %LOCALAPPDATA%/AI-Interviewer/config/application-local.yml
+# Never commit a real API key.
+llm:
+  base-url: https://api.example.com
+  api-key: ""
+  chat-model: ""
+  embedding-model: ""
+  timeout: 60s
+
