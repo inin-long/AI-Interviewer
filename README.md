@@ -77,3 +77,23 @@ $env:AI_LLM_API_KEY='...'
 
 真实 Provider 集成测试默认跳过。仅在本机临时设置完整的 `AI_LLM_*` 配置和
 `AI_LLM_LIVE_TEST=true` 时才会执行，API Key 不应写入仓库。
+
+## Windows 发布
+
+生成包含私有 Java 运行时的应用目录并执行启动冒烟：
+
+```powershell
+.\packaging\windows\Build-Package.ps1 -Type app-image
+.\packaging\windows\Test-AppImage.ps1
+```
+
+生成便携 ZIP 或 Windows 安装包：
+
+```powershell
+.\packaging\windows\Build-Package.ps1 -Type portable
+.\packaging\windows\Build-Package.ps1 -Type exe -DownloadWix
+.\packaging\windows\Build-Package.ps1 -Type msi -DownloadWix
+```
+
+产物默认位于 `target\dist`。WiX 仅下载到 `target\packaging-tools` 并校验 SHA-256，
+不会安装到系统或打入应用。详细说明见 `packaging/windows/README.md`。
