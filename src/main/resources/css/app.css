@@ -285,6 +285,8 @@
 
 .editor-page { -fx-background-color: -app-background; }
 
+.history-filter-bar { -fx-padding: 14 16; }
+
 .interview-workspace {
     -fx-background-color: -app-background;
 }

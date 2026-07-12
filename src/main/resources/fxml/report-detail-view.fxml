@@ -18,6 +18,8 @@
                 <Label fx:id="titleLabel" text="面试报告" styleClass="page-title"/>
                 <Label text="评分与报告均基于本次已保存问答" styleClass="secondary-text"/>
             </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="查看本次问答" onAction="#openTranscript" styleClass="secondary-button"/>
         </HBox>
     </top>
     <center>

@@ -110,6 +110,11 @@ public class InterviewSessionService {
     }
 
     @Transactional(readOnly = true)
+    public List<InterviewSessionDto> list(long userId) {
+        return sessionMapper.findAllByUserId(userId).stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<InterviewMessageDto> messages(long userId, long sessionId) {
         requireEntity(userId, sessionId);
         return messageMapper.findAll(userId, sessionId).stream().map(this::toMessageDto).toList();

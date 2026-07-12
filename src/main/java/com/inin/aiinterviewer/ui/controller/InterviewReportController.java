@@ -19,6 +19,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private final InterviewResultService resultService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
+    private long interviewId;
 
     @FXML private Label titleLabel;
     @FXML private Label overallScoreLabel;
@@ -43,6 +44,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @Override
     public void initializeContext(Long interviewId) {
         if (interviewId == null) throw new IllegalArgumentException("Report requires an interview id");
+        this.interviewId = interviewId;
         var report = resultService.find(sessionState.requireCurrentUser().id(), interviewId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERVIEW_NOT_FOUND));
         titleLabel.setText(report.title());
@@ -59,6 +61,12 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML
     private void back() {
         contentNavigator.back();
+    }
+
+    @FXML
+    private void openTranscript() {
+        contentNavigator.showSubPage(
+                "/fxml/interview-history-detail-view.fxml", "面试记录", interviewId);
     }
 
     private String score(com.inin.aiinterviewer.application.dto.InterviewReportDto report, String key) {

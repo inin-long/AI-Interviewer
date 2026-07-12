@@ -79,6 +79,8 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/report-detail-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/knowledge-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/knowledge-detail-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/history-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/interview-history-detail-view.fxml")).isNotNull();
     }
 
     @Test

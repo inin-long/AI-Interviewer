@@ -32,14 +32,23 @@
             </HBox>
             <VBox spacing="12" styleClass="content-card">
                 <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
-                <Label text="本轮已完成简历解析和面试方案管理的基础能力。" styleClass="content-description"/>
+                <Label text="本地数据与 AI 面试基础能力已就绪。" styleClass="content-description"/>
                 <Separator/>
                 <Label text="数据目录" styleClass="field-label"/>
                 <Label fx:id="dataPathLabel" wrapText="true" styleClass="monospace-text"/>
-                <Label text="请先上传简历并创建面试方案；AI 面试流程将在下一里程碑接入。"
+                <Label text="上传简历、创建面试方案后，即可开始可暂停和恢复的模拟面试。"
                        styleClass="secondary-text" wrapText="true"/>
+            </VBox>
+            <VBox spacing="12" styleClass="content-card">
+                <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="后台任务" styleClass="module-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="刷新状态" onAction="#refreshTasks" styleClass="text-button"/>
+                </HBox>
+                <Label fx:id="taskSummaryLabel" text="等待 0 · 执行中 0 · 失败 0" styleClass="summary-value"/>
+                <Label fx:id="latestTaskLabel" text="暂无后台任务" wrapText="true" styleClass="secondary-text"/>
             </VBox>
         </VBox>
     </content>
 </ScrollPane>
-

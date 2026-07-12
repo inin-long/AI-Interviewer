@@ -37,6 +37,7 @@ class InterviewSessionServiceIntegrationTest {
     @Autowired private UserService userService;
     @Autowired private InterviewPlanService planService;
     @Autowired private InterviewSessionService sessionService;
+    @Autowired private InterviewHistoryService historyService;
     @Autowired private AgentCheckpointMapper checkpointMapper;
 
     @Test
@@ -78,7 +79,20 @@ class InterviewSessionServiceIntegrationTest {
         assertThat(sessionService.startOrResume(owner.id(), plan.id()).id()).isEqualTo(session.id());
         assertThat(sessionService.require(owner.id(), session.id()).status()).isEqualTo(InterviewStatus.RUNNING);
 
+        assertThat(historyService.list(owner.id(), "Java", null))
+                .singleElement().satisfies(item -> {
+                    assertThat(item.sessionId()).isEqualTo(session.id());
+                    assertThat(item.messageCount()).isEqualTo(1);
+                    assertThat(item.reportAvailable()).isFalse();
+                });
+        assertThat(historyService.list(owner.id(), "不存在的岗位", null)).isEmpty();
+        assertThat(historyService.list(owner.id(), "", InterviewStatus.RUNNING)).hasSize(1);
+        assertThat(historyService.list(other.id(), "", null)).isEmpty();
+        assertThat(historyService.detail(owner.id(), session.id()).messages()).hasSize(1);
+
         assertThatThrownBy(() -> sessionService.require(other.id(), session.id()))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> historyService.detail(other.id(), session.id()))
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> sessionService.loadLatestState(other.id(), session.id()))
                 .isInstanceOf(BusinessException.class);

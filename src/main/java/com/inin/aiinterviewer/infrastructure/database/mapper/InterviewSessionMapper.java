@@ -9,8 +9,19 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface InterviewSessionMapper {
+
+    @Select("""
+            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+                   stage, status, prompt_version, started_time, completed_time,
+                   create_time, update_time, deleted
+            FROM interview_session
+            WHERE user_id = #{userId} AND deleted = 0
+            ORDER BY update_time DESC, id DESC
+            """)
+    List<InterviewSessionEntity> findAllByUserId(long userId);
 
     @Insert("""
             INSERT INTO interview_session(user_id, plan_id, resume_id, title, job_title,

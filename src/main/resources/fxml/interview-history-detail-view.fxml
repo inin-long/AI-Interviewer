@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.InterviewHistoryDetailController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回面试记录">
+                <tooltip><Tooltip text="返回面试记录"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label fx:id="titleLabel" text="面试记录详情" styleClass="page-title"/>
+                <Label fx:id="jobLabel" text="目标岗位" styleClass="secondary-text"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="continueButton" text="继续面试" onAction="#continueInterview" styleClass="secondary-button"/>
+            <Button fx:id="reportButton" text="查看完整报告" onAction="#openReport" styleClass="primary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <HBox spacing="20" styleClass="editor-page">
+            <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+            <VBox spacing="15" prefWidth="290" minWidth="270" styleClass="content-card">
+                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="会话信息" styleClass="module-title"/>
+                <Separator/>
+                <Label text="当前状态" styleClass="summary-label"/>
+                <Label fx:id="statusLabel" text="—" styleClass="summary-value"/>
+                <Label text="面试阶段" styleClass="summary-label"/>
+                <Label fx:id="stageLabel" text="—" styleClass="summary-value"/>
+                <Label text="开始时间" styleClass="summary-label"/>
+                <Label fx:id="startedLabel" text="—"/>
+                <Label text="完成时间" styleClass="summary-label"/>
+                <Label fx:id="completedLabel" text="—"/>
+                <Label text="消息数量" styleClass="summary-label"/>
+                <Label fx:id="messageCountLabel" text="0 条"/>
+                <Region VBox.vgrow="ALWAYS"/>
+                <Label text="记录来自本地数据库，页面不会重新调用 AI 或修改历史内容。"
+                       wrapText="true" styleClass="local-data-note"/>
+            </VBox>
+            <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
+                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="完整问答" styleClass="module-title"/>
+                <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
+                          HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>
