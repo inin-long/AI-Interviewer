@@ -27,8 +27,11 @@ llm:
   timeout: 60s
 
 task:
+  enabled: true
   worker-count: 2
   retry-count: 3
+  poll-interval: 500ms
+  retry-delay: 5s
 
 rag:
   chunk-size: 1000
@@ -41,4 +44,3 @@ mybatis:
 
 logging:
   config: classpath:logback-spring.xml
-

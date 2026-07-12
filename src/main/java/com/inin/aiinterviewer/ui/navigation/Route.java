@@ -8,7 +8,7 @@ public enum Route {
     RESUME(null, "/fxml/resume-view.fxml", "简历"),
     PROFILE(null, null, "候选人画像"),
     INTERVIEW(null, null, "模拟面试"),
-    KNOWLEDGE(null, null, "知识库"),
+    KNOWLEDGE(null, "/fxml/knowledge-view.fxml", "知识库"),
     HISTORY(null, null, "面试记录"),
     REPORT(null, null, "面试报告"),
     SETTING(null, null, "设置");

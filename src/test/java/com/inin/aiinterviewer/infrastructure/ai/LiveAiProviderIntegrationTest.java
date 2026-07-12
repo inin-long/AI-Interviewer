@@ -63,7 +63,7 @@ class LiveAiProviderIntegrationTest {
                 List.of(new Message(Message.Role.ASSISTANT, "请简要说明你如何定位一次线上性能问题。",
                                 LocalDateTime.now()),
                         new Message(Message.Role.USER, "我先确认指标，再结合日志和链路追踪定位。",
-                                LocalDateTime.now())), ""));
+                                LocalDateTime.now())), "", ""));
         assertThat(turn.analysis().correctness()).isBetween(0, 100);
         assertThat(turn.questionPrompt()).isNotBlank();
     }

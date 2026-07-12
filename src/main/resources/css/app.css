@@ -210,6 +210,14 @@
     -fx-text-fill: -primary;
 }
 
+.nav-button:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -primary;
+    -fx-border-color: transparent transparent transparent -primary;
+    -fx-border-width: 0 0 0 3;
+    -fx-font-weight: 700;
+}
+
 .sidebar-status {
     -fx-background-color: -surface-muted;
     -fx-border-color: -border;

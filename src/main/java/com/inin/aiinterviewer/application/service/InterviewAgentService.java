@@ -3,6 +3,8 @@ package com.inin.aiinterviewer.application.service;
 import com.inin.aiinterviewer.agent.graph.InterviewGraph;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
+import com.inin.aiinterviewer.agent.tool.ToolInput;
+import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.event.InterviewTurnCompletedEvent;
@@ -22,6 +24,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Map;
 
 @Service
 public class InterviewAgentService {
@@ -31,17 +34,20 @@ public class InterviewAgentService {
     private final InterviewSessionService sessionService;
     private final InterviewGraph interviewGraph;
     private final InterviewCompletionService completionService;
+    private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
     public InterviewAgentService(
             InterviewSessionService sessionService,
             InterviewGraph interviewGraph,
             InterviewCompletionService completionService,
+            ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
         this.sessionService = sessionService;
         this.interviewGraph = interviewGraph;
         this.completionService = completionService;
+        this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
 
@@ -53,7 +59,7 @@ public class InterviewAgentService {
                 return Flux.error(new BusinessException(ErrorCode.INVALID_STATE));
             }
             InterviewTurnInput input = new InterviewTurnInput(
-                    session.stage(), "", "", session.planSnapshot(), List.of(), "");
+                    session.stage(), "", "", session.planSnapshot(), List.of(), "", "");
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(userId, sessionId, session.stage(), prompt, null);
         }).subscribeOn(Schedulers.boundedElastic());
@@ -78,9 +84,11 @@ public class InterviewAgentService {
                 return Flux.empty();
             }
             List<Message> messages = domainMessages(persistedMessages);
+            String retrievedContext = retrieveKnowledge(
+                    userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
             InterviewTurnPlan turn = interviewGraph.plan(new InterviewTurnInput(
                     session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
-                    session.planSnapshot(), messages, answeredState.summary()));
+                    session.planSnapshot(), messages, answeredState.summary(), retrievedContext));
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
@@ -143,5 +151,13 @@ public class InterviewAgentService {
         return messages.stream()
                 .map(message -> new Message(message.role(), message.content(), message.createTime()))
                 .toList();
+    }
+
+    private String retrieveKnowledge(long userId, long sessionId, String query) {
+        return toolRegistry.find("knowledge_search")
+                .map(tool -> tool.execute(new ToolInput(userId, sessionId, Map.of("query", query, "limit", 3))))
+                .filter(result -> result.success())
+                .map(result -> String.valueOf(result.data().getOrDefault("results", "")))
+                .orElse("");
     }
 }

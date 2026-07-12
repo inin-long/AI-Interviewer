@@ -21,6 +21,7 @@ public class InterviewGraphState extends AgentState {
     public static final String DECISION = "decision";
     public static final String QUESTION_PROMPT = "questionPrompt";
     public static final String SUMMARY = "summary";
+    public static final String RETRIEVED_CONTEXT = "retrievedContext";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -60,5 +61,9 @@ public class InterviewGraphState extends AgentState {
 
     public String summary() {
         return this.<String>value(SUMMARY).orElse("");
+    }
+
+    public String retrievedContext() {
+        return this.<String>value(RETRIEVED_CONTEXT).orElse("");
     }
 }

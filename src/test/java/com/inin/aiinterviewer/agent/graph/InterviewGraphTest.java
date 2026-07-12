@@ -99,7 +99,7 @@ class InterviewGraphTest {
                         List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY"), false,
                         LocalDateTime.now(), LocalDateTime.now()),
                 List.of(new Message(Message.Role.ASSISTANT, "请介绍 Spring 事务。", LocalDateTime.now()),
-                        new Message(Message.Role.USER, "事务用于保证一致性。", LocalDateTime.now())), "");
+                        new Message(Message.Role.USER, "事务用于保证一致性。", LocalDateTime.now())), "", "");
     }
 
     private String validAnalysis() {

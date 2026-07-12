@@ -8,6 +8,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Button;
+import javafx.scene.layout.BorderPane;
+import javafx.css.PseudoClass;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -74,6 +77,8 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/plan-editor-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/interview-workspace-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/report-detail-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/knowledge-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/knowledge-detail-view.fxml")).isNotNull();
     }
 
     @Test
@@ -95,6 +100,34 @@ class JavaFxFxmlLoadTest {
         double[] heights = task.get(15, TimeUnit.SECONDS);
         assertThat(heights[0]).isEqualTo(52.0);
         assertThat(heights[0]).isEqualTo(heights[1]);
+    }
+
+    @Test
+    void sidebarSpansWindowAndNavigationTracksActiveRoute() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "navigation-test-user", "导航测试用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            BorderPane root = (BorderPane) load("/fxml/main-window.fxml");
+            Scene scene = new Scene(root, 1200, 800);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            Button dashboard = (Button) root.lookup("#dashboardNavButton");
+            Button plans = (Button) root.lookup("#plansNavButton");
+            PseudoClass selected = PseudoClass.getPseudoClass("selected");
+            boolean initialSelection = dashboard.getPseudoClassStates().contains(selected);
+            plans.fire();
+            boolean switchedSelection = plans.getPseudoClassStates().contains(selected)
+                    && !dashboard.getPseudoClassStates().contains(selected);
+            boolean fullHeight = root.getTop() == null
+                    && Math.abs(root.getLeft().getBoundsInParent().getHeight() - root.getHeight()) < 0.5;
+            boolean topbarInsideContent = root.getCenter() instanceof BorderPane content
+                    && content.getTop() != null;
+            return new boolean[]{initialSelection, switchedSelection, fullHeight, topbarInsideContent};
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
     }
 
     private Parent loadOnFxThread(String resource) throws Exception {

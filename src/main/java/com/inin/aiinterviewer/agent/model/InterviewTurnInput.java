@@ -12,10 +12,12 @@ public record InterviewTurnInput(
         String answer,
         InterviewPlanDto plan,
         List<Message> messages,
-        String summary
+        String summary,
+        String retrievedContext
 ) {
     public InterviewTurnInput {
         messages = messages == null ? List.of() : List.copyOf(messages);
         summary = summary == null ? "" : summary;
+        retrievedContext = retrievedContext == null ? "" : retrievedContext;
     }
 }

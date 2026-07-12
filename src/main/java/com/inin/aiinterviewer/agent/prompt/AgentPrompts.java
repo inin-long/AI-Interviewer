@@ -61,10 +61,11 @@ public final class AgentPrompts {
                 难度：%s
                 重点规则：%s
                 较早对话摘要：%s
+                可参考的用户私有知识片段：%s
                 最近对话：%s
                 """.formatted(intent, state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()), state.summary(),
-                json(objectMapper, recent));
+                state.retrievedContext(), json(objectMapper, recent));
     }
 
     private static String json(ObjectMapper objectMapper, Object value) {

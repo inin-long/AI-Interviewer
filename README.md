@@ -44,8 +44,13 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - 未配置 AI 时仅保存真实输入，不生成伪造的 AI 内容
 - OpenAI-compatible 对话与 Embedding 实现，并提供显式启用的真实 Provider 集成测试
 - 题量上限、早期上下文摘要、会话完成、六维评分和 Markdown 报告详情页
+- 主窗口全高侧栏和 Route 驱动的菜单激活高亮
+- 知识文档解析、重叠切片、Embedding、用户私有 Lucene 向量索引与语义检索
+- `knowledge_search` Agent Tool，将用户私有知识片段作为受控提问上下文
+- SQLite 持久化后台任务队列，支持并发原子领取、固定次数重试、失败留痕与启动恢复
+- 知识文档上传后异步执行解析、切片、Embedding 和索引，不阻塞 JavaFX 页面
 
-后续按照 `docs/spec` 中的阶段顺序实现知识库索引与 RAG，再完善面试记录、报告列表和 UI。
+后续按照 `docs/spec` 中的阶段顺序完善任务状态 UI，再实现面试记录与报告列表页面。
 
 ## 本地配置
 
@@ -53,6 +58,12 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 
 ```powershell
 $env:AI_LLM_API_KEY='...'
+```
+
+长期用于本机开发时，可写入 Windows 当前用户环境变量；新启动的终端和应用会读取它：
+
+```powershell
+[Environment]::SetEnvironmentVariable('AI_LLM_API_KEY', '...', 'User')
 ```
 
 或复制 `%LOCALAPPDATA%\AI-Interviewer\config\application-local.example.yml` 为 `application-local.yml` 后填写。

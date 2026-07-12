@@ -86,6 +86,7 @@ public class InterviewGraph {
         values.put(InterviewGraphState.PLAN, input.plan());
         values.put(InterviewGraphState.MESSAGES, input.messages());
         values.put(InterviewGraphState.SUMMARY, input.summary());
+        values.put(InterviewGraphState.RETRIEVED_CONTEXT, input.retrievedContext());
         return values;
     }
 }

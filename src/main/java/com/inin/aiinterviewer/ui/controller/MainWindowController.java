@@ -7,6 +7,8 @@ import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.control.Button;
+import javafx.css.PseudoClass;
 import javafx.scene.layout.StackPane;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
@@ -14,6 +16,8 @@ import org.springframework.stereotype.Component;
 @Component
 @Scope("prototype")
 public class MainWindowController {
+
+    private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
 
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
@@ -28,6 +32,12 @@ public class MainWindowController {
     private Label contentTitleLabel;
     @FXML
     private StackPane contentHost;
+    @FXML private Button dashboardNavButton;
+    @FXML private Button plansNavButton;
+    @FXML private Button historyNavButton;
+    @FXML private Button resumesNavButton;
+    @FXML private Button knowledgeNavButton;
+    @FXML private Button settingsNavButton;
 
     public MainWindowController(
             UserSessionState sessionState,
@@ -64,5 +74,11 @@ public class MainWindowController {
 
     private void showSection(Route route) {
         contentNavigator.showRoute(route);
+        dashboardNavButton.pseudoClassStateChanged(SELECTED, route == Route.DASHBOARD);
+        plansNavButton.pseudoClassStateChanged(SELECTED, route == Route.PLAN);
+        historyNavButton.pseudoClassStateChanged(SELECTED, route == Route.HISTORY);
+        resumesNavButton.pseudoClassStateChanged(SELECTED, route == Route.RESUME);
+        knowledgeNavButton.pseudoClassStateChanged(SELECTED, route == Route.KNOWLEDGE);
+        settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
     }
 }
