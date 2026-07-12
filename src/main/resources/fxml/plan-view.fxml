@@ -35,8 +35,8 @@
         <HBox alignment="CENTER_RIGHT" spacing="10">
             <Button fx:id="duplicateButton" text="复制所选" onAction="#duplicateSelected" styleClass="secondary-button"/>
             <Button fx:id="deleteButton" text="删除所选" onAction="#deleteSelected" styleClass="danger-button"/>
-            <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="primary-button"/>
+            <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="secondary-button"/>
+            <Button fx:id="startButton" text="开始 / 恢复面试" onAction="#startSelected" styleClass="primary-button"/>
         </HBox>
     </VBox>
 </VBox>
-

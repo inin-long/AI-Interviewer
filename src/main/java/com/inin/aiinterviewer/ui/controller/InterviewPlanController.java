@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
+import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -28,6 +29,7 @@ public class InterviewPlanController {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final InterviewPlanService planService;
+    private final InterviewSessionService sessionService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -44,15 +46,18 @@ public class InterviewPlanController {
     @FXML private Button editButton;
     @FXML private Button duplicateButton;
     @FXML private Button deleteButton;
+    @FXML private Button startButton;
 
     public InterviewPlanController(
             InterviewPlanService planService,
+            InterviewSessionService sessionService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
             GlobalExceptionHandler exceptionHandler
     ) {
         this.planService = planService;
+        this.sessionService = sessionService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -76,6 +81,7 @@ public class InterviewPlanController {
         editButton.disableProperty().bind(planTable.getSelectionModel().selectedItemProperty().isNull());
         duplicateButton.disableProperty().bind(planTable.getSelectionModel().selectedItemProperty().isNull());
         deleteButton.disableProperty().bind(planTable.getSelectionModel().selectedItemProperty().isNull());
+        startButton.disableProperty().bind(planTable.getSelectionModel().selectedItemProperty().isNull());
         planTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && planTable.getSelectionModel().getSelectedItem() != null) {
                 editSelected();
@@ -104,6 +110,20 @@ public class InterviewPlanController {
         try {
             planService.duplicate(sessionState.requireCurrentUser().id(), selected.id());
             refresh();
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    @FXML
+    private void startSelected() {
+        InterviewPlanDto selected = planTable.getSelectionModel().getSelectedItem();
+        if (selected == null) return;
+        try {
+            var session = sessionService.startOrResume(
+                    sessionState.requireCurrentUser().id(), selected.id());
+            contentNavigator.showSubPage(
+                    "/fxml/interview-workspace-view.fxml", "模拟面试", session.id());
         } catch (RuntimeException exception) {
             viewManager.showError(exceptionHandler.toUserMessage(exception));
         }
@@ -141,4 +161,3 @@ public class InterviewPlanController {
         };
     }
 }
-

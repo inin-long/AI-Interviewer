@@ -5,6 +5,9 @@ import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -69,15 +72,41 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/resume-detail-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/plan-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/plan-editor-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/interview-workspace-view.fxml")).isNotNull();
+    }
+
+    @Test
+    void selectAndTextInputHaveMatchingRenderedHeight() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "style-test-user", "样式测试用户", LocalDateTime.now()));
+        }
+        FutureTask<double[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/plan-editor-view.fxml");
+            Scene scene = new Scene(root, 1200, 800);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            ComboBox<?> difficulty = (ComboBox<?>) root.lookup("#difficultyBox");
+            TextField name = (TextField) root.lookup("#nameField");
+            return new double[]{difficulty.getHeight(), name.getHeight()};
+        });
+        Platform.runLater(task);
+        double[] heights = task.get(15, TimeUnit.SECONDS);
+        assertThat(heights[0]).isEqualTo(52.0);
+        assertThat(heights[0]).isEqualTo(heights[1]);
     }
 
     private Parent loadOnFxThread(String resource) throws Exception {
         FutureTask<Parent> task = new FutureTask<>(() -> {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(resource));
-            loader.setControllerFactory(applicationContext::getBean);
-            return loader.load();
+            return load(resource);
         });
         Platform.runLater(task);
         return task.get(15, TimeUnit.SECONDS);
+    }
+
+    private Parent load(String resource) throws Exception {
+        FXMLLoader loader = new FXMLLoader(getClass().getResource(resource));
+        loader.setControllerFactory(applicationContext::getBean);
+        return loader.load();
     }
 }

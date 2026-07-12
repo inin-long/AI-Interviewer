@@ -14,7 +14,8 @@ class FxmlResourceTest {
     @ValueSource(strings = {
             "/fxml/login.fxml", "/fxml/register.fxml", "/fxml/main-window.fxml",
             "/fxml/dashboard-view.fxml", "/fxml/resume-view.fxml", "/fxml/resume-detail-view.fxml",
-            "/fxml/plan-view.fxml", "/fxml/plan-editor-view.fxml"
+            "/fxml/plan-view.fxml", "/fxml/plan-editor-view.fxml",
+            "/fxml/interview-workspace-view.fxml"
     })
     void fxmlResourceIsWellFormedAndDeclaresSpringController(String resource) throws Exception {
         try (InputStream input = getClass().getResourceAsStream(resource)) {

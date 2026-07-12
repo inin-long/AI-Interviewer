@@ -11,7 +11,10 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
             <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="← 返回简历列表" onAction="#back" styleClass="text-button"/>
+            <Button text="←" onAction="#back" styleClass="back-icon-button"
+                    accessibleText="返回简历列表">
+                <tooltip><Tooltip text="返回简历列表"/></tooltip>
+            </Button>
             <VBox spacing="4">
                 <Label text="候选人画像" styleClass="page-title"/>
                 <HBox spacing="10">
@@ -91,4 +94,3 @@
         </ScrollPane>
     </center>
 </BorderPane>
-

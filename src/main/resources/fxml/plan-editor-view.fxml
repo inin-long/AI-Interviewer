@@ -11,7 +11,10 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
             <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="← 返回方案列表" onAction="#cancel" styleClass="text-button"/>
+            <Button text="←" onAction="#cancel" styleClass="back-icon-button"
+                    accessibleText="返回面试方案列表">
+                <tooltip><Tooltip text="返回面试方案列表"/></tooltip>
+            </Button>
             <VBox spacing="4">
                 <Label fx:id="pageHeadingLabel" text="新建面试方案" styleClass="page-title"/>
                 <Label text="配置岗位、简历和规则，保存后返回方案列表" styleClass="secondary-text"/>
@@ -90,4 +93,3 @@
         </ScrollPane>
     </center>
 </BorderPane>
-

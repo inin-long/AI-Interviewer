@@ -1,0 +1,61 @@
+package com.inin.aiinterviewer.infrastructure.database.mapper;
+
+import com.inin.aiinterviewer.domain.entity.InterviewSessionEntity;
+import com.inin.aiinterviewer.domain.enums.InterviewStage;
+import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Options;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+import java.util.Optional;
+
+public interface InterviewSessionMapper {
+
+    @Insert("""
+            INSERT INTO interview_session(user_id, plan_id, resume_id, title, job_title,
+                                          plan_snapshot_json, stage, status, prompt_version,
+                                          started_time, create_time, update_time, deleted)
+            VALUES(#{userId}, #{planId}, #{resumeId}, #{title}, #{jobTitle},
+                   #{planSnapshotJson}, #{stage}, #{status}, #{promptVersion},
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(InterviewSessionEntity entity);
+
+    @Select("""
+            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+                   stage, status, prompt_version, started_time, completed_time,
+                   create_time, update_time, deleted
+            FROM interview_session
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+            LIMIT 1
+            """)
+    Optional<InterviewSessionEntity> findByIdAndUserId(long id, long userId);
+
+    @Select("""
+            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+                   stage, status, prompt_version, started_time, completed_time,
+                   create_time, update_time, deleted
+            FROM interview_session
+            WHERE user_id = #{userId} AND plan_id = #{planId} AND deleted = 0
+              AND status IN ('CREATED', 'RUNNING', 'PAUSED')
+            ORDER BY id DESC
+            LIMIT 1
+            """)
+    Optional<InterviewSessionEntity> findResumableByPlan(long userId, long planId);
+
+    @Update("""
+            UPDATE interview_session
+            SET status = #{status}, update_time = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+            """)
+    int updateStatus(long id, long userId, InterviewStatus status);
+
+    @Update("""
+            UPDATE interview_session
+            SET stage = #{stage}, update_time = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+            """)
+    int updateStage(long id, long userId, InterviewStage stage);
+}

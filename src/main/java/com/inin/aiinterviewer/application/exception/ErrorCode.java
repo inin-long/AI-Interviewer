@@ -8,6 +8,8 @@ public enum ErrorCode {
     FILE_TYPE_NOT_SUPPORTED("FILE_002", "不支持的文件类型"),
     FILE_STORAGE_FAILED("FILE_003", "文件保存失败"),
     PLAN_NOT_FOUND("PLAN_001", "面试方案不存在"),
+    INTERVIEW_NOT_FOUND("INTERVIEW_001", "面试会话不存在"),
+    CHECKPOINT_NOT_FOUND("INTERVIEW_002", "未找到可恢复的面试进度"),
     DATA_ACCESS_FAILED("DATA_001", "本地数据访问失败"),
     AI_NOT_CONFIGURED("AI_001", "AI 服务尚未配置"),
     AI_CALL_FAILED("AI_002", "AI 服务调用失败"),

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.InterviewWorkspaceController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button"
+                    accessibleText="返回面试方案列表">
+                <tooltip><Tooltip text="暂停并返回方案列表"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label fx:id="titleLabel" text="模拟面试" styleClass="page-title"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label fx:id="jobLabel" text="目标岗位" styleClass="secondary-text"/>
+                    <Label fx:id="stageLabel" text="开场介绍" styleClass="status-tag"/>
+                    <Label fx:id="statusLabel" text="进行中" styleClass="status-tag"/>
+                </HBox>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="pauseButton" text="暂停面试" onAction="#togglePause" styleClass="secondary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <VBox spacing="16" styleClass="interview-workspace">
+            <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+            <Label fx:id="aiNoticeLabel" text="AI 状态" styleClass="local-data-note" wrapText="true"/>
+            <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
+                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="面试对话" styleClass="module-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="每次回答、阶段切换和暂停都会保存 Checkpoint" styleClass="secondary-text"/>
+                </HBox>
+                <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
+                          VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
+                <Separator/>
+                <Label text="你的回答" styleClass="field-label"/>
+                <TextArea fx:id="answerArea" promptText="输入回答；当前里程碑先保存输入和状态，后续接入 Agent 分析"
+                          wrapText="true" prefRowCount="4"/>
+                <HBox alignment="CENTER_RIGHT">
+                    <Button fx:id="submitButton" text="保存回答" onAction="#submitAnswer"
+                            defaultButton="true" styleClass="primary-button"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>
