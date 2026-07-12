@@ -287,6 +287,50 @@
 
 .history-filter-bar { -fx-padding: 14 16; }
 
+.settings-navigation { -fx-padding: 12; }
+
+.settings-navigation-title { -fx-padding: 4 10 10 10; }
+
+.settings-nav-button {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-secondary;
+    -fx-padding: 11 12;
+}
+
+.settings-nav-button:hover { -fx-background-color: -hover; }
+
+.settings-nav-button:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -primary;
+    -fx-font-weight: 700;
+}
+
+.settings-scroll,
+.settings-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.settings-form { -fx-padding: 0; }
+
+.settings-section { -fx-padding: 24 26; }
+
+.settings-grid { -fx-padding: 12 0 0 0; }
+
+.connection-status-row {
+    -fx-background-color: -surface-muted;
+    -fx-border-color: -border;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 14 16;
+}
+
+.status-neutral { -fx-text-fill: -text-secondary; }
+
+.status-failed, .danger-text { -fx-text-fill: -danger; }
+
+.success-text { -fx-text-fill: -success; }
+
 .interview-workspace {
     -fx-background-color: -app-background;
 }

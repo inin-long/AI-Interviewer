@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.inin.aiinterviewer.ui.controller.SettingsController"
+      spacing="18" styleClass="page-content">
+    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="5">
+            <Label text="设置" styleClass="page-title"/>
+            <Label text="检查 AI 服务、数据目录和应用运行参数" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="打开配置目录" onAction="#openConfigDirectory" styleClass="secondary-button"/>
+    </HBox>
+
+    <HBox spacing="18" VBox.vgrow="ALWAYS">
+        <VBox spacing="6" prefWidth="190" minWidth="190" styleClass="content-card settings-navigation">
+            <padding><Insets top="16" right="12" bottom="16" left="12"/></padding>
+            <Label text="设置分类" styleClass="field-label settings-navigation-title"/>
+            <Button fx:id="generalNavButton" text="常规与应用" onAction="#showGeneral"
+                    maxWidth="Infinity" styleClass="settings-nav-button"/>
+            <Button fx:id="aiNavButton" text="AI 服务" onAction="#showAi"
+                    maxWidth="Infinity" styleClass="settings-nav-button"/>
+            <Button fx:id="dataNavButton" text="数据与任务" onAction="#showData"
+                    maxWidth="Infinity" styleClass="settings-nav-button"/>
+            <Region VBox.vgrow="ALWAYS"/>
+            <Label text="敏感信息不会在页面或日志中回显。" wrapText="true" styleClass="fine-print"/>
+        </VBox>
+
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" HBox.hgrow="ALWAYS" styleClass="settings-scroll">
+            <content>
+                <StackPane>
+                    <VBox fx:id="generalPane" spacing="0" styleClass="content-card settings-form">
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="应用信息" styleClass="module-title"/>
+                            <Label text="当前桌面应用与运行时版本。" styleClass="secondary-text"/>
+                            <GridPane hgap="24" vgap="14" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="160" prefWidth="190"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="应用名称" styleClass="field-label" GridPane.rowIndex="0"/>
+                                <Label fx:id="appNameLabel" text="AI Interviewer" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                <Label text="应用版本" styleClass="field-label" GridPane.rowIndex="1"/>
+                                <Label fx:id="appVersionLabel" text="0.1.0" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                <Label text="Java Runtime" styleClass="field-label" GridPane.rowIndex="2"/>
+                                <Label fx:id="javaVersionLabel" text="21" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                <Label text="JavaFX" styleClass="field-label" GridPane.rowIndex="3"/>
+                                <Label fx:id="javafxStatusLabel" text="21" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+                        <Separator/>
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="界面与行为" styleClass="module-title"/>
+                            <Label text="当前阶段采用统一浅色主题，面试过程支持流式输出和自动 Checkpoint。"
+                                   wrapText="true" styleClass="secondary-text"/>
+                            <GridPane hgap="24" vgap="14" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="160" prefWidth="190"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="主题" styleClass="field-label" GridPane.rowIndex="0"/>
+                                <Label text="浅色" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                <Label text="报告格式" styleClass="field-label" GridPane.rowIndex="1"/>
+                                <Label text="Markdown" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                <Label text="会话恢复" styleClass="field-label" GridPane.rowIndex="2"/>
+                                <Label text="版本化 Checkpoint 已启用" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                       styleClass="success-text"/>
+                            </GridPane>
+                        </VBox>
+                    </VBox>
+
+                    <VBox fx:id="aiPane" spacing="0" visible="false" managed="false"
+                          styleClass="content-card settings-form">
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="Provider 与模型" styleClass="module-title"/>
+                            <Label text="配置从 Windows 环境变量或数据目录下的外部配置文件读取；修改后需重启应用。"
+                                   wrapText="true" styleClass="secondary-text"/>
+                            <GridPane hgap="18" vgap="12" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                    <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <VBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="0">
+                                    <Label text="API Base URL" styleClass="field-label"/>
+                                    <TextField fx:id="baseUrlField" editable="false" promptText="未配置"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="1">
+                                    <Label text="API Key" styleClass="field-label"/>
+                                    <PasswordField fx:id="apiKeyField" editable="false"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.rowIndex="1" GridPane.columnIndex="0">
+                                    <Label text="Chat Model" styleClass="field-label"/>
+                                    <TextField fx:id="chatModelField" editable="false" promptText="未配置"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.rowIndex="1" GridPane.columnIndex="1">
+                                    <Label text="Embedding Model" styleClass="field-label"/>
+                                    <TextField fx:id="embeddingModelField" editable="false" promptText="未配置"/>
+                                </VBox>
+                            </GridPane>
+                            <GridPane hgap="24" vgap="12" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="160" prefWidth="190"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="请求超时" styleClass="field-label" GridPane.rowIndex="0"/>
+                                <Label fx:id="timeoutLabel" text="60 秒" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                <Label text="配置来源" styleClass="field-label" GridPane.rowIndex="1"/>
+                                <Label fx:id="configurationSourceLabel" text="未检测" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+                        <Separator/>
+                        <VBox spacing="10" styleClass="settings-section">
+                            <HBox alignment="CENTER_LEFT" spacing="12">
+                                <VBox spacing="5">
+                                    <Label text="连接与能力" styleClass="module-title"/>
+                                    <Label text="按需调用真实 Provider，不会在应用启动时自动产生 API 请求。" styleClass="secondary-text"/>
+                                </VBox>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="testConnectionButton" text="测试连接" onAction="#testConnection"
+                                        styleClass="primary-button"/>
+                            </HBox>
+                            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="connection-status-row">
+                                <Label fx:id="connectionStatusLabel" text="● 未检测" styleClass="status-neutral"/>
+                                <Label fx:id="connectionDetailLabel" text="点击测试连接" wrapText="true"
+                                       HBox.hgrow="ALWAYS" styleClass="secondary-text"/>
+                            </HBox>
+                        </VBox>
+                        <Separator/>
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="安全说明" styleClass="module-title"/>
+                            <Label text="API Key 只显示配置状态，不读取到输入框、不写入仓库，也不会记录到日志。"
+                                   wrapText="true" styleClass="local-data-note"/>
+                        </VBox>
+                    </VBox>
+
+                    <VBox fx:id="dataPane" spacing="0" visible="false" managed="false"
+                          styleClass="content-card settings-form">
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="本地数据目录" styleClass="module-title"/>
+                            <Label text="数据库、日志、配置和用户文件与程序安装目录分离。" styleClass="secondary-text"/>
+                            <HBox alignment="CENTER_LEFT" spacing="10">
+                                <TextField fx:id="dataRootField" editable="false" HBox.hgrow="ALWAYS"/>
+                                <Button text="复制" onAction="#copyDataRoot" styleClass="secondary-button"/>
+                                <Button text="打开目录" onAction="#openDataRoot" styleClass="primary-button"/>
+                            </HBox>
+                            <Label fx:id="dataActionLabel" text="目录操作仅在点击后执行。" styleClass="secondary-text"/>
+                            <GridPane hgap="24" vgap="14" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="160" prefWidth="190"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="SQLite 数据库" styleClass="field-label" GridPane.rowIndex="0"/>
+                                <Label fx:id="databasePathLabel" text="database/app.db" wrapText="true"
+                                       GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                <Label text="用户文件" styleClass="field-label" GridPane.rowIndex="1"/>
+                                <Label fx:id="userFilesPathLabel" text="users" wrapText="true"
+                                       GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                <Label text="日志" styleClass="field-label" GridPane.rowIndex="2"/>
+                                <Label fx:id="logPathLabel" text="logs" wrapText="true"
+                                       GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                                <Label text="外部配置" styleClass="field-label" GridPane.rowIndex="3"/>
+                                <Label fx:id="configPathLabel" text="config" wrapText="true"
+                                       GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                            </GridPane>
+                        </VBox>
+                        <Separator/>
+                        <VBox spacing="8" styleClass="settings-section">
+                            <Label text="后台任务" styleClass="module-title"/>
+                            <Label text="知识文档解析与向量索引由持久化任务队列处理。" styleClass="secondary-text"/>
+                            <GridPane hgap="24" vgap="14" styleClass="settings-grid">
+                                <columnConstraints>
+                                    <ColumnConstraints minWidth="160" prefWidth="190"/>
+                                    <ColumnConstraints hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <Label text="Worker" styleClass="field-label" GridPane.rowIndex="0"/>
+                                <Label fx:id="workerStatusLabel" text="已启用" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                                <Label text="重试策略" styleClass="field-label" GridPane.rowIndex="1"/>
+                                <Label fx:id="retryPolicyLabel" text="最多 3 次" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                <Label text="中断恢复" styleClass="field-label" GridPane.rowIndex="2"/>
+                                <Label text="应用启动时自动恢复 RUNNING 任务" GridPane.rowIndex="2" GridPane.columnIndex="1"
+                                       styleClass="success-text"/>
+                            </GridPane>
+                        </VBox>
+                    </VBox>
+                </StackPane>
+            </content>
+        </ScrollPane>
+    </HBox>
+</VBox>

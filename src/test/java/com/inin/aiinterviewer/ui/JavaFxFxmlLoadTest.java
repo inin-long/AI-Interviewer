@@ -9,7 +9,9 @@ import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Button;
+import javafx.scene.control.PasswordField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.VBox;
 import javafx.css.PseudoClass;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -81,6 +83,7 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/knowledge-detail-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/history-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/interview-history-detail-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/settings-view.fxml")).isNotNull();
     }
 
     @Test
@@ -117,6 +120,7 @@ class JavaFxFxmlLoadTest {
             root.layout();
             Button dashboard = (Button) root.lookup("#dashboardNavButton");
             Button plans = (Button) root.lookup("#plansNavButton");
+            Button settings = (Button) root.lookup("#settingsNavButton");
             PseudoClass selected = PseudoClass.getPseudoClass("selected");
             boolean initialSelection = dashboard.getPseudoClassStates().contains(selected);
             plans.fire();
@@ -126,7 +130,42 @@ class JavaFxFxmlLoadTest {
                     && Math.abs(root.getLeft().getBoundsInParent().getHeight() - root.getHeight()) < 0.5;
             boolean topbarInsideContent = root.getCenter() instanceof BorderPane content
                     && content.getTop() != null;
-            return new boolean[]{initialSelection, switchedSelection, fullHeight, topbarInsideContent};
+            settings.fire();
+            boolean settingsLoaded = settings.getPseudoClassStates().contains(selected)
+                    && !plans.getPseudoClassStates().contains(selected)
+                    && root.lookup("#generalNavButton") != null;
+            return new boolean[]{initialSelection, switchedSelection, fullHeight,
+                    topbarInsideContent, settingsLoaded};
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void settingsMasksSecretAndSwitchesCategoryWithActiveState() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "settings-test-user", "设置测试用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/settings-view.fxml");
+            Scene scene = new Scene(root, 1100, 760);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            Button general = (Button) root.lookup("#generalNavButton");
+            Button ai = (Button) root.lookup("#aiNavButton");
+            VBox generalPane = (VBox) root.lookup("#generalPane");
+            VBox aiPane = (VBox) root.lookup("#aiPane");
+            PasswordField key = (PasswordField) root.lookup("#apiKeyField");
+            PseudoClass selected = PseudoClass.getPseudoClass("selected");
+            boolean initial = general.getPseudoClassStates().contains(selected)
+                    && generalPane.isVisible() && !aiPane.isVisible();
+            ai.fire();
+            boolean switched = ai.getPseudoClassStates().contains(selected)
+                    && !general.getPseudoClassStates().contains(selected)
+                    && aiPane.isVisible() && !generalPane.isVisible();
+            boolean masked = key.getText() == null || !key.getText().startsWith("sk-");
+            return new boolean[]{initial, switched, masked};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
