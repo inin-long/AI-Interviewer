@@ -322,6 +322,12 @@
     -fx-text-fill: -text;
 }
 
+.report-score {
+    -fx-font-size: 34px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -primary;
+}
+
 .monospace-text {
     -fx-font-family: "Cascadia Mono", "Consolas", monospace;
     -fx-background-color: -surface-muted;

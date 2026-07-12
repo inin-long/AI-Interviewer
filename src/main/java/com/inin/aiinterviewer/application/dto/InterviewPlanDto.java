@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.application.dto;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 
 import java.time.LocalDateTime;
+import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,5 @@ public record InterviewPlanDto(
         boolean defaultPlan,
         LocalDateTime createTime,
         LocalDateTime updateTime
-) {
+) implements Serializable {
 }
-

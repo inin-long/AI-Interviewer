@@ -73,6 +73,7 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/plan-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/plan-editor-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/interview-workspace-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/report-detail-view.fxml")).isNotNull();
     }
 
     @Test

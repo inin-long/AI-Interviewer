@@ -39,9 +39,13 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - 列表页与查看/编辑页分离，并提供可返回的内容区子页面导航
 - 候选人画像生成、人工编辑与确认；未配置 AI 时使用明确标记的本地草稿
 - 面试方案快照、用户回答、版本化 Checkpoint，以及面试会话的暂停与恢复
-- 最小面试工作区；未配置 AI 时仅保存真实输入，不生成伪造的 AI 内容
+- LangGraph4j 单 Agent 回合：回答分析、追问决策、规则校验和合法阶段切换
+- 面试工作区真实流式输出；格式错误和流式中断时保留用户输入及已生成内容
+- 未配置 AI 时仅保存真实输入，不生成伪造的 AI 内容
+- OpenAI-compatible 对话与 Embedding 实现，并提供显式启用的真实 Provider 集成测试
+- 题量上限、早期上下文摘要、会话完成、六维评分和 Markdown 报告详情页
 
-后续按照 `docs/spec` 中的阶段顺序接入 Agent 提问与回答分析，再实现 RAG、报告和 UI 完善。
+后续按照 `docs/spec` 中的阶段顺序实现知识库索引与 RAG，再完善面试记录、报告列表和 UI。
 
 ## 本地配置
 
@@ -52,3 +56,6 @@ $env:AI_LLM_API_KEY='...'
 ```
 
 或复制 `%LOCALAPPDATA%\AI-Interviewer\config\application-local.example.yml` 为 `application-local.yml` 后填写。
+
+真实 Provider 集成测试默认跳过。仅在本机临时设置完整的 `AI_LLM_*` 配置和
+`AI_LLM_LIVE_TEST=true` 时才会执行，API Key 不应写入仓库。

@@ -21,9 +21,14 @@
                     <Label fx:id="jobLabel" text="目标岗位" styleClass="secondary-text"/>
                     <Label fx:id="stageLabel" text="开场介绍" styleClass="status-tag"/>
                     <Label fx:id="statusLabel" text="进行中" styleClass="status-tag"/>
+                    <Label fx:id="progressLabel" text="第 0 / 0 题" styleClass="secondary-text"/>
                 </HBox>
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="retryQuestionButton" text="生成问题" onAction="#generateInitialQuestion"
+                    styleClass="secondary-button" visible="false" managed="false"/>
+            <Button fx:id="reportButton" text="查看报告" onAction="#openReport"
+                    styleClass="primary-button" visible="false" managed="false"/>
             <Button fx:id="pauseButton" text="暂停面试" onAction="#togglePause" styleClass="secondary-button"/>
         </HBox>
     </top>

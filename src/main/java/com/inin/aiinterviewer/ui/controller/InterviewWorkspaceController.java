@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
+import com.inin.aiinterviewer.application.service.InterviewAgentService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
@@ -13,6 +14,7 @@ import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
+import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import reactor.core.publisher.Flux;
 
 @Component
 @Scope("prototype")
@@ -31,6 +34,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     private final InterviewSessionService sessionService;
+    private final InterviewAgentService agentService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -41,17 +45,22 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label jobLabel;
     @FXML private Label stageLabel;
     @FXML private Label statusLabel;
+    @FXML private Label progressLabel;
     @FXML private Label aiNoticeLabel;
     @FXML private TextArea transcriptArea;
     @FXML private TextArea answerArea;
     @FXML private Button pauseButton;
     @FXML private Button submitButton;
+    @FXML private Button retryQuestionButton;
+    @FXML private Button reportButton;
 
     private long sessionId;
     private InterviewSessionDto currentSession;
+    private boolean generationInProgress;
 
     public InterviewWorkspaceController(
             InterviewSessionService sessionService,
+            InterviewAgentService agentService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -59,6 +68,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             LlmProperties llmProperties
     ) {
         this.sessionService = sessionService;
+        this.agentService = agentService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -73,12 +83,22 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         }
         sessionId = context;
         refresh();
+        if (llmProperties.isConfigured()
+                && currentSession.status() == InterviewStatus.RUNNING
+                && sessionService.messages(userId(), sessionId).isEmpty()) {
+            generateInitialQuestion();
+        }
     }
 
     @FXML
     private void submitAnswer() {
+        String answer = answerArea.getText();
+        if (llmProperties.isConfigured()) {
+            stream(agentService.answer(userId(), sessionId, answer), true, "正在分析回答并准备下一题…");
+            return;
+        }
         try {
-            sessionService.appendUserAnswer(userId(), sessionId, answerArea.getText());
+            sessionService.appendUserAnswer(userId(), sessionId, answer);
             answerArea.clear();
             refresh();
         } catch (RuntimeException exception) {
@@ -88,6 +108,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
 
     @FXML
     private void togglePause() {
+        if (generationInProgress) {
+            viewManager.showInfo("正在生成", "请等待本轮 AI 输出完成后再暂停。");
+            return;
+        }
         try {
             if (currentSession.status() == InterviewStatus.RUNNING) {
                 sessionService.pause(userId(), sessionId);
@@ -102,6 +126,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
 
     @FXML
     private void back() {
+        if (generationInProgress) {
+            viewManager.showInfo("正在生成", "请等待本轮 AI 输出完成后再离开面试页面。");
+            return;
+        }
         if (currentSession != null && currentSession.status() == InterviewStatus.RUNNING) {
             Alert confirmation = new Alert(
                     Alert.AlertType.CONFIRMATION,
@@ -129,14 +157,75 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         stageLabel.setText(stageText(currentSession.stage()));
         statusLabel.setText(statusText(currentSession.status()));
         transcriptArea.setText(transcript(messages));
+        long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
+        progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
+                + " / " + currentSession.planSnapshot().questionCount() + " 题");
 
         boolean running = currentSession.status() == InterviewStatus.RUNNING;
-        answerArea.setDisable(!running);
-        submitButton.setDisable(!running);
+        boolean hasQuestion = sessionService.loadLatestState(userId(), sessionId)
+                .map(state -> state.currentQuestion() != null && !state.currentQuestion().isBlank())
+                .orElse(false);
+        boolean canAnswer = running && !generationInProgress
+                && (!llmProperties.isConfigured() || hasQuestion);
+        answerArea.setDisable(!canAnswer);
+        submitButton.setDisable(!canAnswer);
+        pauseButton.setDisable(generationInProgress);
         pauseButton.setText(running ? "暂停面试" : "继续面试");
-        aiNoticeLabel.setText(llmProperties.isConfigured()
-                ? "AI 已配置。下一迭代将把提问、回答分析和流式输出接入当前会话。"
-                : "AI 尚未配置。当前可验证会话、回答保存及暂停恢复，不会生成伪造的 AI 提问。");
+        pauseButton.setVisible(currentSession.status() != InterviewStatus.COMPLETED);
+        pauseButton.setManaged(pauseButton.isVisible());
+        retryQuestionButton.setVisible(llmProperties.isConfigured() && running && !hasQuestion);
+        retryQuestionButton.setManaged(retryQuestionButton.isVisible());
+        retryQuestionButton.setDisable(generationInProgress || !messages.isEmpty());
+        reportButton.setVisible(currentSession.status() == InterviewStatus.COMPLETED);
+        reportButton.setManaged(reportButton.isVisible());
+        if (currentSession.status() == InterviewStatus.COMPLETED) {
+            aiNoticeLabel.setText("面试已完成，六维评分和 Markdown 报告已保存。可从面试记录进入报告页查看。 ");
+        } else {
+            aiNoticeLabel.setText(llmProperties.isConfigured()
+                    ? "AI 已配置：回答会先保存，再执行分析、受控阶段决策和流式提问。"
+                    : "AI 尚未配置。当前可验证会话、回答保存及暂停恢复，不会生成伪造的 AI 提问。");
+        }
+    }
+
+    @FXML
+    private void openReport() {
+        contentNavigator.showSubPage(
+                "/fxml/report-detail-view.fxml", "面试报告", sessionId);
+    }
+
+    @FXML
+    private void generateInitialQuestion() {
+        if (!llmProperties.isConfigured() || generationInProgress) return;
+        stream(agentService.generateInitialQuestion(userId(), sessionId), false, "正在生成第一题…");
+    }
+
+    private void stream(Flux<String> output, boolean clearInputOnSuccess, String progressText) {
+        if (generationInProgress) return;
+        generationInProgress = true;
+        setBusyState(progressText);
+        String existing = transcriptArea.getText();
+        transcriptArea.setText(existing.isBlank() ? "AI 面试官\n" : existing + "\n\nAI 面试官\n");
+        output.subscribe(
+                chunk -> Platform.runLater(() -> transcriptArea.appendText(chunk)),
+                throwable -> Platform.runLater(() -> {
+                    generationInProgress = false;
+                    refresh();
+                    viewManager.showError(exceptionHandler.toUserMessage(throwable));
+                }),
+                () -> Platform.runLater(() -> {
+                    generationInProgress = false;
+                    if (clearInputOnSuccess) answerArea.clear();
+                    refresh();
+                }));
+    }
+
+    private void setBusyState(String progressText) {
+        aiNoticeLabel.setText(progressText);
+        answerArea.setDisable(true);
+        submitButton.setDisable(true);
+        pauseButton.setDisable(true);
+        retryQuestionButton.setDisable(true);
+        statusLabel.setText("生成中");
     }
 
     private String transcript(List<InterviewMessageDto> messages) {

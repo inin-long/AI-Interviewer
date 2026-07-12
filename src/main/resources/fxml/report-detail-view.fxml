@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.InterviewReportController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回面试">
+                <tooltip><Tooltip text="返回面试"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label fx:id="titleLabel" text="面试报告" styleClass="page-title"/>
+                <Label text="评分与报告均基于本次已保存问答" styleClass="secondary-text"/>
+            </VBox>
+        </HBox>
+    </top>
+    <center>
+        <HBox spacing="20" styleClass="editor-page">
+            <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+            <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="content-card">
+                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="综合得分" styleClass="summary-label"/>
+                <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score"/>
+                <Separator/>
+                <GridPane hgap="18" vgap="14">
+                    <Label text="技术基础" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="technicalScoreLabel" text="0 分" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="summary-value"/>
+                    <Label text="问题解决" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="problemSolvingScoreLabel" text="0 分" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="summary-value"/>
+                    <Label text="项目经验" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="projectScoreLabel" text="0 分" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="summary-value"/>
+                    <Label text="系统设计" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="systemDesignScoreLabel" text="0 分" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="summary-value"/>
+                    <Label text="沟通表达" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="communicationScoreLabel" text="0 分" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="summary-value"/>
+                    <Label text="综合能力" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="summary-label"/>
+                    <Label fx:id="comprehensiveScoreLabel" text="0 分" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="summary-value"/>
+                </GridPane>
+            </VBox>
+            <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
+                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="Markdown 报告" styleClass="module-title"/>
+                <TextArea fx:id="reportArea" editable="false" wrapText="true"
+                          VBox.vgrow="ALWAYS" styleClass="monospace-text"/>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>

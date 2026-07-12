@@ -17,6 +17,7 @@ import com.inin.aiinterviewer.domain.entity.InterviewSessionEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
@@ -138,6 +139,42 @@ public class InterviewSessionService {
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState saveAssistantOutput(
+            long userId,
+            long sessionId,
+            String question,
+            AnswerAnalysis analysis,
+            boolean partial
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        if (session.getStatus() != InterviewStatus.RUNNING || question == null || question.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+
+        InterviewMessageEntity message = new InterviewMessageEntity();
+        message.setUserId(userId);
+        message.setSessionId(sessionId);
+        message.setSequenceNo(messageMapper.nextSequence(userId, sessionId));
+        message.setRole(Message.Role.ASSISTANT);
+        message.setContent(question.strip());
+        message.setMetadataJson(partial ? "{\"partial\":true}" : "{}");
+        messageMapper.insert(message);
+
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        List<Message> allMessages = domainMessages(userId, sessionId);
+        String summary = allMessages.size() > 10 ? compactSummary(allMessages) : previous.summary();
+        InterviewState updated = new InterviewState(
+                previous.stateVersion(), sessionId, userId, session.getStage(),
+                allMessages, question.strip(), previous.latestAnswer(),
+                analysis == null ? previous.analysis() : analysis, previous.evaluation(),
+                previous.profile(), previous.rules(), summary);
+        saveCheckpointInternal(userId, sessionId,
+                partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
     }
 
@@ -264,6 +301,21 @@ public class InterviewSessionService {
         return messageMapper.findAll(userId, sessionId).stream()
                 .map(entity -> new Message(entity.getRole(), entity.getContent(), entity.getCreateTime()))
                 .toList();
+    }
+
+    private String compactSummary(List<Message> messages) {
+        int keepRecent = 8;
+        int end = Math.max(0, messages.size() - keepRecent);
+        StringBuilder summary = new StringBuilder();
+        for (int index = 0; index < end; index++) {
+            Message message = messages.get(index);
+            String content = message.content().replaceAll("\\s+", " ").strip();
+            if (content.length() > 160) content = content.substring(0, 160) + "…";
+            if (summary.length() + content.length() > 2000) break;
+            summary.append(message.role() == Message.Role.USER ? "候选人：" : "面试官：")
+                    .append(content).append("\n");
+        }
+        return summary.toString().strip();
     }
 
     private InterviewStage initialStage(List<String> configuredStages) {

@@ -38,6 +38,9 @@ public class ConfigValidator implements ApplicationRunner {
         } else {
             log.info("AI provider is not configured; local account and data features remain available");
         }
+        if (llmProperties.isEmbeddingConfigured()) {
+            log.info("Embedding provider configuration detected for model: {}", llmProperties.embeddingModel());
+        }
     }
 
     private void initializeRuntimeDirectories(Path dataRoot) {

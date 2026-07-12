@@ -16,5 +16,9 @@ public record LlmProperties(
         return apiKey != null && !apiKey.isBlank()
                 && chatModel != null && !chatModel.isBlank();
     }
-}
 
+    public boolean isEmbeddingConfigured() {
+        return apiKey != null && !apiKey.isBlank()
+                && embeddingModel != null && !embeddingModel.isBlank();
+    }
+}

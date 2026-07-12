@@ -13,6 +13,7 @@ public enum ErrorCode {
     DATA_ACCESS_FAILED("DATA_001", "本地数据访问失败"),
     AI_NOT_CONFIGURED("AI_001", "AI 服务尚未配置"),
     AI_CALL_FAILED("AI_002", "AI 服务调用失败"),
+    AI_RESPONSE_INVALID("AI_003", "AI 返回格式无效，请重试"),
     TASK_FAILED("TASK_001", "后台任务执行失败"),
     VALIDATION_FAILED("BUSINESS_000", "请检查输入内容"),
     INVALID_STATE("BUSINESS_001", "当前状态不允许执行此操作"),

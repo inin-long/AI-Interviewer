@@ -10,13 +10,24 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     public String toUserMessage(Throwable throwable) {
-        if (throwable instanceof ApplicationException applicationException) {
+        ApplicationException applicationException = findApplicationException(throwable);
+        if (applicationException != null) {
             ErrorCode code = applicationException.getErrorCode();
-            log.warn("Application error [{}]: {}", code.code(), throwable.getMessage(), throwable);
+            log.warn("Application error [{}]: {}", code.code(), applicationException.getMessage(), throwable);
             return code.userMessage();
         }
         log.error("Unhandled application error", throwable);
         return ErrorCode.SYSTEM_ERROR.userMessage();
     }
-}
 
+    private ApplicationException findApplicationException(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ApplicationException applicationException) {
+                return applicationException;
+            }
+            current = current.getCause();
+        }
+        return null;
+    }
+}

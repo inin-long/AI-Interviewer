@@ -58,4 +58,12 @@ public interface InterviewSessionMapper {
             WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
             """)
     int updateStage(long id, long userId, InterviewStage stage);
+
+    @Update("""
+            UPDATE interview_session
+            SET stage = 'COMPLETED', status = 'COMPLETED', completed_time = CURRENT_TIMESTAMP,
+                update_time = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0 AND status = 'RUNNING'
+            """)
+    int complete(long id, long userId);
 }
