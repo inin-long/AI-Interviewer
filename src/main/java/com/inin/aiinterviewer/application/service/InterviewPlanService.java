@@ -8,6 +8,7 @@ import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.entity.InterviewPlanEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,10 +27,16 @@ public class InterviewPlanService {
     );
 
     private final InterviewPlanMapper planMapper;
+    private final ResumeMapper resumeMapper;
     private final ObjectMapper objectMapper;
 
-    public InterviewPlanService(InterviewPlanMapper planMapper, ObjectMapper objectMapper) {
+    public InterviewPlanService(
+            InterviewPlanMapper planMapper,
+            ResumeMapper resumeMapper,
+            ObjectMapper objectMapper
+    ) {
         this.planMapper = planMapper;
+        this.resumeMapper = resumeMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -85,6 +92,10 @@ public class InterviewPlanService {
                 || command.durationMinutes() < 10 || command.durationMinutes() > 240
                 || command.questionCount() < 1 || command.questionCount() > 100) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        if (command.resumeId() != null
+                && resumeMapper.findByIdAndUserId(command.resumeId(), userId).isEmpty()) {
+            throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
 
         InterviewPlanEntity entity = new InterviewPlanEntity();

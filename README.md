@@ -34,8 +34,12 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - SQLite、Flyway、MyBatis 与本地用户系统
 - 分层包结构、配置、异常、日志和文件存储边界
 - Agent、AI、向量存储接口和完整 MVP 数据库迁移
+- 简历上传、Tika 文本解析、列表与删除
+- 面试方案的新建、编辑、复制、删除及简历关联
+- 列表页与查看/编辑页分离，并提供可返回的内容区子页面导航
+- 候选人画像生成、人工编辑与确认；未配置 AI 时使用明确标记的本地草稿
 
-后续按照 `docs/spec` 中的阶段顺序实现简历、面试方案、Agent、RAG、报告和 UI 完善。
+后续按照 `docs/spec` 中的阶段顺序实现 Agent 面试流程、RAG、报告和 UI 完善。
 
 ## 本地配置
 
@@ -46,4 +50,3 @@ $env:AI_LLM_API_KEY='...'
 ```
 
 或复制 `%LOCALAPPDATA%\AI-Interviewer\config\application-local.example.yml` 为 `application-local.yml` 后填写。
-

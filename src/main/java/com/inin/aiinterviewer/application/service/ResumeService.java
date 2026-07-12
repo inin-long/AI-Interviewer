@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.application.dto.ResumeDto;
+import com.inin.aiinterviewer.application.dto.ResumeDetailDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.entity.ResumeEntity;
@@ -52,7 +53,12 @@ public class ResumeService {
         entity.setFileType(extension(stored.originalName()));
         entity.setFileSize(stored.size());
         entity.setStatus(ResumeStatus.UPLOADED);
-        insert(entity);
+        try {
+            resumeMapper.insert(entity);
+        } catch (RuntimeException exception) {
+            fileStorageService.delete(userId, StorageCategory.RESUMES, stored.storageName());
+            throw exception;
+        }
 
         try {
             resumeMapper.markParsing(entity.getId(), userId);
@@ -69,6 +75,13 @@ public class ResumeService {
         return resumeMapper.findAllByUserId(userId).stream().map(this::toDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public ResumeDetailDto getDetail(long userId, long resumeId) {
+        ResumeEntity entity = resumeMapper.findByIdAndUserId(resumeId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        return new ResumeDetailDto(toDto(entity), entity.getParsedText());
+    }
+
     @Transactional
     public void delete(long userId, long resumeId) {
         ResumeEntity entity = resumeMapper.findByIdAndUserId(resumeId, userId)
@@ -79,13 +92,7 @@ public class ResumeService {
         fileStorageService.delete(userId, StorageCategory.RESUMES, entity.getStorageName());
     }
 
-    @Transactional
-    protected void insert(ResumeEntity entity) {
-        resumeMapper.insert(entity);
-    }
-
-    @Transactional(readOnly = true)
-    protected ResumeDto requireResume(long id, long userId) {
+    private ResumeDto requireResume(long id, long userId) {
         return resumeMapper.findByIdAndUserId(id, userId)
                 .map(this::toDto)
                 .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
@@ -107,4 +114,3 @@ public class ResumeService {
         return message == null || message.isBlank() ? "简历解析失败" : message.substring(0, Math.min(500, message.length()));
     }
 }
-

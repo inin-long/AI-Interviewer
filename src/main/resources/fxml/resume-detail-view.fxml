@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.ResumeDetailController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="← 返回简历列表" onAction="#back" styleClass="text-button"/>
+            <VBox spacing="4">
+                <Label text="候选人画像" styleClass="page-title"/>
+                <HBox spacing="10">
+                    <Label fx:id="resumeNameLabel" text="简历" styleClass="secondary-text"/>
+                    <Label fx:id="resumeStatusLabel" text="状态" styleClass="status-tag"/>
+                    <Label fx:id="profileStatusLabel" text="尚未生成" styleClass="status-tag"/>
+                </HBox>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="generateButton" text="生成 / 重新分析" onAction="#generateProfile" styleClass="secondary-button"/>
+            <Button text="保存草稿" onAction="#saveDraft" styleClass="secondary-button"/>
+            <Button fx:id="confirmButton" text="确认画像" onAction="#confirmProfile" styleClass="primary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
+            <content>
+                <HBox spacing="20" styleClass="editor-page">
+                    <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+                    <VBox spacing="14" HBox.hgrow="ALWAYS">
+                        <Label fx:id="sourceNoticeLabel" text="画像来源" styleClass="local-data-note" wrapText="true"/>
+                        <VBox spacing="12" styleClass="content-card">
+                            <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                            <Label text="1  基础信息" styleClass="module-title"/>
+                            <GridPane hgap="14" vgap="10">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                    <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                    <Label text="姓名" styleClass="field-label"/>
+                                    <TextField fx:id="fullNameField"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                    <Label text="目标岗位" styleClass="field-label"/>
+                                    <TextField fx:id="targetRoleField"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                    <Label text="工作年限" styleClass="field-label"/>
+                                    <TextField fx:id="yearsField"/>
+                                </VBox>
+                                <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label text="教育背景" styleClass="field-label"/>
+                                    <TextField fx:id="educationField"/>
+                                </VBox>
+                            </GridPane>
+                            <Label text="核心技能（逗号分隔）" styleClass="field-label"/>
+                            <TextField fx:id="skillsField" promptText="Java, Spring Boot, Redis"/>
+                            <Label text="画像摘要" styleClass="field-label"/>
+                            <TextArea fx:id="summaryArea" prefRowCount="4" wrapText="true"/>
+                        </VBox>
+                        <VBox spacing="12" styleClass="content-card">
+                            <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                            <Label text="2  经历与项目" styleClass="module-title"/>
+                            <Label text="项目经历（每行一项）" styleClass="field-label"/>
+                            <TextArea fx:id="projectsArea" prefRowCount="4" wrapText="true"/>
+                            <Label text="工作经历（每行一项）" styleClass="field-label"/>
+                            <TextArea fx:id="experienceArea" prefRowCount="4" wrapText="true"/>
+                        </VBox>
+                    </VBox>
+                    <VBox spacing="14" prefWidth="370" minWidth="330">
+                        <VBox spacing="10" styleClass="content-card">
+                            <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                            <Label text="优势亮点" styleClass="module-title"/>
+                            <TextArea fx:id="strengthsArea" prefRowCount="6" wrapText="true" promptText="每行一项"/>
+                            <Label text="潜在风险" styleClass="module-title"/>
+                            <TextArea fx:id="risksArea" prefRowCount="6" wrapText="true" promptText="每行一项"/>
+                        </VBox>
+                        <VBox spacing="10" VBox.vgrow="ALWAYS" styleClass="content-card">
+                            <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                            <Label text="简历解析原文" styleClass="module-title"/>
+                            <TextArea fx:id="rawTextArea" editable="false" wrapText="true" prefRowCount="14" VBox.vgrow="ALWAYS"/>
+                        </VBox>
+                    </VBox>
+                </HBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>
+

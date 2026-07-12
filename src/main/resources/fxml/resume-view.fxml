@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.inin.aiinterviewer.ui.controller.ResumeController"
+      spacing="18" styleClass="page-content">
+    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="5">
+            <Label text="简历中心" styleClass="page-title"/>
+            <Label text="上传并解析 PDF、DOCX、Markdown 或 TXT 简历" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+        <Button fx:id="uploadButton" text="上传简历" onAction="#uploadResume" styleClass="primary-button"/>
+    </HBox>
+    <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
+        <Label fx:id="summaryLabel" text="共 0 份" styleClass="summary-value"/>
+        <Label fx:id="taskLabel" text="文件和解析结果仅保存在本机" styleClass="secondary-text"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="deleteButton" text="删除所选" onAction="#deleteSelected" styleClass="danger-button"/>
+        <Button fx:id="viewButton" text="查看 / 编辑画像" onAction="#viewSelected" styleClass="primary-button"/>
+    </HBox>
+    <TableView fx:id="resumeTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+        <placeholder><Label text="暂无简历，点击右上角上传" styleClass="secondary-text"/></placeholder>
+        <columns>
+            <TableColumn fx:id="nameColumn" text="文件名" prefWidth="310"/>
+            <TableColumn fx:id="typeColumn" text="格式" prefWidth="90"/>
+            <TableColumn fx:id="sizeColumn" text="大小" prefWidth="110"/>
+            <TableColumn fx:id="statusColumn" text="解析状态" prefWidth="130"/>
+            <TableColumn fx:id="updateTimeColumn" text="更新时间" prefWidth="170"/>
+        </columns>
+    </TableView>
+</VBox>

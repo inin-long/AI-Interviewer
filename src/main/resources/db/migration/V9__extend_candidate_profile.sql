@@ -1,0 +1,4 @@
+ALTER TABLE candidate_profile ADD COLUMN source VARCHAR(32) NOT NULL DEFAULT 'LOCAL_DRAFT';
+ALTER TABLE candidate_profile ADD COLUMN status VARCHAR(32) NOT NULL DEFAULT 'DRAFT';
+ALTER TABLE candidate_profile ADD COLUMN error_message TEXT;
+

@@ -65,6 +65,10 @@ class JavaFxFxmlLoadTest {
     void loadsMainWindowForAuthenticatedUser() throws Exception {
         sessionState.logIn(new UserDto(1L, "test-user", "测试用户", LocalDateTime.now()));
         assertThat(loadOnFxThread("/fxml/main-window.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/resume-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/resume-detail-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/plan-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/plan-editor-view.fxml")).isNotNull();
     }
 
     private Parent loadOnFxThread(String resource) throws Exception {
@@ -77,4 +81,3 @@ class JavaFxFxmlLoadTest {
         return task.get(15, TimeUnit.SECONDS);
     }
 }
-

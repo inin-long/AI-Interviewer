@@ -37,41 +37,7 @@
         </HBox>
     </top>
     <center>
-        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
-            <content>
-                <VBox spacing="22" styleClass="page-content">
-                    <padding><Insets top="28" right="28" bottom="28" left="28"/></padding>
-                    <VBox spacing="8" styleClass="welcome-panel">
-                        <padding><Insets top="28" right="30" bottom="28" left="30"/></padding>
-                        <Label fx:id="greetingLabel" text="你好" styleClass="page-title"/>
-                        <Label text="准备开始一次专注、可恢复的 AI 模拟面试。" styleClass="hero-subtitle"/>
-                    </VBox>
-                    <HBox spacing="16">
-                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
-                            <Label text="工程状态" styleClass="summary-label"/>
-                            <Label text="基础骨架已就绪" styleClass="summary-value"/>
-                        </VBox>
-                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
-                            <Label text="本地数据" styleClass="summary-label"/>
-                            <Label text="SQLite 已连接" styleClass="summary-value"/>
-                        </VBox>
-                        <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="summary-card">
-                            <Label text="下一里程碑" styleClass="summary-label"/>
-                            <Label text="简历与面试方案" styleClass="summary-value"/>
-                        </VBox>
-                    </HBox>
-                    <VBox spacing="12" styleClass="content-card">
-                        <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
-                        <Label fx:id="contentDescriptionLabel" wrapText="true" styleClass="content-description"/>
-                        <Separator/>
-                        <Label text="数据目录" styleClass="field-label"/>
-                        <Label fx:id="dataPathLabel" wrapText="true" styleClass="monospace-text"/>
-                        <Label text="当前版本仅展示已经真实接通的功能，不填充演示数据。"
-                               styleClass="secondary-text" wrapText="true"/>
-                    </VBox>
-                </VBox>
-            </content>
-        </ScrollPane>
+        <StackPane fx:id="contentHost" styleClass="content-host"/>
     </center>
 </BorderPane>
 
