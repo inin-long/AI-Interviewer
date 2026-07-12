@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.MarkdownView?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -20,13 +21,21 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="查看本次问答" onAction="#openTranscript" styleClass="secondary-button"/>
+            <Button text="复制 Markdown" onAction="#copyMarkdown" styleClass="secondary-button"/>
+            <Button text="导出 .md" onAction="#exportMarkdown" styleClass="primary-button"/>
         </HBox>
     </top>
     <center>
         <HBox spacing="20" styleClass="editor-page">
             <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
-            <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="content-card">
+            <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="content-card report-directory">
                 <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="报告目录" styleClass="module-title"/>
+                <Button text="报告首页" onAction="#scrollHome" maxWidth="Infinity" styleClass="report-directory-button"/>
+                <Button text="能力评分" onAction="#scrollScores" maxWidth="Infinity" styleClass="report-directory-button"/>
+                <Button text="综合评价" onAction="#scrollSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
+                <Button text="问答摘要" onAction="#scrollTranscriptSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
+                <Separator/>
                 <Label text="综合得分" styleClass="summary-label"/>
                 <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score"/>
                 <Separator/>
@@ -45,11 +54,8 @@
                     <Label fx:id="comprehensiveScoreLabel" text="0 分" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="summary-value"/>
                 </GridPane>
             </VBox>
-            <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
-                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                <Label text="Markdown 报告" styleClass="module-title"/>
-                <TextArea fx:id="reportArea" editable="false" wrapText="true"
-                          VBox.vgrow="ALWAYS" styleClass="monospace-text"/>
+            <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="content-card report-document">
+                <MarkdownView fx:id="reportView" VBox.vgrow="ALWAYS"/>
             </VBox>
         </HBox>
     </center>

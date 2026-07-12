@@ -24,6 +24,7 @@
         <langgraph4j.version>1.8.20</langgraph4j.version>
         <tika.version>3.2.3</tika.version>
         <lucene.version>10.3.2</lucene.version>
+        <commonmark.version>0.28.0</commonmark.version>
         <flyway.version>12.10.0</flyway.version>
         <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
         <maven-wrapper.version>3.3.4</maven-wrapper.version>
@@ -132,6 +133,16 @@
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
             <version>${lucene.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark</artifactId>
+            <version>${commonmark.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.commonmark</groupId>
+            <artifactId>commonmark-ext-gfm-tables</artifactId>
+            <version>${commonmark.version}</version>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>

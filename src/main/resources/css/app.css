@@ -382,6 +382,25 @@
     -fx-text-fill: -primary;
 }
 
+.report-directory-button {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-text-fill: -text-secondary;
+    -fx-padding: 9 10;
+}
+
+.report-directory-button:hover {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -primary;
+}
+
+.report-document { -fx-padding: 1; }
+
+.markdown-view,
+.markdown-view .web-view {
+    -fx-background-color: -surface;
+}
+
 .monospace-text {
     -fx-font-family: "Cascadia Mono", "Consolas", monospace;
     -fx-background-color: -surface-muted;

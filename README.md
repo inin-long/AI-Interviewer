@@ -54,8 +54,10 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - 首页后台任务状态摘要，展示等待、执行中、失败和最近一次任务
 - 设置页分类导航、AI 配置安全遮蔽与按需连接测试
 - 本地数据/配置目录入口，以及后台 Worker 和重试策略状态展示
+- 可复用 `MarkdownView` 正式报告阅读组件，支持 GFM 表格和文档目录定位
+- Markdown 报告复制、导出、原始问答联动，以及 HTML/危险 URL/远程图片防护
 
-后续按照 `docs/spec` 中的阶段顺序完善 Markdown 报告阅读组件和应用发布配置。
+后续按照 `docs/spec` 中的阶段顺序完善 Windows `jpackage` 应用发布配置。
 
 ## 本地配置
 
