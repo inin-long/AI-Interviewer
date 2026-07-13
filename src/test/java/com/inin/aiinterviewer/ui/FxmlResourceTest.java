@@ -14,6 +14,7 @@ class FxmlResourceTest {
     @ValueSource(strings = {
             "/fxml/login.fxml", "/fxml/register.fxml", "/fxml/main-window.fxml",
             "/fxml/dashboard-view.fxml", "/fxml/resume-view.fxml", "/fxml/resume-detail-view.fxml",
+            "/fxml/profile-view.fxml", "/fxml/task-view.fxml", "/fxml/task-detail-view.fxml",
             "/fxml/plan-view.fxml", "/fxml/plan-editor-view.fxml",
             "/fxml/interview-workspace-view.fxml", "/fxml/report-detail-view.fxml",
             "/fxml/knowledge-view.fxml", "/fxml/knowledge-detail-view.fxml",

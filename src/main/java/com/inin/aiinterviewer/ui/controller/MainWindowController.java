@@ -36,6 +36,7 @@ public class MainWindowController {
     @FXML private Button plansNavButton;
     @FXML private Button historyNavButton;
     @FXML private Button resumesNavButton;
+    @FXML private Button profilesNavButton;
     @FXML private Button knowledgeNavButton;
     @FXML private Button settingsNavButton;
 
@@ -63,6 +64,7 @@ public class MainWindowController {
     @FXML private void showPlans() { showSection(Route.PLAN); }
     @FXML private void showHistory() { showSection(Route.HISTORY); }
     @FXML private void showResumes() { showSection(Route.RESUME); }
+    @FXML private void showProfiles() { showSection(Route.PROFILE); }
     @FXML private void showKnowledge() { showSection(Route.KNOWLEDGE); }
     @FXML private void showSettings() { showSection(Route.SETTING); }
 
@@ -78,6 +80,7 @@ public class MainWindowController {
         plansNavButton.pseudoClassStateChanged(SELECTED, route == Route.PLAN);
         historyNavButton.pseudoClassStateChanged(SELECTED, route == Route.HISTORY);
         resumesNavButton.pseudoClassStateChanged(SELECTED, route == Route.RESUME);
+        profilesNavButton.pseudoClassStateChanged(SELECTED, route == Route.PROFILE);
         knowledgeNavButton.pseudoClassStateChanged(SELECTED, route == Route.KNOWLEDGE);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
     }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.BackgroundTaskController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回首页">
+                <tooltip><Tooltip text="返回首页"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label text="后台任务" styleClass="page-title"/>
+                <Label text="查看简历解析、画像生成、知识处理和报告生成状态" styleClass="secondary-text"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <VBox spacing="18" styleClass="page-content">
+            <padding><Insets top="22" right="28" bottom="28" left="28"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
+                <Label fx:id="summaryLabel" text="共 0 项" styleClass="summary-value"/>
+                <Label text="失败任务可进入详情后手动重新排队" styleClass="secondary-text"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="detailButton" text="查看详情" onAction="#viewSelected" styleClass="primary-button"/>
+            </HBox>
+            <TableView fx:id="taskTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+                <placeholder><Label text="暂无后台任务" styleClass="secondary-text"/></placeholder>
+                <columns>
+                    <TableColumn fx:id="typeColumn" text="任务类型" prefWidth="250"/>
+                    <TableColumn fx:id="statusColumn" text="状态" prefWidth="130"/>
+                    <TableColumn fx:id="attemptColumn" text="尝试次数" prefWidth="120"/>
+                    <TableColumn fx:id="createTimeColumn" text="创建时间" prefWidth="180"/>
+                    <TableColumn fx:id="updateTimeColumn" text="更新时间" prefWidth="180"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </center>
+</BorderPane>

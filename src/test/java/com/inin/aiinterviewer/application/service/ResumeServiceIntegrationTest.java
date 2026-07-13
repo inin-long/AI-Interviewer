@@ -31,6 +31,8 @@ class ResumeServiceIntegrationTest {
 
     @Autowired private UserService userService;
     @Autowired private ResumeService resumeService;
+    @Autowired private ResumeTaskService resumeTaskService;
+    @Autowired private BackgroundTaskService backgroundTaskService;
     @Autowired private ResumeMapper resumeMapper;
 
     @Test
@@ -54,5 +56,22 @@ class ResumeServiceIntegrationTest {
         resumeService.delete(owner.id(), uploaded.id());
         assertThat(resumeService.list(owner.id())).isEmpty();
     }
-}
 
+    @Test
+    void queuesResumeParsingAndCompletesThroughPersistentTaskHandler() throws Exception {
+        UserDto owner = userService.register("queued-resume-owner", "Queue Owner", "safe-password");
+        Path source = applicationHome.resolve("异步简历.txt");
+        Files.writeString(source, "候选人具备 Java、Spring Boot 与 Redis 项目经验。\n");
+
+        var queued = resumeTaskService.uploadAndEnqueue(owner.id(), source);
+        assertThat(queued.resume().status()).isEqualTo(ResumeStatus.UPLOADED);
+        assertThat(backgroundTaskService.executeNext("resume-test-worker")).isTrue();
+
+        assertThat(backgroundTaskService.require(owner.id(), queued.taskId()).getStatus().name())
+                .isEqualTo("SUCCESS");
+        assertThat(resumeService.getDetail(owner.id(), queued.resume().id()).resume().status())
+                .isEqualTo(ResumeStatus.COMPLETED);
+        assertThat(resumeService.getDetail(owner.id(), queued.resume().id()).parsedText())
+                .contains("Spring Boot", "Redis");
+    }
+}

@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
+import com.inin.aiinterviewer.application.dto.CandidateProfileListItemDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -14,12 +15,14 @@ import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import com.inin.aiinterviewer.infrastructure.database.mapper.CandidateProfileMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
+import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.List;
 
 @Service
 public class CandidateProfileService {
@@ -30,6 +33,7 @@ public class CandidateProfileService {
     private final ChatService chatService;
     private final LlmProperties llmProperties;
     private final ObjectMapper objectMapper;
+    private final StructuredAiResponseParser responseParser;
 
     public CandidateProfileService(
             CandidateProfileMapper profileMapper,
@@ -37,7 +41,8 @@ public class CandidateProfileService {
             LocalCandidateProfileExtractor localExtractor,
             ChatService chatService,
             LlmProperties llmProperties,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            StructuredAiResponseParser responseParser
     ) {
         this.profileMapper = profileMapper;
         this.resumeMapper = resumeMapper;
@@ -45,11 +50,19 @@ public class CandidateProfileService {
         this.chatService = chatService;
         this.llmProperties = llmProperties;
         this.objectMapper = objectMapper;
+        this.responseParser = responseParser;
     }
 
     @Transactional(readOnly = true)
     public Optional<CandidateProfileDto> find(long userId, long resumeId) {
         return profileMapper.findByResumeIdAndUserId(resumeId, userId).map(this::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CandidateProfileListItemDto> list(long userId) {
+        return profileMapper.findAllByUserId(userId).stream()
+                .map(this::toListItemDto)
+                .toList();
     }
 
     @Transactional
@@ -108,12 +121,7 @@ public class CandidateProfileService {
 
                 简历文本：
                 """ + resumeText.substring(0, Math.min(resumeText.length(), 30_000));
-        try {
-            String response = stripCodeFence(chatService.chat(prompt));
-            return objectMapper.readValue(response, CandidateProfileContent.class);
-        } catch (JsonProcessingException exception) {
-            throw new SystemException(ErrorCode.AI_CALL_FAILED, exception);
-        }
+        return responseParser.parse(chatService.chat(prompt), CandidateProfileContent.class);
     }
 
     private void save(
@@ -151,6 +159,14 @@ public class CandidateProfileService {
         }
     }
 
+    private CandidateProfileListItemDto toListItemDto(CandidateProfileEntity entity) {
+        CandidateProfileDto profile = toDto(entity);
+        CandidateProfileContent content = profile.content();
+        return new CandidateProfileListItemDto(profile.id(), profile.resumeId(), entity.getResumeName(),
+                content.fullName(), content.targetRole(), content.skills(), profile.source(),
+                profile.status(), profile.confirmed(), profile.updateTime());
+    }
+
     private String writeJson(CandidateProfileContent content) {
         try {
             return objectMapper.writeValueAsString(content);
@@ -159,16 +175,4 @@ public class CandidateProfileService {
         }
     }
 
-    private String stripCodeFence(String response) {
-        String value = response == null ? "" : response.strip();
-        if (value.startsWith("```")) {
-            int firstNewline = value.indexOf('\n');
-            int lastFence = value.lastIndexOf("```");
-            if (firstNewline >= 0 && lastFence > firstNewline) {
-                value = value.substring(firstNewline + 1, lastFence).strip();
-            }
-        }
-        return value;
-    }
 }
-

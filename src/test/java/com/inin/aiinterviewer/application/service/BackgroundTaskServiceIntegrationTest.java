@@ -2,6 +2,7 @@ package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.application.task.BackgroundTaskContext;
 import com.inin.aiinterviewer.application.task.BackgroundTaskHandler;
+import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Import(BackgroundTaskServiceIntegrationTest.TaskHandlerConfiguration.class)
@@ -97,6 +99,20 @@ class BackgroundTaskServiceIntegrationTest {
         assertThat(failed.getStatus()).isEqualTo(BackgroundTaskStatus.FAILED);
         assertThat(failed.getAttemptCount()).isEqualTo(3);
         assertThat(failed.getErrorMessage()).contains("planned failure");
+
+        assertThatThrownBy(() -> taskService.retryFailed(other.id(), failedTaskId))
+                .isInstanceOf(BusinessException.class);
+        var retried = taskService.retryFailed(owner.id(), failedTaskId);
+        assertThat(retried.status()).isEqualTo(BackgroundTaskStatus.PENDING);
+        assertThat(retried.attemptCount()).isZero();
+        assertThat(retried.errorMessage()).isNull();
+        assertThatThrownBy(() -> taskService.retryFailed(owner.id(), failedTaskId))
+                .isInstanceOf(BusinessException.class);
+
+        taskHandler.failNext(0);
+        assertThat(taskService.executeNext("manual-retry-worker")).isTrue();
+        assertThat(taskService.requireDto(owner.id(), failedTaskId).status())
+                .isEqualTo(BackgroundTaskStatus.SUCCESS);
     }
 
     @TestConfiguration(proxyBeanMethods = false)

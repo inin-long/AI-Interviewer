@@ -28,11 +28,17 @@ class CandidateProfileServiceIntegrationTest {
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
         registry.add("ai.interviewer.home", () -> applicationHome.toString());
+        registry.add("llm.api-key", () -> "");
+        registry.add("llm.chat-model", () -> "");
+        registry.add("llm.embedding-model", () -> "");
+        registry.add("task.enabled", () -> false);
     }
 
     @Autowired private UserService userService;
     @Autowired private ResumeService resumeService;
     @Autowired private CandidateProfileService profileService;
+    @Autowired private CandidateProfileTaskService profileTaskService;
+    @Autowired private BackgroundTaskService backgroundTaskService;
 
     @Test
     void createsClearlyMarkedLocalDraftThenAllowsManualConfirmation() throws Exception {
@@ -68,6 +74,31 @@ class CandidateProfileServiceIntegrationTest {
         var confirmed = profileService.confirm(owner.id(), resume.id());
         assertThat(confirmed.confirmed()).isTrue();
         assertThat(confirmed.status()).isEqualTo(ProfileStatus.CONFIRMED);
+        assertThat(profileService.list(owner.id())).singleElement().satisfies(item -> {
+            assertThat(item.resumeName()).isEqualTo("profile-resume.md");
+            assertThat(item.candidateName()).isEqualTo("张三");
+            assertThat(item.targetRole()).isEqualTo("Java 后端工程师");
+            assertThat(item.confirmed()).isTrue();
+        });
+        assertThat(profileService.list(other.id())).isEmpty();
+    }
+
+    @Test
+    void generatesProfileThroughRecoverableBackgroundTask() throws Exception {
+        UserDto owner = userService.register("queued-profile-owner", "Queue Owner", "safe-password");
+        Path source = applicationHome.resolve("queued-profile-resume.md");
+        Files.writeString(source, "3 年开发经验，熟悉 Java、Spring Boot、Redis 与 MySQL。\n");
+        var resume = resumeService.uploadAndParse(owner.id(), source);
+
+        long taskId = profileTaskService.enqueue(owner.id(), resume.id());
+        assertThat(backgroundTaskService.executeNext("profile-test-worker")).isTrue();
+
+        assertThat(backgroundTaskService.require(owner.id(), taskId).getStatus().name())
+                .isEqualTo("SUCCESS");
+        assertThat(profileService.find(owner.id(), resume.id()))
+                .get().satisfies(profile -> {
+                    assertThat(profile.source()).isEqualTo(ProfileSource.LOCAL_DRAFT);
+                    assertThat(profile.content().skills()).contains("Java", "Spring Boot", "Redis", "MySQL");
+                });
     }
 }
-

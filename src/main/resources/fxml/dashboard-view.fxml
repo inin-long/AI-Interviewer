@@ -45,6 +45,7 @@
                     <Label text="后台任务" styleClass="module-title"/>
                     <Region HBox.hgrow="ALWAYS"/>
                     <Button text="刷新状态" onAction="#refreshTasks" styleClass="text-button"/>
+                    <Button text="查看全部任务" onAction="#showAllTasks" styleClass="secondary-button"/>
                 </HBox>
                 <Label fx:id="taskSummaryLabel" text="等待 0 · 执行中 0 · 失败 0" styleClass="summary-value"/>
                 <Label fx:id="latestTaskLabel" text="暂无后台任务" wrapText="true" styleClass="secondary-text"/>

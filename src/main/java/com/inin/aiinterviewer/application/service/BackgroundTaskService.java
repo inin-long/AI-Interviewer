@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskFailedEvent;
+import com.inin.aiinterviewer.application.dto.BackgroundTaskDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.TaskException;
@@ -100,6 +101,24 @@ public class BackgroundTaskService {
         return mapper.findAll(userId);
     }
 
+    @Transactional(readOnly = true)
+    public BackgroundTaskDto requireDto(long userId, long taskId) {
+        return toDto(require(userId, taskId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<BackgroundTaskDto> listDtos(long userId) {
+        return mapper.findAll(userId).stream().map(this::toDto).toList();
+    }
+
+    @Transactional
+    public BackgroundTaskDto retryFailed(long userId, long taskId) {
+        if (mapper.retryFailed(taskId, userId) != 1) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        return requireDto(userId, taskId);
+    }
+
     private void handleFailure(BackgroundTaskEntity task, String workerId, Exception exception) {
         String message = safeMessage(exception);
         if (task.getAttemptCount() < properties.retryCount()) {
@@ -129,5 +148,12 @@ public class BackgroundTaskService {
         String message = cause.getMessage();
         if (message == null || message.isBlank()) message = exception.getClass().getSimpleName();
         return message.substring(0, Math.min(MAX_ERROR_LENGTH, message.length()));
+    }
+
+    private BackgroundTaskDto toDto(BackgroundTaskEntity task) {
+        return new BackgroundTaskDto(task.getId(), task.getTaskType(), task.getStatus(),
+                task.getProgress(), task.getAttemptCount(), task.getErrorMessage(),
+                task.getAvailableTime(), task.getStartedTime(), task.getFinishedTime(),
+                task.getCreateTime(), task.getUpdateTime());
     }
 }

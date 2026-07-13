@@ -76,6 +76,15 @@ public interface BackgroundTaskMapper {
             """)
     int recoverInterrupted();
 
+    @Update("""
+            UPDATE task SET status = 'PENDING', progress = 0, attempt_count = 0,
+                   worker_id = NULL, error_message = NULL, started_time = NULL,
+                   finished_time = NULL, available_time = CURRENT_TIMESTAMP,
+                   update_time = CURRENT_TIMESTAMP
+             WHERE id = #{id} AND user_id = #{userId} AND status = 'FAILED' AND deleted = 0
+            """)
+    int retryFailed(long id, long userId);
+
     @Select("""
             SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
                    error_message, worker_id, available_time, started_time, finished_time,

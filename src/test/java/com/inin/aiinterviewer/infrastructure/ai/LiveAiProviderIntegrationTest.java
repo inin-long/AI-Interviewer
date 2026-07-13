@@ -6,6 +6,12 @@ import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.application.service.UserService;
+import com.inin.aiinterviewer.application.service.ResumeService;
+import com.inin.aiinterviewer.application.service.CandidateProfileService;
+import com.inin.aiinterviewer.application.service.CandidateProfileTaskService;
+import com.inin.aiinterviewer.application.service.BackgroundTaskService;
+import com.inin.aiinterviewer.domain.enums.ProfileSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,6 +21,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +43,14 @@ class LiveAiProviderIntegrationTest {
     @Autowired private ChatService chatService;
     @Autowired private EmbeddingService embeddingService;
     @Autowired private InterviewGraph interviewGraph;
+    @Autowired private UserService userService;
+    @Autowired private ResumeService resumeService;
+    @Autowired private CandidateProfileService profileService;
+    @Autowired private CandidateProfileTaskService profileTaskService;
+    @Autowired private BackgroundTaskService backgroundTaskService;
 
     @Test
-    void validatesSynchronousStreamingAndEmbeddingCalls() {
+    void validatesSynchronousStreamingEmbeddingAgentAndProfileCalls() throws Exception {
         String response = chatService.chat("只回复四个字：连接成功");
         assertThat(response).isNotBlank();
 
@@ -66,5 +78,23 @@ class LiveAiProviderIntegrationTest {
                                 LocalDateTime.now())), "", ""));
         assertThat(turn.analysis().correctness()).isBetween(0, 100);
         assertThat(turn.questionPrompt()).isNotBlank();
+
+        var user = userService.register("live-profile-user", "Live Profile", "safe-password");
+        Path resumeFile = applicationHome.resolve("live-profile-resume.md");
+        Files.writeString(resumeFile, """
+                # 测试候选人
+                4 年 Java 后端开发经验，熟悉 Spring Boot、Redis、MySQL 和 Docker。
+                负责过订单系统性能优化与稳定性建设，目标岗位为 Java 后端工程师。
+                """);
+        var resume = resumeService.uploadAndParse(user.id(), resumeFile);
+        long taskId = profileTaskService.enqueue(user.id(), resume.id());
+        assertThat(backgroundTaskService.executeNext("live-profile-worker")).isTrue();
+        assertThat(backgroundTaskService.require(user.id(), taskId).getStatus().name()).isEqualTo("SUCCESS");
+        assertThat(profileService.find(user.id(), resume.id()))
+                .get().satisfies(profile -> {
+                    assertThat(profile.source()).isEqualTo(ProfileSource.AI);
+                    assertThat(profile.content().skills()).isNotEmpty();
+                    assertThat(profile.content().summary()).isNotBlank();
+                });
     }
 }

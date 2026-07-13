@@ -75,6 +75,9 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/main-window.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/resume-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/resume-detail-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/profile-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/task-view.fxml")).isNotNull();
+        assertThat(loadOnFxThread("/fxml/task-detail-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/plan-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/plan-editor-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/interview-workspace-view.fxml")).isNotNull();
@@ -120,6 +123,7 @@ class JavaFxFxmlLoadTest {
             root.layout();
             Button dashboard = (Button) root.lookup("#dashboardNavButton");
             Button plans = (Button) root.lookup("#plansNavButton");
+            Button profiles = (Button) root.lookup("#profilesNavButton");
             Button settings = (Button) root.lookup("#settingsNavButton");
             PseudoClass selected = PseudoClass.getPseudoClass("selected");
             boolean initialSelection = dashboard.getPseudoClassStates().contains(selected);
@@ -130,12 +134,16 @@ class JavaFxFxmlLoadTest {
                     && Math.abs(root.getLeft().getBoundsInParent().getHeight() - root.getHeight()) < 0.5;
             boolean topbarInsideContent = root.getCenter() instanceof BorderPane content
                     && content.getTop() != null;
+            profiles.fire();
+            boolean profilesLoaded = profiles.getPseudoClassStates().contains(selected)
+                    && !plans.getPseudoClassStates().contains(selected)
+                    && root.lookup("#profileTable") != null;
             settings.fire();
             boolean settingsLoaded = settings.getPseudoClassStates().contains(selected)
                     && !plans.getPseudoClassStates().contains(selected)
                     && root.lookup("#generalNavButton") != null;
             return new boolean[]{initialSelection, switchedSelection, fullHeight,
-                    topbarInsideContent, settingsLoaded};
+                    topbarInsideContent, profilesLoaded, settingsLoaded};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);

@@ -6,17 +6,34 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface CandidateProfileMapper {
 
     @Select("""
-            SELECT id, resume_id, user_id, content_json, source, status, error_message,
-                   confirmed, create_time, update_time, deleted
-            FROM candidate_profile
-            WHERE resume_id = #{resumeId} AND user_id = #{userId} AND deleted = 0
+            SELECT profile.id, profile.resume_id, profile.user_id, profile.content_json,
+                   profile.source, profile.status, profile.error_message, profile.confirmed,
+                   profile.create_time, profile.update_time, profile.deleted,
+                   resume.original_name AS resume_name
+            FROM candidate_profile profile
+            JOIN resume ON resume.id = profile.resume_id AND resume.user_id = profile.user_id
+            WHERE profile.resume_id = #{resumeId} AND profile.user_id = #{userId}
+              AND profile.deleted = 0 AND resume.deleted = 0
             LIMIT 1
             """)
     Optional<CandidateProfileEntity> findByResumeIdAndUserId(long resumeId, long userId);
+
+    @Select("""
+            SELECT profile.id, profile.resume_id, profile.user_id, profile.content_json,
+                   profile.source, profile.status, profile.error_message, profile.confirmed,
+                   profile.create_time, profile.update_time, profile.deleted,
+                   resume.original_name AS resume_name
+            FROM candidate_profile profile
+            JOIN resume ON resume.id = profile.resume_id AND resume.user_id = profile.user_id
+            WHERE profile.user_id = #{userId} AND profile.deleted = 0 AND resume.deleted = 0
+            ORDER BY profile.update_time DESC, profile.id DESC
+            """)
+    List<CandidateProfileEntity> findAllByUserId(long userId);
 
     @Insert("""
             INSERT INTO candidate_profile(resume_id, user_id, content_json, source, status,
@@ -41,4 +58,3 @@ public interface CandidateProfileMapper {
             """)
     int confirm(long resumeId, long userId);
 }
-

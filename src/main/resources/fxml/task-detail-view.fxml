@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.BackgroundTaskDetailController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回任务列表">
+                <tooltip><Tooltip text="返回任务列表"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label text="任务详情" styleClass="page-title"/>
+                <HBox spacing="10">
+                    <Label fx:id="taskIdLabel" text="#—" styleClass="secondary-text"/>
+                    <Label fx:id="taskStatusLabel" text="状态" styleClass="status-tag"/>
+                </HBox>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+            <Button fx:id="retryButton" text="重新排队" onAction="#retry" styleClass="primary-button" disable="true"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
+            <content>
+                <VBox spacing="18" styleClass="editor-page">
+                    <padding><Insets top="22" right="28" bottom="28" left="28"/></padding>
+                    <VBox spacing="16" styleClass="content-card">
+                        <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+                        <Label text="执行信息" styleClass="module-title"/>
+                        <GridPane hgap="24" vgap="16">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                            </columnConstraints>
+                            <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                <Label text="任务类型" styleClass="summary-label"/>
+                                <Label fx:id="taskTypeLabel" text="—" styleClass="summary-value"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                <Label text="执行进度" styleClass="summary-label"/>
+                                <Label fx:id="progressLabel" text="0%" styleClass="summary-value"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                <Label text="尝试次数" styleClass="summary-label"/>
+                                <Label fx:id="attemptLabel" text="0 次"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                <Label text="下次可执行时间" styleClass="summary-label"/>
+                                <Label fx:id="availableTimeLabel" text="—"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                                <Label text="创建时间" styleClass="summary-label"/>
+                                <Label fx:id="createTimeLabel" text="—"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                <Label text="开始时间" styleClass="summary-label"/>
+                                <Label fx:id="startedTimeLabel" text="—"/>
+                            </VBox>
+                            <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="3">
+                                <Label text="完成时间" styleClass="summary-label"/>
+                                <Label fx:id="finishedTimeLabel" text="—"/>
+                            </VBox>
+                        </GridPane>
+                    </VBox>
+                    <VBox spacing="12" styleClass="content-card">
+                        <padding><Insets top="24" right="24" bottom="24" left="24"/></padding>
+                        <Label text="错误信息" styleClass="module-title"/>
+                        <Label text="任务失败时会保留最后一次错误，便于检查后重新执行。" styleClass="secondary-text"/>
+                        <TextArea fx:id="errorArea" editable="false" wrapText="true" prefRowCount="8"/>
+                    </VBox>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>

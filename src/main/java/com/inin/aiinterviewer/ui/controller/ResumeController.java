@@ -3,12 +3,18 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.ResumeDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.ResumeService;
+import com.inin.aiinterviewer.application.service.ResumeTaskService;
+import com.inin.aiinterviewer.application.service.BackgroundTaskService;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.concurrent.Task;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -31,6 +37,8 @@ public class ResumeController {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final ResumeService resumeService;
+    private final ResumeTaskService resumeTaskService;
+    private final BackgroundTaskService backgroundTaskService;
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
     private final ContentNavigator contentNavigator;
@@ -47,15 +55,20 @@ public class ResumeController {
     @FXML private Button uploadButton;
     @FXML private Button deleteButton;
     @FXML private Button viewButton;
+    private Timeline statusWatcher;
 
     public ResumeController(
             ResumeService resumeService,
+            ResumeTaskService resumeTaskService,
+            BackgroundTaskService backgroundTaskService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
             GlobalExceptionHandler exceptionHandler
     ) {
         this.resumeService = resumeService;
+        this.resumeTaskService = resumeTaskService;
+        this.backgroundTaskService = backgroundTaskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -98,21 +111,20 @@ public class ResumeController {
         }
 
         long userId = sessionState.requireCurrentUser().id();
-        Task<ResumeDto> uploadTask = new Task<>() {
+        Task<ResumeTaskService.QueuedResume> uploadTask = new Task<>() {
             @Override
-            protected ResumeDto call() {
-                return resumeService.uploadAndParse(userId, selected.toPath());
+            protected ResumeTaskService.QueuedResume call() {
+                return resumeTaskService.uploadAndEnqueue(userId, selected.toPath());
             }
         };
         uploadButton.setDisable(true);
-        taskLabel.setText("正在保存并解析 “" + selected.getName() + "”…");
+        taskLabel.setText("正在保存 “" + selected.getName() + "” 并创建后台任务…");
         uploadTask.setOnSucceeded(event -> {
             uploadButton.setDisable(false);
-            ResumeDto resume = uploadTask.getValue();
-            taskLabel.setText(resume.status() == ResumeStatus.COMPLETED
-                    ? "解析完成：" + resume.originalName()
-                    : "文件已保存，但解析失败；可在后续任务中心重试。");
+            var queued = uploadTask.getValue();
+            taskLabel.setText("已加入后台解析队列：" + queued.resume().originalName());
             refresh();
+            watchStatus(queued.resume().id(), queued.taskId(), queued.resume().originalName());
         });
         uploadTask.setOnFailed(event -> {
             uploadButton.setDisable(false);
@@ -122,6 +134,30 @@ public class ResumeController {
         Thread worker = new Thread(uploadTask, "resume-upload");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private void watchStatus(long resumeId, long taskId, String name) {
+        if (statusWatcher != null) statusWatcher.stop();
+        statusWatcher = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            var resumes = resumeService.list(sessionState.requireCurrentUser().id());
+            resumeTable.getItems().setAll(resumes);
+            long completed = resumes.stream().filter(item -> item.status() == ResumeStatus.COMPLETED).count();
+            summaryLabel.setText("共 " + resumes.size() + " 份 · 已解析 " + completed + " 份");
+            var backgroundTask = backgroundTaskService.requireDto(
+                    sessionState.requireCurrentUser().id(), taskId);
+            if (backgroundTask.status() == BackgroundTaskStatus.SUCCESS) {
+                taskLabel.setText("解析完成：" + name);
+                statusWatcher.stop();
+            } else if (backgroundTask.status() == BackgroundTaskStatus.FAILED) {
+                taskLabel.setText("解析失败：" + name + "；错误已保留，可重新上传或稍后重试。");
+                statusWatcher.stop();
+            } else if (backgroundTask.status() == BackgroundTaskStatus.PENDING
+                    && backgroundTask.attemptCount() > 0) {
+                taskLabel.setText("解析失败后等待第 " + (backgroundTask.attemptCount() + 1) + " 次重试：" + name);
+            }
+        }));
+        statusWatcher.setCycleCount(60);
+        statusWatcher.play();
     }
 
     @FXML

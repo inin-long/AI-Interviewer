@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.inin.aiinterviewer.ui.controller.ProfileController"
+      spacing="18" styleClass="page-content">
+    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="5">
+            <Label text="候选人画像" styleClass="page-title"/>
+            <Label text="集中查看 AI 生成或人工维护的候选人画像" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+    </HBox>
+    <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
+        <Label fx:id="summaryLabel" text="共 0 份画像" styleClass="summary-value"/>
+        <Label text="画像修改和确认在独立子页面中完成" styleClass="secondary-text"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="primary-button"/>
+    </HBox>
+    <TableView fx:id="profileTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+        <placeholder><Label text="暂无候选人画像，请先在简历中心生成画像" styleClass="secondary-text"/></placeholder>
+        <columns>
+            <TableColumn fx:id="resumeColumn" text="关联简历" prefWidth="190"/>
+            <TableColumn fx:id="nameColumn" text="候选人" prefWidth="120"/>
+            <TableColumn fx:id="roleColumn" text="目标岗位" prefWidth="150"/>
+            <TableColumn fx:id="skillsColumn" text="核心技能" prefWidth="280"/>
+            <TableColumn fx:id="sourceColumn" text="来源" prefWidth="100"/>
+            <TableColumn fx:id="statusColumn" text="状态" prefWidth="90"/>
+            <TableColumn fx:id="updateTimeColumn" text="更新时间" prefWidth="160"/>
+        </columns>
+    </TableView>
+</VBox>

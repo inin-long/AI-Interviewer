@@ -151,6 +151,12 @@ try {
     & $jpackage @jpackageArguments
     if ($LASTEXITCODE -ne 0) { throw "jpackage failed with exit code $LASTEXITCODE" }
 
+    # jpackage marks Windows launcher binaries read-only. Clear that flag so a later
+    # `mvn clean` can remove target/ without requiring manual intervention.
+    Get-ChildItem -LiteralPath $imageOutput -Recurse -File -Force |
+        Where-Object { $_.IsReadOnly } |
+        ForEach-Object { $_.IsReadOnly = $false }
+
     if ($Type -eq 'portable') {
         $image = Join-Path $imageOutput 'AI Interviewer'
         $archive = Join-Path $OutputDirectory "AI-Interviewer-$appVersion-windows-x64.zip"

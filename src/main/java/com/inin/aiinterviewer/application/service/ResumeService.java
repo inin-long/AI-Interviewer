@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
 import com.inin.aiinterviewer.infrastructure.document.DocumentParser;
 import com.inin.aiinterviewer.infrastructure.document.ParsedDocument;
 import com.inin.aiinterviewer.infrastructure.file.FileStorageService;
+import com.inin.aiinterviewer.infrastructure.file.PathService;
 import com.inin.aiinterviewer.infrastructure.file.StoredFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,19 +27,32 @@ public class ResumeService {
 
     private final ResumeMapper resumeMapper;
     private final FileStorageService fileStorageService;
+    private final PathService pathService;
     private final DocumentParser documentParser;
 
     public ResumeService(
             ResumeMapper resumeMapper,
             FileStorageService fileStorageService,
+            PathService pathService,
             DocumentParser documentParser
     ) {
         this.resumeMapper = resumeMapper;
         this.fileStorageService = fileStorageService;
+        this.pathService = pathService;
         this.documentParser = documentParser;
     }
 
     public ResumeDto uploadAndParse(long userId, Path source) {
+        ResumeDto uploaded = upload(userId, source);
+        try {
+            processResume(userId, uploaded.id());
+        } catch (RuntimeException ignored) {
+            // Compatibility entry point returns the persisted FAILED state.
+        }
+        return requireResume(uploaded.id(), userId);
+    }
+
+    public ResumeDto upload(long userId, Path source) {
         StoredFile stored = fileStorageService.store(userId, StorageCategory.RESUMES, source);
         if (stored.size() > MAX_FILE_SIZE) {
             fileStorageService.delete(userId, StorageCategory.RESUMES, stored.storageName());
@@ -60,14 +74,22 @@ public class ResumeService {
             throw exception;
         }
 
-        try {
-            resumeMapper.markParsing(entity.getId(), userId);
-            ParsedDocument parsed = documentParser.parse(stored.path());
-            resumeMapper.markCompleted(entity.getId(), userId, parsed.content());
-        } catch (RuntimeException exception) {
-            resumeMapper.markFailed(entity.getId(), userId, safeError(exception));
-        }
         return requireResume(entity.getId(), userId);
+    }
+
+    public void processResume(long userId, long resumeId) {
+        ResumeEntity resume = resumeMapper.findByIdAndUserId(resumeId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        try {
+            resumeMapper.markParsing(resumeId, userId);
+            Path storedPath = pathService.resolveStoredPath(
+                    userId, StorageCategory.RESUMES, resume.getStorageName());
+            ParsedDocument parsed = documentParser.parse(storedPath);
+            resumeMapper.markCompleted(resumeId, userId, parsed.content());
+        } catch (RuntimeException exception) {
+            resumeMapper.markFailed(resumeId, userId, safeError(exception));
+            throw exception;
+        }
     }
 
     @Transactional(readOnly = true)

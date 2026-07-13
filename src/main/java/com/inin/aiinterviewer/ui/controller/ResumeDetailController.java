@@ -4,19 +4,25 @@ import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
 import com.inin.aiinterviewer.application.dto.ResumeDetailDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.CandidateProfileService;
+import com.inin.aiinterviewer.application.service.CandidateProfileTaskService;
+import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.application.service.ResumeService;
 import com.inin.aiinterviewer.domain.enums.ProfileSource;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
+import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
-import javafx.concurrent.Task;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.util.Duration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +35,8 @@ public class ResumeDetailController implements ContextAwareController<Long> {
 
     private final ResumeService resumeService;
     private final CandidateProfileService profileService;
+    private final CandidateProfileTaskService profileTaskService;
+    private final BackgroundTaskService backgroundTaskService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -54,10 +62,13 @@ public class ResumeDetailController implements ContextAwareController<Long> {
 
     private long resumeId;
     private CandidateProfileDto currentProfile;
+    private Timeline generationWatcher;
 
     public ResumeDetailController(
             ResumeService resumeService,
             CandidateProfileService profileService,
+            CandidateProfileTaskService profileTaskService,
+            BackgroundTaskService backgroundTaskService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -65,6 +76,8 @@ public class ResumeDetailController implements ContextAwareController<Long> {
     ) {
         this.resumeService = resumeService;
         this.profileService = profileService;
+        this.profileTaskService = profileTaskService;
+        this.backgroundTaskService = backgroundTaskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -83,26 +96,14 @@ public class ResumeDetailController implements ContextAwareController<Long> {
     @FXML
     private void generateProfile() {
         long userId = sessionState.requireCurrentUser().id();
-        Task<CandidateProfileDto> task = new Task<>() {
-            @Override protected CandidateProfileDto call() {
-                return profileService.generate(userId, resumeId);
-            }
-        };
-        generateButton.setDisable(true);
-        sourceNoticeLabel.setText("正在分析简历并生成画像…");
-        task.setOnSucceeded(event -> {
-            generateButton.setDisable(false);
-            currentProfile = task.getValue();
-            populate(currentProfile);
-        });
-        task.setOnFailed(event -> {
-            generateButton.setDisable(false);
-            sourceNoticeLabel.setText("画像生成失败");
-            viewManager.showError(exceptionHandler.toUserMessage(task.getException()));
-        });
-        Thread worker = new Thread(task, "candidate-profile-generation");
-        worker.setDaemon(true);
-        worker.start();
+        try {
+            long taskId = profileTaskService.enqueue(userId, resumeId);
+            generateButton.setDisable(true);
+            sourceNoticeLabel.setText("画像生成已进入后台任务队列，可安全等待或离开页面。 ");
+            watchGeneration(taskId);
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     @FXML
@@ -137,14 +138,49 @@ public class ResumeDetailController implements ContextAwareController<Long> {
         resumeNameLabel.setText(detail.resume().originalName());
         resumeStatusLabel.setText(detail.resume().status().name());
         rawTextArea.setText(detail.parsedText() == null ? "" : detail.parsedText());
+        boolean parsed = detail.resume().status() == ResumeStatus.COMPLETED;
+        generateButton.setDisable(!parsed);
         currentProfile = profileService.find(userId, resumeId).orElse(null);
         if (currentProfile == null) {
             profileStatusLabel.setText("尚未生成");
-            sourceNoticeLabel.setText("未配置 AI 时将生成明确标记的本地草稿，需人工确认。 ");
+            sourceNoticeLabel.setText(parsed
+                    ? "点击生成画像；未配置 AI 时将生成明确标记的本地草稿，需人工确认。 "
+                    : "简历仍在后台解析，完成后才能生成候选人画像。 ");
             confirmButton.setDisable(true);
         } else {
             populate(currentProfile);
         }
+    }
+
+    private void watchGeneration(long taskId) {
+        if (generationWatcher != null) generationWatcher.stop();
+        generationWatcher = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            var task = backgroundTaskService.requireDto(
+                    sessionState.requireCurrentUser().id(), taskId);
+            if (task.status() == BackgroundTaskStatus.SUCCESS) {
+                generationWatcher.stop();
+                generateButton.setDisable(false);
+                currentProfile = profileService.find(
+                        sessionState.requireCurrentUser().id(), resumeId).orElse(null);
+                if (currentProfile != null) populate(currentProfile);
+            } else if (task.status() == BackgroundTaskStatus.FAILED) {
+                generationWatcher.stop();
+                generateButton.setDisable(false);
+                profileStatusLabel.setText("生成失败");
+                sourceNoticeLabel.setText("画像生成失败：" + safeError(task.errorMessage()) + "。可点击重新分析。 ");
+            } else if (task.status() == BackgroundTaskStatus.PENDING && task.attemptCount() > 0) {
+                sourceNoticeLabel.setText("画像生成失败后等待第 " + (task.attemptCount() + 1) + " 次重试…");
+            } else {
+                sourceNoticeLabel.setText("正在后台分析简历并生成结构化画像…");
+            }
+        }));
+        generationWatcher.setCycleCount(120);
+        generationWatcher.play();
+    }
+
+    private String safeError(String value) {
+        if (value == null || value.isBlank()) return "未知错误";
+        return value.length() <= 160 ? value : value.substring(0, 160) + "…";
     }
 
     private void populate(CandidateProfileDto profile) {

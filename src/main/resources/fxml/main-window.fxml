@@ -20,6 +20,7 @@
             <Button fx:id="plansNavButton" text="面试方案" onAction="#showPlans" maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="historyNavButton" text="面试记录" onAction="#showHistory" maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="resumesNavButton" text="简历" onAction="#showResumes" maxWidth="Infinity" styleClass="nav-button"/>
+            <Button fx:id="profilesNavButton" text="候选人画像" onAction="#showProfiles" maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="knowledgeNavButton" text="知识库" onAction="#showKnowledge" maxWidth="Infinity" styleClass="nav-button"/>
             <Button fx:id="settingsNavButton" text="设置" onAction="#showSettings" maxWidth="Infinity" styleClass="nav-button"/>
             <Region VBox.vgrow="ALWAYS"/>

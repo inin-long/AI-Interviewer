@@ -6,7 +6,7 @@ public enum Route {
     DASHBOARD("/fxml/main-window.fxml", "/fxml/dashboard-view.fxml", "首页"),
     PLAN(null, "/fxml/plan-view.fxml", "面试方案"),
     RESUME(null, "/fxml/resume-view.fxml", "简历"),
-    PROFILE(null, null, "候选人画像"),
+    PROFILE(null, "/fxml/profile-view.fxml", "候选人画像"),
     INTERVIEW(null, null, "模拟面试"),
     KNOWLEDGE(null, "/fxml/knowledge-view.fxml", "知识库"),
     HISTORY(null, "/fxml/history-view.fxml", "面试记录"),

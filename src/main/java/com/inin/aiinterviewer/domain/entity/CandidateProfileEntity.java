@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class CandidateProfileEntity {
     private Long id;
     private Long resumeId;
+    private String resumeName;
     private Long userId;
     private String contentJson;
     private ProfileSource source;
@@ -22,6 +23,8 @@ public class CandidateProfileEntity {
     public void setId(Long id) { this.id = id; }
     public Long getResumeId() { return resumeId; }
     public void setResumeId(Long resumeId) { this.resumeId = resumeId; }
+    public String getResumeName() { return resumeName; }
+    public void setResumeName(String resumeName) { this.resumeName = resumeName; }
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
     public String getContentJson() { return contentJson; }
@@ -41,4 +44,3 @@ public class CandidateProfileEntity {
     public boolean isDeleted() { return deleted; }
     public void setDeleted(boolean deleted) { this.deleted = deleted; }
 }
-
