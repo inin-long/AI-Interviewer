@@ -17,7 +17,7 @@
         <Region HBox.hgrow="ALWAYS"/>
         <Label fx:id="summaryLabel" text="共 0 个可复用方案" styleClass="secondary-text"/>
         <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
-        <Button text="新建方案" onAction="#createPlan" styleClass="primary-button"/>
+        <Button fx:id="createPlanButton" text="新建方案" onAction="#createPlan" styleClass="primary-button"/>
     </HBox>
     <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
         <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>

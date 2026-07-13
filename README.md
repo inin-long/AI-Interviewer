@@ -68,6 +68,7 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - 本地数据/配置目录入口，以及后台 Worker 和重试策略状态展示
 - 可复用 `MarkdownView` 正式报告阅读组件，支持 GFM 表格和文档目录定位
 - Markdown 报告复制、导出、原始问答联动，以及 HTML/危险 URL/远程图片防护
+- TestFX 完整业务场景覆盖注册登录、配置式简历上传、方案创建、模拟面试和报告分析
 
 MVP 业务主流程已经贯通，当前进入 Windows 发布验收阶段。详细进度和不阻塞主线的局部优化清单见
 [`STATUS.md`](STATUS.md)。
@@ -90,6 +91,16 @@ $env:AI_LLM_API_KEY='...'
 
 真实 Provider 集成测试默认跳过。仅在本机临时设置完整的 `AI_LLM_*` 配置和
 `AI_LLM_LIVE_TEST=true` 时才会执行，API Key 不应写入仓库。
+
+## 测试
+
+`mvnw verify` 会先运行单元与集成测试，再在独立 JVM 中运行 Windows TestFX 业务流程测试。
+TestFX 使用临时数据目录、`fixtures/full-stack-engineer-resume.md` 简历和确定性 AI，不访问真实 Provider。
+需要单独运行主流程时使用：
+
+```powershell
+.\mvnw.cmd "-Dit.test=CompleteBusinessFlowE2ETest" failsafe:integration-test failsafe:verify
+```
 
 ## Windows 发布
 

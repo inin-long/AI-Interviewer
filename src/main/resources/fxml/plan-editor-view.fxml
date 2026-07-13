@@ -21,7 +21,7 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="取消" onAction="#cancel" styleClass="secondary-button"/>
-            <Button text="保存方案" onAction="#savePlan" defaultButton="true" styleClass="primary-button"/>
+            <Button fx:id="savePlanButton" text="保存方案" onAction="#savePlan" defaultButton="true" styleClass="primary-button"/>
         </HBox>
     </top>
     <center>

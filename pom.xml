@@ -25,6 +25,7 @@
         <tika.version>3.2.3</tika.version>
         <lucene.version>10.3.2</lucene.version>
         <commonmark.version>0.28.0</commonmark.version>
+        <testfx.version>4.0.18</testfx.version>
         <flyway.version>12.10.0</flyway.version>
         <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
         <maven-wrapper.version>3.3.4</maven-wrapper.version>
@@ -159,6 +160,18 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-core</artifactId>
+            <version>${testfx.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit5</artifactId>
+            <version>${testfx.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -169,6 +182,39 @@
                 <configuration>
                     <release>${java.version}</release>
                     <parameters>true</parameters>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>**/*E2ETest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>**/*E2ETest.java</include>
+                    </includes>
+                    <reuseForks>false</reuseForks>
+                    <systemPropertyVariables>
+                        <testfx.robot>glass</testfx.robot>
+                        <testfx.headless>false</testfx.headless>
+                        <prism.order>sw</prism.order>
+                        <java.awt.headless>false</java.awt.headless>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>

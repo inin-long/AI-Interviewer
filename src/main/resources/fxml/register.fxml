@@ -54,7 +54,7 @@
                 <PasswordField fx:id="confirmPasswordField" promptText="请再次输入密码" onAction="#handleRegister"/>
                 <CheckBox fx:id="agreementCheckBox" text="我已阅读并同意本地使用说明"/>
                 <Label fx:id="errorLabel" wrapText="true" styleClass="form-error"/>
-                <Button text="创建账户" onAction="#handleRegister" defaultButton="true"
+                <Button fx:id="registerButton" text="创建账户" onAction="#handleRegister" defaultButton="true"
                         maxWidth="Infinity" styleClass="primary-button"/>
                 <Button text="返回登录" onAction="#showLogin"
                         maxWidth="Infinity" styleClass="secondary-button"/>
@@ -62,4 +62,3 @@
         </HBox>
     </center>
 </BorderPane>
-

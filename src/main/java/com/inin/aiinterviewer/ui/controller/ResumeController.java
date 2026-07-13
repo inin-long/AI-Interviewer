@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
+import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.concurrent.Task;
@@ -22,11 +23,10 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import javafx.stage.FileChooser;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -42,6 +42,7 @@ public class ResumeController {
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
     private final ContentNavigator contentNavigator;
+    private final FileDialogService fileDialogService;
     private final GlobalExceptionHandler exceptionHandler;
 
     @FXML private TableView<ResumeDto> resumeTable;
@@ -63,6 +64,7 @@ public class ResumeController {
             BackgroundTaskService backgroundTaskService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
+            FileDialogService fileDialogService,
             JavaFxViewManager viewManager,
             GlobalExceptionHandler exceptionHandler
     ) {
@@ -71,6 +73,7 @@ public class ResumeController {
         this.backgroundTaskService = backgroundTaskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
+        this.fileDialogService = fileDialogService;
         this.viewManager = viewManager;
         this.exceptionHandler = exceptionHandler;
     }
@@ -101,24 +104,18 @@ public class ResumeController {
 
     @FXML
     private void uploadResume() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("选择简历");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                "简历文件 (*.pdf, *.docx, *.md, *.txt)", "*.pdf", "*.docx", "*.md", "*.txt"));
-        File selected = chooser.showOpenDialog(uploadButton.getScene().getWindow());
-        if (selected == null) {
-            return;
-        }
+        Path selected = fileDialogService.chooseResume(uploadButton.getScene().getWindow()).orElse(null);
+        if (selected == null) return;
 
         long userId = sessionState.requireCurrentUser().id();
         Task<ResumeTaskService.QueuedResume> uploadTask = new Task<>() {
             @Override
             protected ResumeTaskService.QueuedResume call() {
-                return resumeTaskService.uploadAndEnqueue(userId, selected.toPath());
+                return resumeTaskService.uploadAndEnqueue(userId, selected);
             }
         };
         uploadButton.setDisable(true);
-        taskLabel.setText("正在保存 “" + selected.getName() + "” 并创建后台任务…");
+        taskLabel.setText("正在保存 “" + selected.getFileName() + "” 并创建后台任务…");
         uploadTask.setOnSucceeded(event -> {
             uploadButton.setDisable(false);
             var queued = uploadTask.getValue();

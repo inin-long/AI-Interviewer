@@ -60,10 +60,10 @@
                 <Label text="密码" styleClass="field-label"/>
                 <PasswordField fx:id="passwordField" promptText="请输入密码" onAction="#handleLogin"/>
                 <Label fx:id="errorLabel" wrapText="true" styleClass="form-error"/>
-                <Button text="登录" onAction="#handleLogin" defaultButton="true"
+                <Button fx:id="loginButton" text="登录" onAction="#handleLogin" defaultButton="true"
                         maxWidth="Infinity" styleClass="primary-button"/>
                 <Separator/>
-                <Button text="创建本地账户" onAction="#showRegister"
+                <Button fx:id="showRegisterButton" text="创建本地账户" onAction="#showRegister"
                         maxWidth="Infinity" styleClass="secondary-button"/>
                 <Label text="所有数据仅保存在本机；AI 调用需要单独配置服务。"
                        styleClass="fine-print" wrapText="true"/>
@@ -71,4 +71,3 @@
         </HBox>
     </center>
 </BorderPane>
-
