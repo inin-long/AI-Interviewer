@@ -94,13 +94,23 @@ $env:AI_LLM_API_KEY='...'
 
 ## 测试
 
-`mvnw verify` 会先运行单元与集成测试，再在独立 JVM 中运行 Windows TestFX 业务流程测试。
-TestFX 使用临时数据目录、`fixtures/full-stack-engineer-resume.md` 简历和确定性 AI，不访问真实 Provider。
-需要单独运行主流程时使用：
+`mvnw verify` 会先运行单元与集成测试，再在独立 JVM 中运行 Windows TestFX 本地业务流程测试。
+本地场景使用临时数据目录、全栈工程师简历、订单一致性知识文档以及确定性 AI/Embedding，覆盖画像、Lucene 检索、三题 Agent 流程、RAG 引用和报告，不访问真实 Provider。
+
+需要单独运行本地完整流程时使用：
 
 ```powershell
-.\mvnw.cmd "-Dit.test=CompleteBusinessFlowE2ETest" failsafe:integration-test failsafe:verify
+.\mvnw.cmd test-compile "-Dit.test=CompleteBusinessFlowE2ETest" failsafe:integration-test failsafe:verify
 ```
+
+真实 Provider 场景使用生产对话、Embedding 适配器和自动后台 Worker。只有显式开启才运行：
+
+```powershell
+$env:AI_LLM_LIVE_TEST='true'
+.\mvnw.cmd test-compile "-Dit.test=LiveProviderBusinessFlowE2ETest" failsafe:integration-test failsafe:verify
+```
+
+JaCoCo HTML 报告位于 `target/site/jacoco/index.html`。构建要求总体行覆盖率至少 70%、分支覆盖率至少 45%。
 
 ## Windows 发布
 

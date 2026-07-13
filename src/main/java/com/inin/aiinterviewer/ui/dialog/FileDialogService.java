@@ -12,4 +12,6 @@ import java.util.Optional;
 public interface FileDialogService {
 
     Optional<Path> chooseResume(Window owner);
+
+    Optional<Path> chooseKnowledgeDocument(Window owner);
 }

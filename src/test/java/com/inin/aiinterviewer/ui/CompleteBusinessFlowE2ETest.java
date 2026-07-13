@@ -1,16 +1,20 @@
 package com.inin.aiinterviewer.ui;
 
 import com.inin.aiinterviewer.application.service.BackgroundTaskService;
+import com.inin.aiinterviewer.application.service.CandidateProfileService;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
+import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.application.service.ResumeService;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
 import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
+import com.inin.aiinterviewer.infrastructure.ai.EmbeddingService;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
 import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -21,6 +25,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextInputControl;
 import javafx.stage.Stage;
@@ -49,7 +54,9 @@ import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,11 +71,16 @@ class CompleteBusinessFlowE2ETest {
     private static final String PASSWORD = "FullStack-2026";
     private static final String PLAN_NAME = "高级全栈工程师完整流程面试";
     private static final String RESUME_FILE = "full-stack-engineer-resume.md";
-    private static final String FIRST_QUESTION =
-            "请结合订单协同平台的经历，说明你如何用 Outbox 模式和幂等键保证订单与消息的一致性？";
-    private static final String ANSWER = "订单写入和 Outbox 事件写入同一个数据库事务，并以业务请求号建立唯一约束。"
-            + "事务提交后由发布器投递事件，消费者同样按事件编号幂等处理。发送失败会重试并告警，"
-            + "对长时间未投递的记录由补偿任务扫描，因此既避免双写不一致，也能处理消息重复。";
+    private static final String KNOWLEDGE_FILE = "outbox-and-cache-consistency.md";
+    private static final List<String> QUESTIONS = List.of(
+            "请简要介绍你在订单协同平台中承担的全栈职责，以及最有挑战的一项技术决策。",
+            "结合知识资料说明，订单写入成功但消息发送失败时，Outbox、幂等键和补偿任务如何协作？",
+            "如果 Redis 缓存删除失败且热点请求持续回源，你会怎样控制脏数据窗口和缓存重建并发？");
+    private static final List<String> ANSWERS = List.of(
+            "我负责订单聚合、库存预占接口和 Vue 3 管理端，最有挑战的是在不引入分布式事务的前提下保证订单与履约消息最终一致。",
+            "订单与 Outbox 事件在同一数据库事务写入，requestId 唯一约束保证请求幂等。发布器至少一次投递，消费者按事件号去重；失败通过退避重试、租约恢复和补偿扫描处理。",
+            "事务提交后发送失效事件，删除失败自动重试并执行延迟二次删除。热点键使用单飞合并回源、随机过期和限流，数据库始终是事实来源，并监控回源量与重建失败。"
+    );
     private static final String REPORT_SUMMARY =
             "候选人能够从事务边界、业务幂等、消息重试和补偿机制解释一致性方案，技术基础扎实，表达清晰。";
 
@@ -79,6 +91,8 @@ class CompleteBusinessFlowE2ETest {
     @Autowired private UserSessionState sessionState;
     @Autowired private BackgroundTaskService backgroundTaskService;
     @Autowired private ResumeService resumeService;
+    @Autowired private CandidateProfileService profileService;
+    @Autowired private KnowledgeDocumentService knowledgeService;
     @Autowired private InterviewPlanService planService;
     @Autowired private InterviewSessionService sessionService;
     @Autowired private InterviewResultService resultService;
@@ -90,8 +104,9 @@ class CompleteBusinessFlowE2ETest {
         registry.add("llm.base-url", () -> "http://127.0.0.1:1");
         registry.add("llm.api-key", () -> "testfx-local-key");
         registry.add("llm.chat-model", () -> "deterministic-test-model");
-        registry.add("llm.embedding-model", () -> "");
+        registry.add("llm.embedding-model", () -> "deterministic-test-embedding");
         registry.add("test.resume-path", () -> resumeFixture().toString());
+        registry.add("test.knowledge-path", () -> knowledgeFixture().toString());
     }
 
     @Start
@@ -104,11 +119,13 @@ class CompleteBusinessFlowE2ETest {
     }
 
     @Test
-    void completesRegistrationResumeInterviewAndReportWorkflow(FxRobot robot) throws Exception {
+    void completesLocalProfileRagInterviewAndReportWorkflow(FxRobot robot) throws Exception {
         registerAndLogin(robot);
         long userId = sessionState.requireCurrentUser().id();
 
         uploadAndParseResume(robot, userId);
+        generateAndConfirmProfile(robot, userId);
+        uploadIndexAndSearchKnowledge(robot, userId);
         createInterviewPlan(robot, userId);
         long sessionId = conductInterview(robot, userId);
         verifyReport(robot, userId, sessionId);
@@ -159,6 +176,63 @@ class CompleteBusinessFlowE2ETest {
                 .contains("高级全栈工程师", "Outbox 模式", "Vue 3");
     }
 
+    private void generateAndConfirmProfile(FxRobot robot, long userId) throws Exception {
+        long resumeId = resumeService.list(userId).getFirst().id();
+        TableView<?> resumes = table(robot, "#resumeTable");
+        robot.interact(() -> resumes.getSelectionModel().selectFirst());
+        fire(robot, "#viewButton");
+        waitForNode(robot, "#generateButton");
+        fire(robot, "#generateButton");
+
+        waitUntil(() -> backgroundTaskService.list(userId).stream().anyMatch(task ->
+                task.getTaskType() == BackgroundTaskType.PROFILE_GENERATE
+                        && task.getStatus() == BackgroundTaskStatus.PENDING));
+        assertThat(backgroundTaskService.executeNext("testfx-profile-worker")).isTrue();
+        waitUntil(() -> profileService.find(userId, resumeId).isPresent());
+
+        fire(robot, "#resumesNavButton");
+        waitForNode(robot, "#resumeTable");
+        TableView<?> refreshedResumes = table(robot, "#resumeTable");
+        robot.interact(() -> refreshedResumes.getSelectionModel().selectFirst());
+        fire(robot, "#viewButton");
+        waitForNode(robot, "#fullNameField");
+
+        assertThat(textInput(robot, "#fullNameField").getText()).isEqualTo("林泽宇");
+        assertThat(textInput(robot, "#targetRoleField").getText()).isEqualTo("高级全栈工程师");
+        assertThat(textInput(robot, "#skillsField").getText()).contains("Java 21", "Vue 3", "Redis");
+        fire(robot, "#confirmButton");
+        waitUntil(() -> profileService.find(userId, resumeId).orElseThrow().confirmed());
+        assertThat(label(robot, "#profileStatusLabel").getText()).isEqualTo("已确认");
+    }
+
+    private void uploadIndexAndSearchKnowledge(FxRobot robot, long userId) throws Exception {
+        fire(robot, "#knowledgeNavButton");
+        waitForNode(robot, "#documentTable");
+        fire(robot, "#uploadButton");
+
+        waitUntil(() -> backgroundTaskService.list(userId).stream().anyMatch(task ->
+                task.getTaskType() == BackgroundTaskType.DOCUMENT_PARSE
+                        && task.getStatus() == BackgroundTaskStatus.PENDING));
+        assertThat(backgroundTaskService.executeNext("testfx-knowledge-worker")).isTrue();
+        waitUntil(() -> !knowledgeService.list(userId).isEmpty()
+                && knowledgeService.list(userId).getFirst().status() == KnowledgeStatus.READY);
+
+        fire(robot, "#knowledgeNavButton");
+        waitForNode(robot, "#documentTable");
+        setText(robot, "#searchField", "Outbox 消息失败如何补偿并保证幂等");
+        fire(robot, "#searchButton");
+        waitUntil(() -> textInput(robot, "#searchResultArea").getText().contains("Outbox"));
+        assertThat(textInput(robot, "#searchResultArea").getText())
+                .contains("outbox-and-cache-consistency", "requestId", "补偿");
+
+        TableView<?> documents = table(robot, "#documentTable");
+        robot.interact(() -> documents.getSelectionModel().selectFirst());
+        fire(robot, "#viewButton");
+        waitForNode(robot, "#chunksArea");
+        assertThat(textInput(robot, "#chunksArea").getText())
+                .contains("事务消息与 Outbox", "Redis 缓存一致性", "片段");
+    }
+
     private void createInterviewPlan(FxRobot robot, long userId) throws Exception {
         fire(robot, "#plansNavButton");
         waitForNode(robot, "#planTable");
@@ -170,10 +244,12 @@ class CompleteBusinessFlowE2ETest {
         setText(robot, "#jobDescriptionArea",
                 "负责 Java/Spring Boot 服务、Vue 3 前端、数据一致性、可观测性及自动化交付。");
         setText(robot, "#durationField", "30");
-        setText(robot, "#questionCountField", "1");
+        setText(robot, "#questionCountField", Integer.toString(QUESTIONS.size()));
         setText(robot, "#focusField", "全栈架构、事务消息、缓存一致性、工程质量");
         selectCombo(robot, "#difficultyBox", InterviewDifficulty.SENIOR);
         selectFirst(robot, "#resumeBox");
+        selectFirst(robot, "#profileBox");
+        selectListFirst(robot, "#knowledgeList");
 
         fire(robot, "#savePlanButton");
         waitForNode(robot, "#planTable");
@@ -182,8 +258,10 @@ class CompleteBusinessFlowE2ETest {
         var plan = planService.list(userId).getFirst();
         assertThat(plan.name()).isEqualTo(PLAN_NAME);
         assertThat(plan.resumeId()).isEqualTo(resumeService.list(userId).getFirst().id());
-        assertThat(plan.questionCount()).isEqualTo(1);
+        assertThat(plan.questionCount()).isEqualTo(QUESTIONS.size());
         assertThat(plan.difficulty()).isEqualTo(InterviewDifficulty.SENIOR);
+        assertThat(plan.profileId()).isNotNull();
+        assertThat(plan.knowledgeDocumentIds()).containsExactly(knowledgeService.list(userId).getFirst().id());
     }
 
     private long conductInterview(FxRobot robot, long userId) throws Exception {
@@ -194,15 +272,19 @@ class CompleteBusinessFlowE2ETest {
 
         waitUntil(() -> !sessionService.list(userId).isEmpty());
         long sessionId = sessionService.list(userId).getFirst().id();
-        waitUntil(() -> sessionService.messages(userId, sessionId).size() == 1);
-        waitUntil(() -> !textInput(robot, "#answerArea").isDisabled());
-
-        assertThat(sessionService.messages(userId, sessionId).getFirst().content()).isEqualTo(FIRST_QUESTION);
-        assertThat(label(robot, "#progressLabel").getText()).isEqualTo("第 1 / 1 题");
-
-        setText(robot, "#answerArea", ANSWER);
-        fire(robot, "#submitButton");
-        waitUntil(() -> sessionService.messages(userId, sessionId).size() == 2);
+        for (int index = 0; index < QUESTIONS.size(); index++) {
+            int expectedMessagesBeforeAnswer = index * 2 + 1;
+            waitUntil(() -> sessionService.messages(userId, sessionId).size()
+                    >= expectedMessagesBeforeAnswer);
+            waitUntil(() -> !textInput(robot, "#answerArea").isDisabled());
+            var messages = sessionService.messages(userId, sessionId);
+            assertThat(messages.get(expectedMessagesBeforeAnswer - 1).content()).isEqualTo(QUESTIONS.get(index));
+            assertThat(label(robot, "#progressLabel").getText())
+                    .isEqualTo("第 " + (index + 1) + " / " + QUESTIONS.size() + " 题");
+            setText(robot, "#answerArea", ANSWERS.get(index));
+            fire(robot, "#submitButton");
+        }
+        waitUntil(() -> sessionService.messages(userId, sessionId).size() == QUESTIONS.size() * 2);
         waitUntil(() -> backgroundTaskService.list(userId).stream().anyMatch(task ->
                 task.getTaskType() == BackgroundTaskType.REPORT_GENERATE
                         && task.getStatus() == BackgroundTaskStatus.PENDING));
@@ -211,6 +293,12 @@ class CompleteBusinessFlowE2ETest {
         waitUntil(() -> resultService.find(userId, sessionId).isPresent());
         waitUntil(() -> button(robot, "#reportButton").isVisible());
         assertThat(sessionService.require(userId, sessionId).status()).isEqualTo(InterviewStatus.COMPLETED);
+        assertThat(sessionService.profileSnapshot(userId, sessionId)).isPresent();
+        assertThat(sessionService.knowledgeSnapshot(userId, sessionId)).hasSize(1);
+        assertThat(sessionService.messages(userId, sessionId).stream()
+                .filter(message -> !message.citations().isEmpty()).toList()).hasSize(2)
+                .allSatisfy(message -> assertThat(message.citations().getFirst().documentName())
+                        .isEqualTo("outbox-and-cache-consistency"));
         return sessionId;
     }
 
@@ -224,7 +312,8 @@ class CompleteBusinessFlowE2ETest {
 
         MarkdownView reportView = robot.lookup("#reportView").queryAs(MarkdownView.class);
         assertThat(reportView.getMarkdown())
-                .contains(PLAN_NAME, REPORT_SUMMARY, "综合得分：88 / 100", "问答摘要", ANSWER);
+                .contains(PLAN_NAME, REPORT_SUMMARY, "综合得分：88 / 100", "问答摘要",
+                        ANSWERS.getFirst(), ANSWERS.getLast(), "参考依据", "outbox-and-cache-consistency");
 
         var report = resultService.find(userId, sessionId).orElseThrow();
         assertThat(report.overallScore()).isEqualTo(88);
@@ -232,13 +321,20 @@ class CompleteBusinessFlowE2ETest {
     }
 
     private static Path resumeFixture() {
+        return fixture("/fixtures/full-stack-engineer-resume.md");
+    }
+
+    private static Path knowledgeFixture() {
+        return fixture("/fixtures/" + KNOWLEDGE_FILE);
+    }
+
+    private static Path fixture(String name) {
         try {
-            var resource = CompleteBusinessFlowE2ETest.class
-                    .getResource("/fixtures/full-stack-engineer-resume.md");
-            if (resource == null) throw new IllegalStateException("Missing full-stack resume fixture");
+            var resource = CompleteBusinessFlowE2ETest.class.getResource(name);
+            if (resource == null) throw new IllegalStateException("Missing TestFX fixture: " + name);
             return Path.of(resource.toURI()).toAbsolutePath().normalize();
         } catch (URISyntaxException exception) {
-            throw new IllegalStateException("Invalid full-stack resume fixture path", exception);
+            throw new IllegalStateException("Invalid TestFX fixture path: " + name, exception);
         }
     }
 
@@ -261,6 +357,11 @@ class CompleteBusinessFlowE2ETest {
     private void selectFirst(FxRobot robot, String selector) {
         ComboBox<?> comboBox = robot.lookup(selector).queryAs(ComboBox.class);
         robot.interact(() -> comboBox.getSelectionModel().selectFirst());
+    }
+
+    private void selectListFirst(FxRobot robot, String selector) {
+        ListView<?> listView = robot.lookup(selector).queryAs(ListView.class);
+        robot.interact(() -> listView.getSelectionModel().selectFirst());
     }
 
     private DialogPane waitForDialog(FxRobot robot) throws Exception {
@@ -299,17 +400,33 @@ class CompleteBusinessFlowE2ETest {
 
         @Bean
         @Primary
-        FileDialogService configuredFileDialogService(@Value("${test.resume-path}") String configuredPath) {
-            Path resume = Path.of(configuredPath).toAbsolutePath().normalize();
+        FileDialogService configuredFileDialogService(
+                @Value("${test.resume-path}") String resumePath,
+                @Value("${test.knowledge-path}") String knowledgePath
+        ) {
+            Path resume = Path.of(resumePath).toAbsolutePath().normalize();
+            Path knowledge = Path.of(knowledgePath).toAbsolutePath().normalize();
             if (!Files.isRegularFile(resume) || !Files.isReadable(resume)) {
                 throw new IllegalStateException("Configured TestFX resume is not readable: " + resume);
             }
-            return owner -> Optional.of(resume);
+            if (!Files.isRegularFile(knowledge) || !Files.isReadable(knowledge)) {
+                throw new IllegalStateException("Configured TestFX knowledge file is not readable: " + knowledge);
+            }
+            return new FileDialogService() {
+                @Override public Optional<Path> chooseResume(javafx.stage.Window owner) {
+                    return Optional.of(resume);
+                }
+
+                @Override public Optional<Path> chooseKnowledgeDocument(javafx.stage.Window owner) {
+                    return Optional.of(knowledge);
+                }
+            };
         }
 
         @Bean
         @Primary
         ChatService deterministicWorkflowChatService() {
+            AtomicInteger questionSequence = new AtomicInteger();
             return new ChatService() {
                 @Override
                 public String chat(String prompt) {
@@ -320,24 +437,58 @@ class CompleteBusinessFlowE2ETest {
                                 "comprehensiveScore":88,"summary":"%s"}
                                 """.formatted(REPORT_SUMMARY);
                     }
+                    if (prompt.contains("技术招聘分析助手")) {
+                        return """
+                                {"fullName":"林泽宇","targetRole":"高级全栈工程师",
+                                "yearsExperience":"7 年","education":"软件工程本科",
+                                "skills":["Java 21","Spring Boot","Vue 3","TypeScript","Redis","PostgreSQL"],
+                                "projects":["高并发订单协同平台","实时运营分析控制台"],
+                                "experience":["7 年企业级 Web 应用研发","带领 5 人小组交付核心业务"],
+                                "strengths":["全栈交付","数据一致性","可观测性"],
+                                "risks":["需要继续验证超大规模系统经验"],
+                                "summary":"具备端到端交付能力的高级全栈工程师"}
+                                """;
+                    }
                     if (prompt.contains("技术面试回答分析器")) {
                         return """
                                 {"correctness":90,"depth":88,"missingPoints":[],"feedback":"回答完整"}
                                 """;
                     }
                     if (prompt.contains("流程决策器")) {
-                        return """
-                                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续追问"}
-                                """;
+                        return prompt.contains("当前阶段：INTRODUCTION")
+                                ? """
+                                  {"action":"NEXT_STAGE","nextStage":"RESUME_REVIEW","reason":"进入简历深挖"}
+                                  """
+                                : """
+                                  {"action":"FOLLOW_UP","nextStage":null,"reason":"继续追问缓存恢复"}
+                                  """;
                     }
                     throw new IllegalArgumentException("Unexpected deterministic chat prompt: " + prompt);
                 }
 
                 @Override
                 public Flux<String> stream(String prompt) {
-                    return Flux.just(FIRST_QUESTION.substring(0, 34), FIRST_QUESTION.substring(34));
+                    int index = questionSequence.getAndIncrement();
+                    if (index >= QUESTIONS.size()) {
+                        return Flux.error(new IllegalStateException("Unexpected extra interview question"));
+                    }
+                    if (!prompt.contains("林泽宇") || !prompt.contains("高级全栈工程师")) {
+                        return Flux.error(new IllegalStateException("Confirmed profile was not added to prompt"));
+                    }
+                    if (index > 0 && (!prompt.contains("Outbox") || !prompt.contains("requestId"))) {
+                        return Flux.error(new IllegalStateException("RAG context was not added to follow-up prompt"));
+                    }
+                    String question = QUESTIONS.get(index);
+                    int split = question.length() / 2;
+                    return Flux.just(question.substring(0, split), question.substring(split));
                 }
             };
+        }
+
+        @Bean
+        @Primary
+        EmbeddingService deterministicWorkflowEmbeddingService() {
+            return text -> new float[]{1.0f, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f, 0.015625f, 0.0078125f};
         }
     }
 }

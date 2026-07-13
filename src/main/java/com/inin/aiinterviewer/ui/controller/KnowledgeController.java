@@ -6,16 +6,16 @@ import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentTaskService;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.stage.FileChooser;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
+import java.nio.file.Path;
 
 @Component
 @Scope("prototype")
@@ -25,6 +25,7 @@ public class KnowledgeController {
     private final KnowledgeDocumentTaskService knowledgeTaskService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
+    private final FileDialogService fileDialogService;
     private final JavaFxViewManager viewManager;
     private final GlobalExceptionHandler exceptionHandler;
 
@@ -46,6 +47,7 @@ public class KnowledgeController {
             KnowledgeDocumentTaskService knowledgeTaskService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
+            FileDialogService fileDialogService,
             JavaFxViewManager viewManager,
             GlobalExceptionHandler exceptionHandler
     ) {
@@ -53,6 +55,7 @@ public class KnowledgeController {
         this.knowledgeTaskService = knowledgeTaskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
+        this.fileDialogService = fileDialogService;
         this.viewManager = viewManager;
         this.exceptionHandler = exceptionHandler;
     }
@@ -74,15 +77,12 @@ public class KnowledgeController {
 
     @FXML
     private void upload() {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("上传知识文档");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
-                "知识文档", "*.pdf", "*.docx", "*.md", "*.txt"));
-        File file = chooser.showOpenDialog(documentTable.getScene().getWindow());
-        if (file == null) return;
+        Path selected = fileDialogService.chooseKnowledgeDocument(
+                documentTable.getScene().getWindow()).orElse(null);
+        if (selected == null) return;
         Task<KnowledgeDocumentTaskService.QueuedKnowledgeDocument> task = new Task<>() {
             @Override protected KnowledgeDocumentTaskService.QueuedKnowledgeDocument call() {
-                return knowledgeTaskService.uploadAndEnqueue(userId(), file.toPath(), "技术资料");
+                return knowledgeTaskService.uploadAndEnqueue(userId(), selected, "技术资料");
             }
         };
         uploadButton.setDisable(true);

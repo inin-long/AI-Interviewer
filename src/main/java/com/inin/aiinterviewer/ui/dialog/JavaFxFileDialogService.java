@@ -20,4 +20,14 @@ public class JavaFxFileDialogService implements FileDialogService {
         File selected = chooser.showOpenDialog(owner);
         return selected == null ? Optional.empty() : Optional.of(selected.toPath());
     }
+
+    @Override
+    public Optional<Path> chooseKnowledgeDocument(Window owner) {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("上传知识文档");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(
+                "知识文档 (*.pdf, *.docx, *.md, *.txt)", "*.pdf", "*.docx", "*.md", "*.txt"));
+        File selected = chooser.showOpenDialog(owner);
+        return selected == null ? Optional.empty() : Optional.of(selected.toPath());
+    }
 }

@@ -42,7 +42,7 @@
                 <Label text="语义检索验证" styleClass="module-title"/>
                 <HBox spacing="10">
                     <TextField fx:id="searchField" promptText="输入问题或技术关键词" HBox.hgrow="ALWAYS"/>
-                    <Button text="检索" onAction="#search" styleClass="primary-button"/>
+                    <Button fx:id="searchButton" text="检索" onAction="#search" styleClass="primary-button"/>
                 </HBox>
                 <TextArea fx:id="searchResultArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
                           promptText="检索结果将显示在这里"/>
