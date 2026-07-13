@@ -233,6 +233,38 @@ class InterviewAgentServiceIntegrationTest {
     }
 
     @Test
+    void recoversAnInterruptedReportTaskAfterApplicationRestart() {
+        var user = userService.register("report-recovery-owner", "Report Recovery", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "报告恢复验证", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 1, null, Map.of(), List.of("INTRODUCTION", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请说明你如何设计可恢复的后台任务。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        sessionService.appendUserAnswer(user.id(), session.id(), "任务状态持久化，并在启动时回收 RUNNING 状态。");
+        long taskId = reportTaskService.enqueue(user.id(), session.id());
+
+        var claimed = backgroundTaskService.claimNext("crashed-report-worker").orElseThrow();
+        assertThat(claimed.getId()).isEqualTo(taskId);
+        assertThat(backgroundTaskService.require(user.id(), taskId).getStatus())
+                .isEqualTo(BackgroundTaskStatus.RUNNING);
+
+        assertThat(backgroundTaskService.recoverInterruptedTasks()).isEqualTo(1);
+        assertThat(backgroundTaskService.require(user.id(), taskId).getStatus())
+                .isEqualTo(BackgroundTaskStatus.PENDING);
+        chatService.enqueueChat("""
+                {"overallScore":84,"technicalScore":86,"problemSolvingScore":85,
+                "projectScore":82,"systemDesignScore":88,"communicationScore":81,
+                "comprehensiveScore":83,"summary":"具备清晰的任务恢复设计。"}
+                """);
+        assertThat(backgroundTaskService.executeNext("recovered-report-worker")).isTrue();
+        assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
+        assertThat(reportTaskService.state(user.id(), session.id()).taskStatus())
+                .isEqualTo(BackgroundTaskStatus.SUCCESS);
+    }
+
+    @Test
     void preservesFinalAnswerRecordsFailureAndRetriesReportWithoutDuplicateMessage() {
         var user = userService.register("report-retry-owner", "Report Retry", "safe-password");
         var other = userService.register("report-retry-other", "Other", "safe-password");
