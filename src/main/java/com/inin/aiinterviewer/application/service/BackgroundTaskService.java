@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskFailedEvent;
+import com.inin.aiinterviewer.application.event.BackgroundTaskQueuedEvent;
+import com.inin.aiinterviewer.application.event.BackgroundTaskStartedEvent;
 import com.inin.aiinterviewer.application.dto.BackgroundTaskDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
@@ -19,6 +21,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.Optional;
@@ -53,6 +57,7 @@ public class BackgroundTaskService {
     public long enqueue(long userId, BackgroundTaskType type, Object payload) {
         BackgroundTaskEntity task = newTask(userId, type, payload, null);
         mapper.insert(task);
+        publishAfterCommit(new BackgroundTaskQueuedEvent(task.getId(), userId, type));
         return task.getId();
     }
 
@@ -60,7 +65,10 @@ public class BackgroundTaskService {
     public long enqueueUnique(long userId, BackgroundTaskType type, String deduplicationKey, Object payload) {
         String normalizedKey = normalizeDeduplicationKey(deduplicationKey);
         BackgroundTaskEntity task = newTask(userId, type, payload, normalizedKey);
-        if (mapper.insertUnique(task) == 1) return task.getId();
+        if (mapper.insertUnique(task) == 1) {
+            publishAfterCommit(new BackgroundTaskQueuedEvent(task.getId(), userId, type));
+            return task.getId();
+        }
         return mapper.findActiveByDeduplicationKey(userId, type, normalizedKey)
                 .map(BackgroundTaskEntity::getId)
                 .orElseThrow(() -> new TaskException(
@@ -70,7 +78,10 @@ public class BackgroundTaskService {
 
     public Optional<BackgroundTaskEntity> claimNext(String workerId) {
         if (workerId == null || workerId.isBlank()) throw new IllegalArgumentException("workerId is required");
-        return mapper.claimNext(workerId);
+        Optional<BackgroundTaskEntity> claimed = mapper.claimNext(workerId);
+        claimed.ifPresent(task -> publishAfterCommit(new BackgroundTaskStartedEvent(
+                task.getId(), task.getUserId(), task.getTaskType())));
+        return claimed;
     }
 
     public boolean executeNext(String workerId) {
@@ -134,13 +145,26 @@ public class BackgroundTaskService {
         if (mapper.retryFailed(taskId, userId) != 1) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
-        return requireDto(userId, taskId);
+        BackgroundTaskDto task = requireDto(userId, taskId);
+        publishAfterCommit(new BackgroundTaskQueuedEvent(task.id(), userId, task.type()));
+        return task;
+    }
+
+    @Transactional
+    public boolean retryFailedIfCurrent(long userId, long taskId) {
+        if (mapper.retryFailed(taskId, userId) != 1) return false;
+        BackgroundTaskEntity task = require(userId, taskId);
+        publishAfterCommit(new BackgroundTaskQueuedEvent(taskId, userId, task.getTaskType()));
+        return true;
     }
 
     private void handleFailure(BackgroundTaskEntity task, String workerId, Exception exception) {
         String message = safeMessage(exception);
         if (task.getAttemptCount() < properties.retryCount()) {
-            mapper.scheduleRetry(task.getId(), workerId, message, properties.retryDelay().toSeconds());
+            if (mapper.scheduleRetry(task.getId(), workerId, message, properties.retryDelay().toSeconds()) == 1) {
+                publishAfterCommit(new BackgroundTaskQueuedEvent(
+                        task.getId(), task.getUserId(), task.getTaskType()));
+            }
             log.warn("Background task {} failed on attempt {}/{} and will retry: {}",
                     task.getId(), task.getAttemptCount(), properties.retryCount(), message);
             return;
@@ -180,6 +204,19 @@ public class BackgroundTaskService {
             throw new IllegalArgumentException("deduplicationKey is too long");
         }
         return normalized;
+    }
+
+    private void publishAfterCommit(Object event) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            events.publishEvent(event);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                events.publishEvent(event);
+            }
+        });
     }
 
     private String safeMessage(Exception exception) {

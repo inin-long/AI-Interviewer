@@ -11,6 +11,7 @@ public enum Route {
     KNOWLEDGE(null, "/fxml/knowledge-view.fxml", "知识库"),
     HISTORY(null, "/fxml/history-view.fxml", "面试记录"),
     REPORT(null, null, "面试报告"),
+    TASK(null, "/fxml/task-view.fxml", "任务中心"),
     SETTING(null, "/fxml/settings-view.fxml", "设置");
 
     private final String fxmlPath;

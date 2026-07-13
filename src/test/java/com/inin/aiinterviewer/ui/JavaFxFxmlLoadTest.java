@@ -3,10 +3,13 @@ package com.inin.aiinterviewer.ui;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.UserDto;
+import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
+import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -16,8 +19,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ListView;
+import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.css.PseudoClass;
 import org.junit.jupiter.api.AfterAll;
@@ -38,6 +43,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -54,6 +60,9 @@ class JavaFxFxmlLoadTest {
 
     @Autowired
     private UserSessionState sessionState;
+
+    @Autowired
+    private TaskNotificationCenter taskNotificationCenter;
 
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
@@ -246,7 +255,10 @@ class JavaFxFxmlLoadTest {
             Button dashboard = (Button) root.lookup("#dashboardNavButton");
             Button plans = (Button) root.lookup("#plansNavButton");
             Button profiles = (Button) root.lookup("#profilesNavButton");
+            Button tasks = (Button) root.lookup("#tasksNavButton");
             Button settings = (Button) root.lookup("#settingsNavButton");
+            Button taskStatus = (Button) root.lookup("#taskStatusButton");
+            HBox activityReceipt = (HBox) root.lookup("#activityReceipt");
             PseudoClass selected = PseudoClass.getPseudoClass("selected");
             boolean initialSelection = dashboard.getPseudoClassStates().contains(selected);
             plans.fire();
@@ -260,15 +272,63 @@ class JavaFxFxmlLoadTest {
             boolean profilesLoaded = profiles.getPseudoClassStates().contains(selected)
                     && !plans.getPseudoClassStates().contains(selected)
                     && root.lookup("#profileTable") != null;
+            tasks.fire();
+            boolean tasksLoaded = tasks.getPseudoClassStates().contains(selected)
+                    && !profiles.getPseudoClassStates().contains(selected)
+                    && root.lookup("#taskTable") != null;
             settings.fire();
             boolean settingsLoaded = settings.getPseudoClassStates().contains(selected)
                     && !plans.getPseudoClassStates().contains(selected)
                     && root.lookup("#generalNavButton") != null;
+            boolean taskFeedbackReady = taskStatus != null
+                    && "后台任务".equals(taskStatus.getText())
+                    && activityReceipt != null
+                    && !activityReceipt.isVisible()
+                    && !activityReceipt.isManaged();
             return new boolean[]{initialSelection, switchedSelection, fullHeight,
-                    topbarInsideContent, profilesLoaded, settingsLoaded};
+                    topbarInsideContent, profilesLoaded, tasksLoaded, settingsLoaded, taskFeedbackReady};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void mainWindowShowsANonModalReceiptForCompletedBackgroundTasks() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "notification-test-user", "通知测试用户", LocalDateTime.now()));
+        }
+        long userId = sessionState.requireCurrentUser().id();
+        AtomicReference<BorderPane> rootReference = new AtomicReference<>();
+        FutureTask<Void> setup = new FutureTask<>(() -> {
+            BorderPane root = (BorderPane) load("/fxml/main-window.fxml");
+            Scene scene = new Scene(root, 1200, 800);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            rootReference.set(root);
+            return null;
+        });
+        Platform.runLater(setup);
+        setup.get(15, TimeUnit.SECONDS);
+
+        taskNotificationCenter.taskCompleted(new BackgroundTaskCompletedEvent(
+                99L, userId, BackgroundTaskType.REPORT_GENERATE));
+
+        FutureTask<boolean[]> assertion = new FutureTask<>(() -> {
+            BorderPane root = rootReference.get();
+            HBox receipt = (HBox) root.lookup("#activityReceipt");
+            Label title = (Label) root.lookup("#activityTitleLabel");
+            Label detail = (Label) root.lookup("#activityDetailLabel");
+            Button close = (Button) root.lookup(".activity-receipt-close");
+            boolean shown = receipt.isVisible() && receipt.isManaged()
+                    && "面试报告生成已完成".equals(title.getText())
+                    && detail.getText().contains("面试记录");
+            close.fire();
+            boolean dismissed = !receipt.isVisible() && !receipt.isManaged();
+            return new boolean[]{shown, dismissed};
+        });
+        Platform.runLater(assertion);
+        assertThat(assertion.get(15, TimeUnit.SECONDS)).containsOnly(true);
     }
 
     @Test

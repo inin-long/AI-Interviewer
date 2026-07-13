@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.application.dto.ReportGenerationTaskStateDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -40,12 +41,21 @@ public class ReportGenerationTaskService {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
 
+        var latest = taskService.findLatestByDeduplicationKey(
+                userId, BackgroundTaskType.REPORT_GENERATE, deduplicationKey(sessionId));
         Long taskId = transactionTemplate.execute(status -> {
-            long id = taskService.enqueueUnique(
-                    userId,
-                    BackgroundTaskType.REPORT_GENERATE,
-                    deduplicationKey(sessionId),
-                    new ReportGenerationTaskPayload(sessionId));
+            long id;
+            if (latest.isPresent()
+                    && latest.get().getStatus() == BackgroundTaskStatus.FAILED
+                    && taskService.retryFailedIfCurrent(userId, latest.get().getId())) {
+                id = latest.get().getId();
+            } else {
+                id = taskService.enqueueUnique(
+                        userId,
+                        BackgroundTaskType.REPORT_GENERATE,
+                        deduplicationKey(sessionId),
+                        new ReportGenerationTaskPayload(sessionId));
+            }
             resultService.beginGeneration(userId, sessionService.require(userId, sessionId));
             return id;
         });

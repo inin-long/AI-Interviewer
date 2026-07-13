@@ -5,13 +5,18 @@ import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
+import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.layout.BorderPane;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -23,11 +28,17 @@ import java.time.format.DateTimeFormatter;
 public class BackgroundTaskController {
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final PseudoClass PENDING = PseudoClass.getPseudoClass("task-pending");
+    private static final PseudoClass RUNNING = PseudoClass.getPseudoClass("task-running");
+    private static final PseudoClass SUCCESS = PseudoClass.getPseudoClass("task-success");
+    private static final PseudoClass FAILED = PseudoClass.getPseudoClass("task-failed");
 
     private final BackgroundTaskService taskService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
+    private final TaskNotificationCenter notificationCenter;
 
+    @FXML private BorderPane taskRoot;
     @FXML private TableView<BackgroundTaskDto> taskTable;
     @FXML private TableColumn<BackgroundTaskDto, String> typeColumn;
     @FXML private TableColumn<BackgroundTaskDto, String> statusColumn;
@@ -37,20 +48,25 @@ public class BackgroundTaskController {
     @FXML private Label summaryLabel;
     @FXML private Button detailButton;
 
+    private TaskNotificationCenter.Registration notificationRegistration;
+
     public BackgroundTaskController(
             BackgroundTaskService taskService,
             UserSessionState sessionState,
-            ContentNavigator contentNavigator
+            ContentNavigator contentNavigator,
+            TaskNotificationCenter notificationCenter
     ) {
         this.taskService = taskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
+        this.notificationCenter = notificationCenter;
     }
 
     @FXML
     private void initialize() {
         typeColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(typeText(cell.getValue().type())));
         statusColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(statusText(cell.getValue().status())));
+        statusColumn.setCellFactory(ignored -> statusCell());
         attemptColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().attemptCount() + " 次"));
         configureTimeColumn(createTimeColumn, BackgroundTaskDto::createTime);
         configureTimeColumn(updateTimeColumn, BackgroundTaskDto::updateTime);
@@ -59,6 +75,10 @@ public class BackgroundTaskController {
             if (event.getClickCount() == 2 && taskTable.getSelectionModel().getSelectedItem() != null) {
                 viewSelected();
             }
+        });
+        taskRoot.sceneProperty().addListener((observable, previous, current) -> {
+            if (current == null) unsubscribeFromNotifications();
+            else subscribeToNotifications();
         });
         refresh();
     }
@@ -83,7 +103,41 @@ public class BackgroundTaskController {
 
     @FXML
     private void back() {
+        unsubscribeFromNotifications();
         contentNavigator.back();
+    }
+
+    private TableCell<BackgroundTaskDto, String> statusCell() {
+        TableCell<BackgroundTaskDto, String> cell = new TableCell<>() {
+            @Override
+            protected void updateItem(String value, boolean empty) {
+                super.updateItem(value, empty);
+                BackgroundTaskStatus status = empty || getIndex() < 0 || getIndex() >= getTableView().getItems().size()
+                        ? null : getTableView().getItems().get(getIndex()).status();
+                setText(empty ? null : value);
+                pseudoClassStateChanged(PENDING, status == BackgroundTaskStatus.PENDING);
+                pseudoClassStateChanged(RUNNING, status == BackgroundTaskStatus.RUNNING);
+                pseudoClassStateChanged(SUCCESS, status == BackgroundTaskStatus.SUCCESS);
+                pseudoClassStateChanged(FAILED, status == BackgroundTaskStatus.FAILED);
+            }
+        };
+        cell.getStyleClass().add("task-status-cell");
+        return cell;
+    }
+
+    private void subscribeToNotifications() {
+        if (notificationRegistration != null) return;
+        notificationRegistration = notificationCenter.subscribe(
+                sessionState.requireCurrentUser().id(),
+                notification -> Platform.runLater(() -> {
+                    if (taskRoot.getScene() != null) refresh();
+                }));
+    }
+
+    private void unsubscribeFromNotifications() {
+        if (notificationRegistration == null) return;
+        notificationRegistration.close();
+        notificationRegistration = null;
     }
 
     private void configureTimeColumn(

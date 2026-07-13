@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.application.task.BackgroundTaskHandler;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
+import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,10 +44,13 @@ class BackgroundTaskServiceIntegrationTest {
     @Autowired private UserService userService;
     @Autowired private BackgroundTaskService taskService;
     @Autowired private ControllableTaskHandler taskHandler;
+    @Autowired private TaskNotificationCenter notificationCenter;
 
     @Test
     void deduplicatesActiveTasksAndAllowsANewTaskAfterCompletion() throws Exception {
         var owner = userService.register("dedup-task-owner", "Dedup Owner", "safe-password");
+        var notifications = new CopyOnWriteArrayList<TaskNotificationCenter.TaskNotification>();
+        var registration = notificationCenter.subscribe(owner.id(), notifications::add);
 
         ArrayList<Callable<Long>> enqueues = new ArrayList<>();
         for (int index = 0; index < 10; index++) {
@@ -61,6 +66,10 @@ class BackgroundTaskServiceIntegrationTest {
         }
 
         assertThat(new HashSet<>(taskIds)).hasSize(1);
+        assertThat(notifications).singleElement().satisfies(notification -> {
+            assertThat(notification.taskId()).isEqualTo(taskIds.getFirst());
+            assertThat(notification.outcome()).isEqualTo(TaskNotificationCenter.Outcome.QUEUED);
+        });
         assertThat(taskService.list(owner.id())).hasSize(1);
         long firstTaskId = taskIds.getFirst();
         assertThat(taskService.executeNext("dedup-worker")).isTrue();
@@ -74,6 +83,7 @@ class BackgroundTaskServiceIntegrationTest {
         assertThatThrownBy(() -> taskService.enqueueUnique(
                 owner.id(), BackgroundTaskType.VECTOR_UPDATE, " ", Map.of()))
                 .isInstanceOf(IllegalArgumentException.class);
+        registration.close();
     }
 
     @Test

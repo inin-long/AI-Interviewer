@@ -312,7 +312,7 @@ class InterviewAgentServiceIntegrationTest {
                 "comprehensiveScore":80,"summary":"排查过程完整，具备较好的故障定位思路。"}
                 """);
         long retriedTaskId = reportTaskService.enqueue(user.id(), session.id());
-        assertThat(retriedTaskId).isNotEqualTo(queued.taskId());
+        assertThat(retriedTaskId).isEqualTo(queued.taskId());
         assertThat(reportTaskService.state(user.id(), session.id()).taskStatus())
                 .isEqualTo(BackgroundTaskStatus.PENDING);
         assertThat(backgroundTaskService.executeNext("report-retry-worker")).isTrue();
