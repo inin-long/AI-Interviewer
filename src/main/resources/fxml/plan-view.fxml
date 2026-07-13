@@ -29,6 +29,7 @@
                 <TableColumn fx:id="difficultyColumn" text="难度" prefWidth="100"/>
                 <TableColumn fx:id="durationColumn" text="时长（分钟）" prefWidth="120"/>
                 <TableColumn fx:id="questionColumn" text="题目数量" prefWidth="110"/>
+                <TableColumn fx:id="profileColumn" text="候选人画像" prefWidth="140"/>
                 <TableColumn fx:id="updatedColumn" text="更新时间" prefWidth="170"/>
             </columns>
         </TableView>

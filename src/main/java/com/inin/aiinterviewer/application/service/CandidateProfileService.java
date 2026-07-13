@@ -65,6 +65,22 @@ public class CandidateProfileService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<CandidateProfileListItemDto> listConfirmed(long userId) {
+        return list(userId).stream().filter(CandidateProfileListItemDto::confirmed).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CandidateProfileDto requireConfirmed(long userId, long profileId) {
+        CandidateProfileDto profile = profileMapper.findByIdAndUserId(profileId, userId)
+                .map(this::toDto)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_CONFIRMED));
+        if (!profile.confirmed() || profile.status() != ProfileStatus.CONFIRMED) {
+            throw new BusinessException(ErrorCode.PROFILE_NOT_CONFIRMED);
+        }
+        return profile;
+    }
+
     @Transactional
     public CandidateProfileDto generate(long userId, long resumeId) {
         ResumeEntity resume = requireParsedResume(userId, resumeId);

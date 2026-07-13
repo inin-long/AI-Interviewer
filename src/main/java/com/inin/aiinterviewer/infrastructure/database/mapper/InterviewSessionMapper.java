@@ -14,7 +14,8 @@ import java.util.List;
 public interface InterviewSessionMapper {
 
     @Select("""
-            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+            SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
+                   profile_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session
@@ -24,18 +25,19 @@ public interface InterviewSessionMapper {
     List<InterviewSessionEntity> findAllByUserId(long userId);
 
     @Insert("""
-            INSERT INTO interview_session(user_id, plan_id, resume_id, title, job_title,
-                                          plan_snapshot_json, stage, status, prompt_version,
+            INSERT INTO interview_session(user_id, plan_id, resume_id, profile_id, title, job_title,
+                                          plan_snapshot_json, profile_snapshot_json, stage, status, prompt_version,
                                           started_time, create_time, update_time, deleted)
-            VALUES(#{userId}, #{planId}, #{resumeId}, #{title}, #{jobTitle},
-                   #{planSnapshotJson}, #{stage}, #{status}, #{promptVersion},
+            VALUES(#{userId}, #{planId}, #{resumeId}, #{profileId}, #{title}, #{jobTitle},
+                   #{planSnapshotJson}, #{profileSnapshotJson}, #{stage}, #{status}, #{promptVersion},
                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(InterviewSessionEntity entity);
 
     @Select("""
-            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+            SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
+                   profile_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session
@@ -45,7 +47,8 @@ public interface InterviewSessionMapper {
     Optional<InterviewSessionEntity> findByIdAndUserId(long id, long userId);
 
     @Select("""
-            SELECT id, user_id, plan_id, resume_id, title, job_title, plan_snapshot_json,
+            SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
+                   profile_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session

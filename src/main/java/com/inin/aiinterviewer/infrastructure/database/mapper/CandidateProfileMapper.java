@@ -30,6 +30,19 @@ public interface CandidateProfileMapper {
                    resume.original_name AS resume_name
             FROM candidate_profile profile
             JOIN resume ON resume.id = profile.resume_id AND resume.user_id = profile.user_id
+            WHERE profile.id = #{id} AND profile.user_id = #{userId}
+              AND profile.deleted = 0 AND resume.deleted = 0
+            LIMIT 1
+            """)
+    Optional<CandidateProfileEntity> findByIdAndUserId(long id, long userId);
+
+    @Select("""
+            SELECT profile.id, profile.resume_id, profile.user_id, profile.content_json,
+                   profile.source, profile.status, profile.error_message, profile.confirmed,
+                   profile.create_time, profile.update_time, profile.deleted,
+                   resume.original_name AS resume_name
+            FROM candidate_profile profile
+            JOIN resume ON resume.id = profile.resume_id AND resume.user_id = profile.user_id
             WHERE profile.user_id = #{userId} AND profile.deleted = 0 AND resume.deleted = 0
             ORDER BY profile.update_time DESC, profile.id DESC
             """)

@@ -64,6 +64,10 @@
                         <Label text="2  关联资料" styleClass="module-title"/>
                         <Label text="关联简历" styleClass="field-label"/>
                         <ComboBox fx:id="resumeBox" maxWidth="Infinity" promptText="不关联简历"/>
+                        <Label text="已确认候选人画像" styleClass="field-label"/>
+                        <ComboBox fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
+                        <Label text="选择画像后会自动关联对应简历；未确认画像不会出现在这里。"
+                               styleClass="secondary-text" wrapText="true"/>
                         <Label text="岗位描述 / JD" styleClass="field-label"/>
                         <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责与要求" prefRowCount="7" wrapText="true"/>
                         <Separator/>
@@ -84,6 +88,8 @@
                         <Label fx:id="summaryDurationLabel" text="45 分钟" styleClass="summary-value"/>
                         <Label text="题目数量" styleClass="summary-label"/>
                         <Label fx:id="summaryQuestionsLabel" text="15 题" styleClass="summary-value"/>
+                        <Label text="候选人画像" styleClass="summary-label"/>
+                        <Label fx:id="summaryProfileLabel" text="未关联" styleClass="summary-value" wrapText="true"/>
                         <Region prefHeight="8"/>
                         <Label text="保存方案后，可以从列表进入候选人画像和模拟面试准备流程。"
                                styleClass="local-data-note" wrapText="true"/>

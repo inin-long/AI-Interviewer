@@ -41,6 +41,7 @@ public class InterviewPlanController {
     @FXML private TableColumn<InterviewPlanDto, String> difficultyColumn;
     @FXML private TableColumn<InterviewPlanDto, Integer> durationColumn;
     @FXML private TableColumn<InterviewPlanDto, Integer> questionColumn;
+    @FXML private TableColumn<InterviewPlanDto, String> profileColumn;
     @FXML private TableColumn<InterviewPlanDto, LocalDateTime> updatedColumn;
     @FXML private Label summaryLabel;
     @FXML private Button editButton;
@@ -71,6 +72,8 @@ public class InterviewPlanController {
         difficultyColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(difficultyText(cell.getValue().difficulty())));
         durationColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().durationMinutes()));
         questionColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().questionCount()));
+        profileColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
+                cell.getValue().profileId() == null ? "未关联" : "已关联确认画像"));
         updatedColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().updateTime()));
         updatedColumn.setCellFactory(column -> new javafx.scene.control.TableCell<>() {
             @Override protected void updateItem(LocalDateTime value, boolean empty) {

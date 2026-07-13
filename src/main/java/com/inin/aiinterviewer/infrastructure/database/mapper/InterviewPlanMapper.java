@@ -14,17 +14,17 @@ public interface InterviewPlanMapper {
     @Insert("""
             INSERT INTO interview_plan(user_id, name, job_title, job_description, difficulty,
                                        duration_minutes, question_count, resume_id, rules_json,
-                                       stages_json, is_default, create_time, update_time, deleted)
+                                       profile_id, stages_json, is_default, create_time, update_time, deleted)
             VALUES(#{userId}, #{name}, #{jobTitle}, #{jobDescription}, #{difficulty},
                    #{durationMinutes}, #{questionCount}, #{resumeId}, #{rulesJson},
-                   #{stagesJson}, #{defaultPlan}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+                   #{profileId}, #{stagesJson}, #{defaultPlan}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(InterviewPlanEntity entity);
 
     @Select("""
             SELECT id, user_id, name, job_title, job_description, difficulty, duration_minutes,
-                   question_count, resume_id, rules_json, stages_json, is_default,
+                   question_count, resume_id, profile_id, rules_json, stages_json, is_default,
                    create_time, update_time, deleted
             FROM interview_plan
             WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
@@ -34,7 +34,7 @@ public interface InterviewPlanMapper {
 
     @Select("""
             SELECT id, user_id, name, job_title, job_description, difficulty, duration_minutes,
-                   question_count, resume_id, rules_json, stages_json, is_default,
+                   question_count, resume_id, profile_id, rules_json, stages_json, is_default,
                    create_time, update_time, deleted
             FROM interview_plan
             WHERE user_id = #{userId} AND deleted = 0
@@ -47,7 +47,7 @@ public interface InterviewPlanMapper {
             SET name = #{name}, job_title = #{jobTitle}, job_description = #{jobDescription},
                 difficulty = #{difficulty}, duration_minutes = #{durationMinutes},
                 question_count = #{questionCount}, resume_id = #{resumeId},
-                rules_json = #{rulesJson}, stages_json = #{stagesJson},
+                profile_id = #{profileId}, rules_json = #{rulesJson}, stages_json = #{stagesJson},
                 update_time = CURRENT_TIMESTAMP
             WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
             """)

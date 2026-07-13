@@ -6,6 +6,7 @@ import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,8 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private InterviewResultService interviewResultService;
     @Autowired private InterviewAgentService agentService;
     @Autowired private FakeChatService chatService;
+    @Autowired private ResumeService resumeService;
+    @Autowired private CandidateProfileService profileService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -54,17 +58,26 @@ class InterviewAgentServiceIntegrationTest {
     }
 
     @Test
-    void streamsQuestionsRunsGraphAndPreservesInputAndPartialOutputOnFailure() {
+    void streamsQuestionsRunsGraphAndPreservesInputAndPartialOutputOnFailure() throws Exception {
         var user = userService.register("agent-owner", "Agent Owner", "safe-password");
+        Path source = applicationHome.resolve("agent-profile.md");
+        Files.writeString(source, "李明，熟悉 Java、Spring Boot 和订单系统。");
+        var resume = resumeService.uploadAndParse(user.id(), source);
+        profileService.saveManual(user.id(), resume.id(), new CandidateProfileContent(
+                "李明", "Java 工程师", "4 年", "本科", List.of("Java", "Spring Boot"),
+                List.of("订单系统"), List.of("后端开发"), List.of("业务理解"),
+                List.of("性能调优待验证"), "具备订单系统研发经验。"));
+        var profile = profileService.confirm(user.id(), resume.id());
         var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
                 "Java Agent 面试", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
-                45, 10, null, Map.of("focus", "Spring"),
+                45, 10, resume.id(), profile.id(), Map.of("focus", "Spring"),
                 List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY")));
         var session = sessionService.create(user.id(), plan.id());
 
         chatService.enqueueStream(Flux.just("请简要介绍", "你的项目经历。"));
         assertThat(agentService.generateInitialQuestion(user.id(), session.id()).collectList().block())
                 .containsExactly("请简要介绍", "你的项目经历。");
+        assertThat(chatService.lastStreamPrompt()).contains("已确认候选人画像快照", "李明", "Spring Boot");
         assertThat(sessionService.messages(user.id(), session.id()))
                 .singleElement().satisfies(message -> {
                     assertThat(message.role()).isEqualTo(Message.Role.ASSISTANT);
@@ -177,6 +190,7 @@ class InterviewAgentServiceIntegrationTest {
     static class FakeChatService implements ChatService {
         private final Queue<String> chats = new ArrayDeque<>();
         private final Queue<Flux<String>> streams = new ArrayDeque<>();
+        private String lastStreamPrompt;
 
         synchronized void enqueueChat(String response) {
             chats.add(response);
@@ -193,12 +207,18 @@ class InterviewAgentServiceIntegrationTest {
 
         @Override
         public synchronized Flux<String> stream(String prompt) {
+            lastStreamPrompt = prompt;
             return streams.remove();
+        }
+
+        synchronized String lastStreamPrompt() {
+            return lastStreamPrompt;
         }
 
         synchronized void clear() {
             chats.clear();
             streams.clear();
+            lastStreamPrompt = null;
         }
     }
 }

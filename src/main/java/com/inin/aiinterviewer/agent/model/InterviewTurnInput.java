@@ -13,11 +13,25 @@ public record InterviewTurnInput(
         InterviewPlanDto plan,
         List<Message> messages,
         String summary,
-        String retrievedContext
+        String retrievedContext,
+        String candidateProfileContext
 ) {
+    public InterviewTurnInput(
+            InterviewStage stage,
+            String currentQuestion,
+            String answer,
+            InterviewPlanDto plan,
+            List<Message> messages,
+            String summary,
+            String retrievedContext
+    ) {
+        this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext, "");
+    }
+
     public InterviewTurnInput {
         messages = messages == null ? List.of() : List.copyOf(messages);
         summary = summary == null ? "" : summary;
         retrievedContext = retrievedContext == null ? "" : retrievedContext;
+        candidateProfileContext = candidateProfileContext == null ? "" : candidateProfileContext;
     }
 }

@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
 import com.inin.aiinterviewer.application.dto.UserDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
+import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,7 @@ class InterviewPlanServiceIntegrationTest {
     @Autowired private UserService userService;
     @Autowired private InterviewPlanService planService;
     @Autowired private ResumeService resumeService;
+    @Autowired private CandidateProfileService profileService;
 
     @Test
     void providesUserIsolatedCrudAndCopy() {
@@ -80,6 +82,33 @@ class InterviewPlanServiceIntegrationTest {
                 45, 10, otherResume.id(), Map.of(), null);
 
         assertThatThrownBy(() -> planService.create(owner.id(), command))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void associatesOnlyConfirmedProfileOwnedByCurrentUserAndDerivesResume() throws Exception {
+        UserDto owner = userService.register("plan-profile-owner", "Owner", "safe-password");
+        UserDto other = userService.register("plan-profile-other", "Other", "safe-password");
+        Path source = applicationHome.resolve("confirmed-profile-resume.md");
+        Files.writeString(source, "张三，5 年 Java 后端开发经验。");
+        var resume = resumeService.uploadAndParse(owner.id(), source);
+        var draft = profileService.saveManual(owner.id(), resume.id(), new CandidateProfileContent(
+                "张三", "Java 后端工程师", "5 年", "本科", List.of("Java", "Spring Boot"),
+                List.of("订单系统"), List.of("后端开发"), List.of("项目完整"),
+                List.of("系统设计待验证"), "具备稳定的 Java 项目经验。"));
+
+        SaveInterviewPlanCommand command = new SaveInterviewPlanCommand(
+                "画像关联面试", "Java 后端工程师", "", InterviewDifficulty.SENIOR,
+                45, 12, null, draft.id(), Map.of(), null);
+        assertThatThrownBy(() -> planService.create(owner.id(), command))
+                .isInstanceOf(BusinessException.class);
+
+        var confirmed = profileService.confirm(owner.id(), resume.id());
+        var plan = planService.create(owner.id(), command);
+        assertThat(plan.profileId()).isEqualTo(confirmed.id());
+        assertThat(plan.resumeId()).isEqualTo(resume.id());
+
+        assertThatThrownBy(() -> planService.create(other.id(), command))
                 .isInstanceOf(BusinessException.class);
     }
 }

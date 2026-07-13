@@ -22,6 +22,7 @@ public class InterviewGraphState extends AgentState {
     public static final String QUESTION_PROMPT = "questionPrompt";
     public static final String SUMMARY = "summary";
     public static final String RETRIEVED_CONTEXT = "retrievedContext";
+    public static final String CANDIDATE_PROFILE_CONTEXT = "candidateProfileContext";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -65,5 +66,9 @@ public class InterviewGraphState extends AgentState {
 
     public String retrievedContext() {
         return this.<String>value(RETRIEVED_CONTEXT).orElse("");
+    }
+
+    public String candidateProfileContext() {
+        return this.<String>value(CANDIDATE_PROFILE_CONTEXT).orElse("");
     }
 }

@@ -59,7 +59,8 @@ public class InterviewAgentService {
                 return Flux.error(new BusinessException(ErrorCode.INVALID_STATE));
             }
             InterviewTurnInput input = new InterviewTurnInput(
-                    session.stage(), "", "", session.planSnapshot(), List.of(), "", "");
+                    session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
+                    retrieveCandidateProfile(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(userId, sessionId, session.stage(), prompt, null);
         }).subscribeOn(Schedulers.boundedElastic());
@@ -88,7 +89,8 @@ public class InterviewAgentService {
                     userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
             InterviewTurnPlan turn = interviewGraph.plan(new InterviewTurnInput(
                     session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
-                    session.planSnapshot(), messages, answeredState.summary(), retrievedContext));
+                    session.planSnapshot(), messages, answeredState.summary(), retrievedContext,
+                    retrieveCandidateProfile(userId, sessionId)));
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
@@ -159,5 +161,13 @@ public class InterviewAgentService {
                 .filter(result -> result.success())
                 .map(result -> String.valueOf(result.data().getOrDefault("results", "")))
                 .orElse("");
+    }
+
+    private String retrieveCandidateProfile(long userId, long sessionId) {
+        return toolRegistry.find("candidate_profile_get")
+                .map(tool -> tool.execute(new ToolInput(userId, sessionId, Map.of())))
+                .filter(result -> result.success())
+                .map(result -> result.data().toString())
+                .orElse("未关联已确认候选人画像");
     }
 }

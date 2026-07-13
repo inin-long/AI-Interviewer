@@ -10,9 +10,11 @@ public class InterviewSessionEntity {
     private Long userId;
     private Long planId;
     private Long resumeId;
+    private Long profileId;
     private String title;
     private String jobTitle;
     private String planSnapshotJson;
+    private String profileSnapshotJson;
     private InterviewStage stage;
     private InterviewStatus status;
     private String promptVersion;
@@ -30,12 +32,16 @@ public class InterviewSessionEntity {
     public void setPlanId(Long planId) { this.planId = planId; }
     public Long getResumeId() { return resumeId; }
     public void setResumeId(Long resumeId) { this.resumeId = resumeId; }
+    public Long getProfileId() { return profileId; }
+    public void setProfileId(Long profileId) { this.profileId = profileId; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public String getJobTitle() { return jobTitle; }
     public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
     public String getPlanSnapshotJson() { return planSnapshotJson; }
     public void setPlanSnapshotJson(String planSnapshotJson) { this.planSnapshotJson = planSnapshotJson; }
+    public String getProfileSnapshotJson() { return profileSnapshotJson; }
+    public void setProfileSnapshotJson(String profileSnapshotJson) { this.profileSnapshotJson = profileSnapshotJson; }
     public InterviewStage getStage() { return stage; }
     public void setStage(InterviewStage stage) { this.stage = stage; }
     public InterviewStatus getStatus() { return status; }

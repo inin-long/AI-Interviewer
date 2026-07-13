@@ -14,6 +14,7 @@ public class InterviewPlanEntity {
     private int durationMinutes;
     private int questionCount;
     private Long resumeId;
+    private Long profileId;
     private String rulesJson;
     private String stagesJson;
     private boolean defaultPlan;
@@ -39,6 +40,8 @@ public class InterviewPlanEntity {
     public void setQuestionCount(int questionCount) { this.questionCount = questionCount; }
     public Long getResumeId() { return resumeId; }
     public void setResumeId(Long resumeId) { this.resumeId = resumeId; }
+    public Long getProfileId() { return profileId; }
+    public void setProfileId(Long profileId) { this.profileId = profileId; }
     public String getRulesJson() { return rulesJson; }
     public void setRulesJson(String rulesJson) { this.rulesJson = rulesJson; }
     public String getStagesJson() { return stagesJson; }

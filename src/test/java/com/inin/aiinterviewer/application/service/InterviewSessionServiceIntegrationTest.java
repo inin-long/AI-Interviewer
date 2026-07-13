@@ -1,6 +1,8 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.agent.state.InterviewState;
+import com.inin.aiinterviewer.agent.tool.ToolInput;
+import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
 import com.inin.aiinterviewer.application.exception.BusinessException;
@@ -8,6 +10,7 @@ import com.inin.aiinterviewer.domain.entity.AgentCheckpointEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -17,6 +20,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Path;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -39,18 +43,42 @@ class InterviewSessionServiceIntegrationTest {
     @Autowired private InterviewSessionService sessionService;
     @Autowired private InterviewHistoryService historyService;
     @Autowired private AgentCheckpointMapper checkpointMapper;
+    @Autowired private ResumeService resumeService;
+    @Autowired private CandidateProfileService profileService;
+    @Autowired private ToolRegistry toolRegistry;
 
     @Test
-    void snapshotsPlanPersistsProgressAndRestoresLatestValidCheckpoint() {
+    void snapshotsPlanAndProfilePersistsProgressAndRestoresLatestValidCheckpoint() throws Exception {
         var owner = userService.register("session-owner", "Owner", "safe-password");
         var other = userService.register("session-other", "Other", "safe-password");
-        var plan = planService.create(owner.id(), command("Java 基础面试", "Spring"));
+        Path source = applicationHome.resolve("session-profile.md");
+        Files.writeString(source, "张三，5 年 Java 与 Spring Boot 开发经验。");
+        var resume = resumeService.uploadAndParse(owner.id(), source);
+        profileService.saveManual(owner.id(), resume.id(), profile("初始画像摘要", "Java"));
+        var confirmedProfile = profileService.confirm(owner.id(), resume.id());
+        var plan = planService.create(owner.id(), command(
+                "Java 基础面试", "Spring", resume.id(), confirmedProfile.id()));
 
         InterviewSessionDto session = sessionService.create(owner.id(), plan.id());
         assertThat(session.status()).isEqualTo(InterviewStatus.RUNNING);
         assertThat(session.planSnapshot().name()).isEqualTo("Java 基础面试");
+        assertThat(session.profileId()).isEqualTo(confirmedProfile.id());
+        assertThat(session.profileSnapshot().content().summary()).isEqualTo("初始画像摘要");
         assertThat(sessionService.loadLatestState(owner.id(), session.id()))
-                .get().extracting(InterviewState::stage).isEqualTo(InterviewStage.INTRODUCTION);
+                .get().satisfies(state -> {
+                    assertThat(state.stage()).isEqualTo(InterviewStage.INTRODUCTION);
+                    assertThat(state.profile().summary()).isEqualTo("初始画像摘要");
+                });
+
+        var profileTool = toolRegistry.find("candidate_profile_get").orElseThrow();
+        var ownProfileResult = profileTool.execute(new ToolInput(owner.id(), session.id(), Map.of()));
+        assertThat(ownProfileResult.success()).isTrue();
+        assertThat(ownProfileResult.data()).containsEntry("fullName", "张三");
+        assertThat(profileTool.execute(new ToolInput(other.id(), session.id(), Map.of())).success()).isFalse();
+
+        profileService.saveManual(owner.id(), resume.id(), profile("后续修改后的画像摘要", "Go"));
+        assertThat(sessionService.require(owner.id(), session.id()).profileSnapshot().content().summary())
+                .isEqualTo("初始画像摘要");
 
         planService.update(owner.id(), plan.id(), command("已修改的方案", "数据库"));
         assertThat(sessionService.require(owner.id(), session.id()).planSnapshot().name())
@@ -99,9 +127,20 @@ class InterviewSessionServiceIntegrationTest {
     }
 
     private SaveInterviewPlanCommand command(String name, String focus) {
+        return command(name, focus, null, null);
+    }
+
+    private SaveInterviewPlanCommand command(String name, String focus, Long resumeId, Long profileId) {
         return new SaveInterviewPlanCommand(
                 name, "Java 工程师", "负责核心服务开发", InterviewDifficulty.MEDIUM,
-                45, 10, null, Map.of("focus", focus),
+                45, 10, resumeId, profileId, Map.of("focus", focus),
                 List.of("INTRODUCTION", "RESUME_REVIEW", "TECHNICAL_DEEP_DIVE", "SUMMARY"));
+    }
+
+    private CandidateProfileContent profile(String summary, String skill) {
+        return new CandidateProfileContent(
+                "张三", "Java 工程师", "5 年", "本科", List.of(skill, "Spring Boot"),
+                List.of("订单系统"), List.of("后端开发"), List.of("交付稳定"),
+                List.of("架构深度待验证"), summary);
     }
 }

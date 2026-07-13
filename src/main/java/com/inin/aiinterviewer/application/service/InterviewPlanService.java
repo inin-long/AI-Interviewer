@@ -28,15 +28,18 @@ public class InterviewPlanService {
 
     private final InterviewPlanMapper planMapper;
     private final ResumeMapper resumeMapper;
+    private final CandidateProfileService profileService;
     private final ObjectMapper objectMapper;
 
     public InterviewPlanService(
             InterviewPlanMapper planMapper,
             ResumeMapper resumeMapper,
+            CandidateProfileService profileService,
             ObjectMapper objectMapper
     ) {
         this.planMapper = planMapper;
         this.resumeMapper = resumeMapper;
+        this.profileService = profileService;
         this.objectMapper = objectMapper;
     }
 
@@ -62,7 +65,8 @@ public class InterviewPlanService {
         InterviewPlanDto source = require(planId, userId);
         SaveInterviewPlanCommand copy = new SaveInterviewPlanCommand(
                 source.name() + " 副本", source.jobTitle(), source.jobDescription(), source.difficulty(),
-                source.durationMinutes(), source.questionCount(), source.resumeId(), source.rules(), source.stages());
+                source.durationMinutes(), source.questionCount(), source.resumeId(), source.profileId(),
+                source.rules(), source.stages());
         return create(userId, copy);
     }
 
@@ -93,8 +97,15 @@ public class InterviewPlanService {
                 || command.questionCount() < 1 || command.questionCount() > 100) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
-        if (command.resumeId() != null
-                && resumeMapper.findByIdAndUserId(command.resumeId(), userId).isEmpty()) {
+        Long resumeId = command.resumeId();
+        if (command.profileId() != null) {
+            var profile = profileService.requireConfirmed(userId, command.profileId());
+            if (resumeId != null && !resumeId.equals(profile.resumeId())) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+            }
+            resumeId = profile.resumeId();
+        }
+        if (resumeId != null && resumeMapper.findByIdAndUserId(resumeId, userId).isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
 
@@ -107,7 +118,8 @@ public class InterviewPlanService {
         entity.setDifficulty(command.difficulty() == null ? InterviewDifficulty.MEDIUM : command.difficulty());
         entity.setDurationMinutes(command.durationMinutes());
         entity.setQuestionCount(command.questionCount());
-        entity.setResumeId(command.resumeId());
+        entity.setResumeId(resumeId);
+        entity.setProfileId(command.profileId());
         entity.setRulesJson(writeJson(command.rules() == null ? Map.of() : command.rules()));
         entity.setStagesJson(writeJson(command.stages() == null || command.stages().isEmpty()
                 ? DEFAULT_STAGES : command.stages()));
@@ -118,7 +130,7 @@ public class InterviewPlanService {
     private InterviewPlanDto toDto(InterviewPlanEntity entity) {
         return new InterviewPlanDto(entity.getId(), entity.getName(), entity.getJobTitle(),
                 entity.getJobDescription(), entity.getDifficulty(), entity.getDurationMinutes(),
-                entity.getQuestionCount(), entity.getResumeId(), readMap(entity.getRulesJson()),
+                entity.getQuestionCount(), entity.getResumeId(), entity.getProfileId(), readMap(entity.getRulesJson()),
                 readList(entity.getStagesJson()), entity.isDefaultPlan(), entity.getCreateTime(), entity.getUpdateTime());
     }
 

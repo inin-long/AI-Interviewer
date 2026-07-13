@@ -8,6 +8,7 @@ import com.inin.aiinterviewer.agent.state.StateSerializer;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
+import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -18,6 +19,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
+import com.inin.aiinterviewer.domain.model.CandidateProfile;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
@@ -34,9 +36,10 @@ import java.util.Optional;
 public class InterviewSessionService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewSessionService.class);
-    private static final String PROMPT_VERSION = "v1.0";
+    private static final String PROMPT_VERSION = "v1.1";
 
     private final InterviewPlanService planService;
+    private final CandidateProfileService profileService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final AgentCheckpointMapper checkpointMapper;
@@ -46,6 +49,7 @@ public class InterviewSessionService {
 
     public InterviewSessionService(
             InterviewPlanService planService,
+            CandidateProfileService profileService,
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
             AgentCheckpointMapper checkpointMapper,
@@ -54,6 +58,7 @@ public class InterviewSessionService {
             ObjectMapper objectMapper
     ) {
         this.planService = planService;
+        this.profileService = profileService;
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
         this.checkpointMapper = checkpointMapper;
@@ -78,15 +83,19 @@ public class InterviewSessionService {
     @Transactional
     public InterviewSessionDto create(long userId, long planId) {
         InterviewPlanDto plan = planService.require(planId, userId);
+        CandidateProfileDto profileSnapshot = plan.profileId() == null
+                ? null : profileService.requireConfirmed(userId, plan.profileId());
         InterviewStage initialStage = initialStage(plan.stages());
 
         InterviewSessionEntity entity = new InterviewSessionEntity();
         entity.setUserId(userId);
         entity.setPlanId(plan.id());
         entity.setResumeId(plan.resumeId());
+        entity.setProfileId(plan.profileId());
         entity.setTitle(plan.name());
         entity.setJobTitle(plan.jobTitle());
         entity.setPlanSnapshotJson(writeJson(plan));
+        entity.setProfileSnapshotJson(profileSnapshot == null ? "{}" : writeJson(profileSnapshot));
         entity.setStage(initialStage);
         entity.setStatus(InterviewStatus.RUNNING);
         entity.setPromptVersion(PROMPT_VERSION);
@@ -94,7 +103,7 @@ public class InterviewSessionService {
 
         InterviewState state = new InterviewState(
                 InterviewState.CURRENT_VERSION, entity.getId(), userId, initialStage,
-                List.of(), "", "", null, null, null, plan.rules(), "");
+                List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "");
         saveCheckpointInternal(userId, entity.getId(), "session_started", state);
         return require(userId, entity.getId());
     }
@@ -112,6 +121,12 @@ public class InterviewSessionService {
     @Transactional(readOnly = true)
     public List<InterviewSessionDto> list(long userId) {
         return sessionMapper.findAllByUserId(userId).stream().map(this::toDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<CandidateProfileDto> profileSnapshot(long userId, long sessionId) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        return Optional.ofNullable(readProfile(session.getProfileSnapshotJson()));
     }
 
     @Transactional(readOnly = true)
@@ -273,9 +288,11 @@ public class InterviewSessionService {
 
     private InterviewState baseState(InterviewSessionEntity session) {
         InterviewPlanDto snapshot = readPlan(session.getPlanSnapshotJson());
+        CandidateProfileDto profileSnapshot = readProfile(session.getProfileSnapshotJson());
         return new InterviewState(
                 InterviewState.CURRENT_VERSION, session.getId(), session.getUserId(), session.getStage(),
-                domainMessages(session.getUserId(), session.getId()), "", "", null, null, null,
+                domainMessages(session.getUserId(), session.getId()), "", "", null, null,
+                stateProfile(profileSnapshot),
                 snapshot.rules() == null ? Map.of() : snapshot.rules(), "");
     }
 
@@ -292,8 +309,9 @@ public class InterviewSessionService {
 
     private InterviewSessionDto toDto(InterviewSessionEntity entity) {
         return new InterviewSessionDto(
-                entity.getId(), entity.getPlanId(), entity.getResumeId(), entity.getTitle(), entity.getJobTitle(),
-                readPlan(entity.getPlanSnapshotJson()), entity.getStage(), entity.getStatus(),
+                entity.getId(), entity.getPlanId(), entity.getResumeId(), entity.getProfileId(),
+                entity.getTitle(), entity.getJobTitle(), readPlan(entity.getPlanSnapshotJson()),
+                readProfile(entity.getProfileSnapshotJson()), entity.getStage(), entity.getStatus(),
                 entity.getPromptVersion(), entity.getStartedTime(), entity.getCompletedTime(),
                 entity.getCreateTime(), entity.getUpdateTime());
     }
@@ -350,5 +368,25 @@ public class InterviewSessionService {
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }
+    }
+
+    private CandidateProfileDto readProfile(String json) {
+        if (json == null || json.isBlank() || "{}".equals(json.strip())) return null;
+        try {
+            return objectMapper.readValue(json, CandidateProfileDto.class);
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
+    private CandidateProfile stateProfile(CandidateProfileDto snapshot) {
+        if (snapshot == null) return null;
+        var content = snapshot.content();
+        return new CandidateProfile(
+                content.skills(),
+                content.projects().stream().map(value -> Map.<String, Object>of("description", value)).toList(),
+                content.experience().stream().map(value -> Map.<String, Object>of("description", value)).toList(),
+                content.education().isBlank() ? Map.of() : Map.of("description", content.education()),
+                content.summary());
     }
 }

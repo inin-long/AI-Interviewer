@@ -60,11 +60,13 @@ public final class AgentPrompts {
                 岗位描述：%s
                 难度：%s
                 重点规则：%s
+                已确认候选人画像快照：%s
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
                 """.formatted(intent, state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
-                state.plan().difficulty(), json(objectMapper, state.plan().rules()), state.summary(),
+                state.plan().difficulty(), json(objectMapper, state.plan().rules()),
+                state.candidateProfileContext(), state.summary(),
                 state.retrievedContext(), json(objectMapper, recent));
     }
 
