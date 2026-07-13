@@ -55,6 +55,14 @@
                     <Label text="综合能力" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="summary-label"/>
                     <Label fx:id="comprehensiveScoreLabel" text="0 分" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="summary-value"/>
                 </GridPane>
+                <Separator/>
+                <Label text="引用定位" styleClass="summary-label"/>
+                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="130" maxHeight="160"
+                            VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
+                    <content>
+                        <VBox fx:id="citationNavigationContainer" spacing="6" fillWidth="true"/>
+                    </content>
+                </ScrollPane>
             </VBox>
             <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="content-card report-document">
                 <MarkdownView fx:id="reportView" VBox.vgrow="ALWAYS"/>

@@ -1,18 +1,17 @@
 package com.inin.aiinterviewer.ui.controller;
 
 import com.inin.aiinterviewer.application.dto.InterviewHistoryDetailDto;
-import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.service.InterviewHistoryService;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
-import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
+import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +19,7 @@ import java.time.format.DateTimeFormatter;
 
 @Component
 @Scope("prototype")
-public class InterviewHistoryDetailController implements ContextAwareController<Long> {
+public class InterviewHistoryDetailController implements ContextAwareController<Object> {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final InterviewHistoryService historyService;
@@ -34,7 +33,7 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     @FXML private Label startedLabel;
     @FXML private Label completedLabel;
     @FXML private Label messageCountLabel;
-    @FXML private TextArea transcriptArea;
+    @FXML private InterviewTranscriptView transcriptView;
     @FXML private Button continueButton;
     @FXML private Button reportButton;
 
@@ -51,9 +50,17 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     }
 
     @Override
-    public void initializeContext(Long context) {
+    public void initializeContext(Object context) {
         if (context == null) throw new IllegalArgumentException("Interview history detail requires a session id");
-        sessionId = context;
+        int targetQuestion = 0;
+        if (context instanceof InterviewTranscriptContext target) {
+            sessionId = target.sessionId();
+            targetQuestion = target.questionNumber();
+        } else if (context instanceof Number number) {
+            sessionId = number.longValue();
+        } else {
+            throw new IllegalArgumentException("Unsupported interview history context");
+        }
         InterviewHistoryDetailDto detail = historyService.detail(userId(), sessionId);
         var session = detail.session();
         titleLabel.setText(session.title());
@@ -63,7 +70,9 @@ public class InterviewHistoryDetailController implements ContextAwareController<
         startedLabel.setText(session.startedTime() == null ? "—" : TIME_FORMAT.format(session.startedTime()));
         completedLabel.setText(session.completedTime() == null ? "—" : TIME_FORMAT.format(session.completedTime()));
         messageCountLabel.setText(detail.messages().size() + " 条");
-        transcriptArea.setText(transcript(detail));
+        transcriptView.setEmptyMessage("本次面试尚未产生问答记录。");
+        transcriptView.setMessages(detail.messages());
+        if (targetQuestion > 0) transcriptView.scrollToQuestion(targetQuestion);
         boolean active = session.status() == InterviewStatus.RUNNING
                 || session.status() == InterviewStatus.PAUSED || session.status() == InterviewStatus.CREATED;
         continueButton.setVisible(active);
@@ -82,31 +91,6 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     @FXML
     private void openReport() {
         contentNavigator.showSubPage("/fxml/report-detail-view.fxml", "面试报告", sessionId);
-    }
-
-    private String transcript(InterviewHistoryDetailDto detail) {
-        if (detail.messages().isEmpty()) return "本次面试尚未产生问答记录。";
-        StringBuilder value = new StringBuilder();
-        for (InterviewMessageDto message : detail.messages()) {
-            value.append(message.role() == Message.Role.USER ? "候选人" : "AI 面试官")
-                    .append(" · ")
-                    .append(message.createTime() == null ? "" : TIME_FORMAT.format(message.createTime()))
-                    .append("\n")
-                    .append(message.content())
-                    .append("\n");
-            if (!message.citations().isEmpty()) {
-                value.append("参考依据：");
-                for (int index = 0; index < message.citations().size(); index++) {
-                    var citation = message.citations().get(index);
-                    if (index > 0) value.append("；");
-                    value.append(citation.documentName())
-                            .append("（片段 ").append(citation.chunkIndex() + 1).append("）");
-                }
-                value.append("\n");
-            }
-            value.append("\n");
-        }
-        return value.toString().stripTrailing();
     }
 
     private long userId() { return sessionState.requireCurrentUser().id(); }

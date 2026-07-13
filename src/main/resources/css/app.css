@@ -344,6 +344,127 @@
     -fx-background-color: -surface-muted;
 }
 
+.interview-transcript,
+.interview-transcript > .viewport {
+    -fx-background-color: -surface-muted;
+}
+
+.interview-transcript {
+    -fx-border-color: -border;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 1;
+}
+
+.interview-transcript-content {
+    -fx-padding: 16 16 22 12;
+}
+
+.transcript-message-row {
+    -fx-padding: 0 0 2 0;
+}
+
+.transcript-marker {
+    -fx-min-width: 38;
+    -fx-pref-width: 38;
+    -fx-max-width: 38;
+    -fx-min-height: 32;
+    -fx-pref-height: 32;
+    -fx-alignment: center;
+    -fx-background-radius: 7;
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+}
+
+.question-marker {
+    -fx-background-color: -primary;
+    -fx-text-fill: white;
+}
+
+.answer-marker {
+    -fx-background-color: #E8EBF0;
+    -fx-text-fill: -text-secondary;
+}
+
+.transcript-message-card {
+    -fx-padding: 14 16;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+}
+
+.question-message-card {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+}
+
+.answer-message-card {
+    -fx-background-color: #F0F2F5;
+    -fx-border-color: transparent;
+}
+
+.transcript-message-row:target .transcript-message-card {
+    -fx-border-color: -primary;
+    -fx-effect: dropshadow(gaussian, rgba(79, 99, 217, 0.16), 12, 0.08, 0, 2);
+}
+
+.transcript-message-row:focused .transcript-message-card {
+    -fx-border-color: #8D99EC;
+}
+
+.transcript-author {
+    -fx-text-fill: -text;
+    -fx-font-weight: 700;
+}
+
+.transcript-time {
+    -fx-text-fill: -text-muted;
+    -fx-font-size: 11px;
+}
+
+.transcript-partial {
+    -fx-text-fill: -danger;
+    -fx-background-color: -danger-soft;
+    -fx-background-radius: 999;
+    -fx-padding: 3 7;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.transcript-message-text {
+    -fx-text-fill: -text;
+    -fx-font-size: 15px;
+    -fx-line-spacing: 3px;
+}
+
+.transcript-citations {
+    -fx-padding: 5 0 0 0;
+}
+
+.transcript-citation-label {
+    -fx-text-fill: -text-muted;
+    -fx-font-size: 11px;
+    -fx-padding: 5 2 0 0;
+}
+
+.transcript-citation-chip {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -primary;
+    -fx-background-radius: 999;
+    -fx-border-color: transparent;
+    -fx-padding: 4 8;
+    -fx-font-size: 11px;
+    -fx-font-weight: 600;
+}
+
+.button.transcript-citation-chip:hover {
+    -fx-background-color: #E1E5FF;
+}
+
+.transcript-empty {
+    -fx-text-fill: -text-secondary;
+    -fx-padding: 18;
+}
+
 .citation-rail {
     -fx-background-color: #FBFCFF;
 }
@@ -449,6 +570,26 @@
 
 .report-directory-button:hover {
     -fx-background-color: -primary-soft;
+    -fx-text-fill: -primary;
+}
+
+.report-citation-scroll,
+.report-citation-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.report-question-link {
+    -fx-alignment: center-left;
+    -fx-background-color: -surface-muted;
+    -fx-border-color: -border;
+    -fx-text-fill: -text-secondary;
+    -fx-padding: 8 10;
+}
+
+.report-question-link:hover,
+.report-question-link:focused {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #C9CFFF;
     -fx-text-fill: -primary;
 }
 

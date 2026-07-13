@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.InterviewTranscriptView?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -44,8 +45,7 @@
                         <Region HBox.hgrow="ALWAYS"/>
                         <Label text="回答、阶段切换和暂停均会保存" styleClass="secondary-text"/>
                     </HBox>
-                    <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
-                              VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
+                    <InterviewTranscriptView fx:id="transcriptView" VBox.vgrow="ALWAYS"/>
                     <Separator/>
                     <Label text="你的回答" styleClass="field-label"/>
                     <TextArea fx:id="answerArea" promptText="输入你的回答，AI 将结合当前阶段和已关联资料继续提问"

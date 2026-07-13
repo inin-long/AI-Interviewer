@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -25,15 +26,12 @@ import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import reactor.core.publisher.Flux;
 
 @Component
 @Scope("prototype")
 public class InterviewWorkspaceController implements ContextAwareController<Long> {
-
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
 
     private final InterviewSessionService sessionService;
     private final InterviewAgentService agentService;
@@ -51,7 +49,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label aiNoticeLabel;
     @FXML private Label citationCountLabel;
     @FXML private VBox citationContainer;
-    @FXML private TextArea transcriptArea;
+    @FXML private InterviewTranscriptView transcriptView;
     @FXML private TextArea answerArea;
     @FXML private Button pauseButton;
     @FXML private Button submitButton;
@@ -86,6 +84,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             throw new IllegalArgumentException("Interview workspace requires a session id");
         }
         sessionId = context;
+        transcriptView.setEmptyMessage("会话已创建，等待 AI 面试官生成第一道问题。");
+        transcriptView.setCitationHandler(this::openCitation);
         refresh();
         if (llmProperties.isConfigured()
                 && currentSession.status() == InterviewStatus.RUNNING
@@ -98,7 +98,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private void submitAnswer() {
         String answer = answerArea.getText();
         if (llmProperties.isConfigured()) {
-            stream(agentService.answer(userId(), sessionId, answer), true, "正在分析回答并准备下一题…");
+            stream(agentService.answer(userId(), sessionId, answer), true,
+                    "正在分析回答并准备下一题…", answer);
             return;
         }
         try {
@@ -160,7 +161,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         jobLabel.setText(currentSession.jobTitle());
         stageLabel.setText(stageText(currentSession.stage()));
         statusLabel.setText(statusText(currentSession.status()));
-        transcriptArea.setText(transcript(messages));
+        transcriptView.setMessages(messages);
+        transcriptView.scrollToBottom();
         renderCitations(messages);
         long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
         progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
@@ -201,17 +203,22 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML
     private void generateInitialQuestion() {
         if (!llmProperties.isConfigured() || generationInProgress) return;
-        stream(agentService.generateInitialQuestion(userId(), sessionId), false, "正在生成第一题…");
+        stream(agentService.generateInitialQuestion(userId(), sessionId), false, "正在生成第一题…", null);
     }
 
-    private void stream(Flux<String> output, boolean clearInputOnSuccess, String progressText) {
+    private void stream(
+            Flux<String> output,
+            boolean clearInputOnSuccess,
+            String progressText,
+            String pendingAnswer
+    ) {
         if (generationInProgress) return;
         generationInProgress = true;
         setBusyState(progressText);
-        String existing = transcriptArea.getText();
-        transcriptArea.setText(existing.isBlank() ? "AI 面试官\n" : existing + "\n\nAI 面试官\n");
+        transcriptView.appendPendingUserAnswer(pendingAnswer);
+        transcriptView.beginAssistantStream(transcriptView.getQuestionCount() + 1);
         output.subscribe(
-                chunk -> Platform.runLater(() -> transcriptArea.appendText(chunk)),
+                chunk -> Platform.runLater(() -> transcriptView.appendAssistantChunk(chunk)),
                 throwable -> Platform.runLater(() -> {
                     generationInProgress = false;
                     refresh();
@@ -231,20 +238,6 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         pauseButton.setDisable(true);
         retryQuestionButton.setDisable(true);
         statusLabel.setText("生成中");
-    }
-
-    private String transcript(List<InterviewMessageDto> messages) {
-        if (messages.isEmpty()) {
-            return "会话已创建，初始状态和 Checkpoint 已保存。\n等待 Agent 提问流程接入。";
-        }
-        StringBuilder transcript = new StringBuilder();
-        for (InterviewMessageDto message : messages) {
-            String role = message.role() == Message.Role.USER ? "你" : "AI 面试官";
-            String time = message.createTime() == null ? "" : "  " + TIME_FORMAT.format(message.createTime());
-            transcript.append(role).append(time).append("\n")
-                    .append(message.content()).append("\n\n");
-        }
-        return transcript.toString().stripTrailing();
     }
 
     private void renderCitations(List<InterviewMessageDto> messages) {

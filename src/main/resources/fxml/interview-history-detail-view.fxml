@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.InterviewTranscriptView?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -47,8 +48,8 @@
             <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
                 <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
                 <Label text="完整问答" styleClass="module-title"/>
-                <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
-                          HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
+                <InterviewTranscriptView fx:id="transcriptView"
+                                         HBox.hgrow="ALWAYS" VBox.vgrow="ALWAYS"/>
             </VBox>
         </HBox>
     </center>
