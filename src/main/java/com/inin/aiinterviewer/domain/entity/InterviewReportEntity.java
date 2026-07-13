@@ -1,5 +1,7 @@
 package com.inin.aiinterviewer.domain.entity;
 
+import com.inin.aiinterviewer.domain.enums.ReportStatus;
+
 public class InterviewReportEntity {
     private Long id;
     private Long userId;
@@ -8,7 +10,8 @@ public class InterviewReportEntity {
     private String title;
     private String contentMarkdown;
     private Integer score;
-    private String status;
+    private ReportStatus status;
+    private String errorMessage;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -24,6 +27,8 @@ public class InterviewReportEntity {
     public void setContentMarkdown(String contentMarkdown) { this.contentMarkdown = contentMarkdown; }
     public Integer getScore() { return score; }
     public void setScore(Integer score) { this.score = score; }
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public ReportStatus getStatus() { return status; }
+    public void setStatus(ReportStatus status) { this.status = status; }
+    public String getErrorMessage() { return errorMessage; }
+    public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
 }

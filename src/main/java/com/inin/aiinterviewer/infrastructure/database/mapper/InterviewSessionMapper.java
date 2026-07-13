@@ -79,7 +79,8 @@ public interface InterviewSessionMapper {
             UPDATE interview_session
             SET stage = 'COMPLETED', status = 'COMPLETED', completed_time = CURRENT_TIMESTAMP,
                 update_time = CURRENT_TIMESTAMP
-            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0 AND status = 'RUNNING'
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+              AND status IN ('RUNNING', 'PAUSED')
             """)
     int complete(long id, long userId);
 }

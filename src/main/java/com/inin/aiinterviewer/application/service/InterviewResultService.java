@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.agent.state.InterviewState;
 import com.inin.aiinterviewer.agent.state.StateSerializer;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportDto;
+import com.inin.aiinterviewer.application.dto.InterviewReportStateDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
@@ -15,6 +16,7 @@ import com.inin.aiinterviewer.domain.entity.AgentCheckpointEntity;
 import com.inin.aiinterviewer.domain.entity.EvaluationEntity;
 import com.inin.aiinterviewer.domain.entity.InterviewReportEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
+import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import com.inin.aiinterviewer.domain.model.EvaluationResult;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
@@ -51,6 +53,45 @@ public class InterviewResultService {
     }
 
     @Transactional
+    public InterviewReportStateDto beginGeneration(long userId, InterviewSessionDto session) {
+        Optional<InterviewReportEntity> existing = resultMapper.findReport(userId, session.id());
+        if (existing.isEmpty()) {
+            InterviewReportEntity report = new InterviewReportEntity();
+            report.setUserId(userId);
+            report.setInterviewId(session.id());
+            report.setTitle(session.title() + " · 面试报告");
+            report.setStatus(ReportStatus.GENERATING);
+            resultMapper.insertReport(report);
+            return new InterviewReportStateDto(ReportStatus.GENERATING, "");
+        }
+        InterviewReportEntity report = existing.get();
+        if (report.getStatus() == ReportStatus.COMPLETED
+                || resultMapper.restartReport(report.getId(), userId) != 1) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        return new InterviewReportStateDto(ReportStatus.GENERATING, "");
+    }
+
+    @Transactional
+    public void failGeneration(long userId, long interviewId, String errorMessage) {
+        InterviewReportEntity report = resultMapper.findReport(userId, interviewId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_STATE));
+        String safeMessage = errorMessage == null || errorMessage.isBlank()
+                ? "报告生成失败，请重试" : errorMessage.strip();
+        if (safeMessage.length() > 500) safeMessage = safeMessage.substring(0, 500);
+        if (resultMapper.failReport(report.getId(), userId, safeMessage) != 1) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public InterviewReportStateDto state(long userId, long interviewId) {
+        return resultMapper.findReport(userId, interviewId)
+                .map(report -> new InterviewReportStateDto(report.getStatus(), report.getErrorMessage()))
+                .orElseGet(() -> new InterviewReportStateDto(ReportStatus.NOT_STARTED, ""));
+    }
+
+    @Transactional
     public InterviewReportDto complete(
             long userId,
             InterviewSessionDto session,
@@ -60,22 +101,24 @@ public class InterviewResultService {
             String summary,
             String markdown
     ) {
-        if (resultMapper.findReport(userId, session.id()).isPresent()) {
+        InterviewReportEntity report = resultMapper.findReport(userId, session.id())
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_STATE));
+        if (report.getStatus() != ReportStatus.GENERATING
+                || resultMapper.findEvaluation(userId, session.id()).isPresent()) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
 
         EvaluationEntity evaluation = toEntity(userId, session.id(), payload);
         resultMapper.insertEvaluation(evaluation);
 
-        InterviewReportEntity report = new InterviewReportEntity();
-        report.setUserId(userId);
-        report.setInterviewId(session.id());
         report.setEvaluationId(evaluation.getId());
-        report.setTitle(session.title() + " · 面试报告");
         report.setContentMarkdown(markdown);
         report.setScore(payload.overallScore());
-        report.setStatus("COMPLETED");
-        resultMapper.insertReport(report);
+        report.setStatus(ReportStatus.COMPLETED);
+        if (resultMapper.completeReport(
+                report.getId(), userId, evaluation.getId(), markdown, payload.overallScore()) != 1) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
 
         if (sessionMapper.complete(session.id(), userId) != 1) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
@@ -102,8 +145,9 @@ public class InterviewResultService {
     @Transactional(readOnly = true)
     public Optional<InterviewReportDto> find(long userId, long interviewId) {
         return resultMapper.findReport(userId, interviewId).flatMap(report ->
-                resultMapper.findEvaluation(userId, interviewId).map(evaluation ->
-                        toDto(report, readPayload(evaluation.getContentJson()))));
+                report.getStatus() != ReportStatus.COMPLETED ? Optional.empty() :
+                        resultMapper.findEvaluation(userId, interviewId).map(evaluation ->
+                                toDto(report, readPayload(evaluation.getContentJson()))));
     }
 
     private EvaluationEntity toEntity(long userId, long interviewId, EvaluationPayload payload) {

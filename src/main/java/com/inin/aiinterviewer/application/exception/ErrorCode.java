@@ -11,6 +11,7 @@ public enum ErrorCode {
     PROFILE_NOT_CONFIRMED("PROFILE_001", "请选择当前账户下已确认的候选人画像"),
     INTERVIEW_NOT_FOUND("INTERVIEW_001", "面试会话不存在"),
     CHECKPOINT_NOT_FOUND("INTERVIEW_002", "未找到可恢复的面试进度"),
+    REPORT_RETRY_REQUIRED("INTERVIEW_003", "最终回答已保存，请重新生成报告"),
     DATA_ACCESS_FAILED("DATA_001", "本地数据访问失败"),
     AI_NOT_CONFIGURED("AI_001", "AI 服务尚未配置"),
     AI_CALL_FAILED("AI_002", "AI 服务调用失败"),

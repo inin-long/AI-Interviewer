@@ -72,6 +72,9 @@ public class InterviewAgentService {
     public Flux<String> answer(long userId, long sessionId, String answer) {
         return Flux.defer(() -> {
             InterviewSessionDto session = requireRunning(userId, sessionId);
+            if (completionService.state(userId, sessionId).finalAnswerSaved()) {
+                return Flux.error(new BusinessException(ErrorCode.REPORT_RETRY_REQUIRED));
+            }
             var previous = sessionService.loadLatestState(userId, sessionId)
                     .orElseThrow(() -> new BusinessException(ErrorCode.CHECKPOINT_NOT_FOUND));
             if (previous.currentQuestion() == null || previous.currentQuestion().isBlank()) {

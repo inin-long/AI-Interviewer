@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.model.EvaluationPayload;
 import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
+import com.inin.aiinterviewer.application.dto.InterviewCompletionStateDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportDto;
+import com.inin.aiinterviewer.application.exception.ApplicationException;
 import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
@@ -16,6 +18,8 @@ import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class InterviewCompletionService {
@@ -25,6 +29,7 @@ public class InterviewCompletionService {
     private final ChatService chatService;
     private final StructuredAiResponseParser parser;
     private final ObjectMapper objectMapper;
+    private final Set<String> generationsInProgress = ConcurrentHashMap.newKeySet();
 
     public InterviewCompletionService(
             InterviewSessionService sessionService,
@@ -41,20 +46,73 @@ public class InterviewCompletionService {
     }
 
     public InterviewReportDto complete(long userId, long sessionId) {
+        String generationKey = userId + ":" + sessionId;
+        if (!generationsInProgress.add(generationKey)) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        try {
+            return completeInternal(userId, sessionId);
+        } finally {
+            generationsInProgress.remove(generationKey);
+        }
+    }
+
+    public InterviewCompletionStateDto state(long userId, long sessionId) {
         var session = sessionService.require(userId, sessionId);
-        if (session.status() != InterviewStatus.RUNNING) {
+        List<InterviewMessageDto> messages = sessionService.messages(userId, sessionId);
+        var reportState = resultService.state(userId, sessionId);
+        return new InterviewCompletionStateDto(
+                finalAnswerSaved(session.planSnapshot().questionCount(), messages),
+                reportState.status(), reportState.failureMessage());
+    }
+
+    private InterviewReportDto completeInternal(long userId, long sessionId) {
+        var session = sessionService.require(userId, sessionId);
+        if (session.status() != InterviewStatus.RUNNING && session.status() != InterviewStatus.PAUSED) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
         List<InterviewMessageDto> messages = sessionService.messages(userId, sessionId);
+        if (!finalAnswerSaved(session.planSnapshot().questionCount(), messages)) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
         var previous = sessionService.loadLatestState(userId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHECKPOINT_NOT_FOUND));
         String summary = compactSummary(messages);
-        EvaluationPayload payload = parser.parse(
-                chatService.chat(evaluationPrompt(session.jobTitle(), messages, summary)),
-                EvaluationPayload.class);
-        validate(payload);
-        String markdown = markdown(session.title(), payload, summary, messages);
-        return resultService.complete(userId, session, messages, previous, payload, summary, markdown);
+        resultService.beginGeneration(userId, session);
+        try {
+            EvaluationPayload payload = parser.parse(
+                    chatService.chat(evaluationPrompt(session.jobTitle(), messages, summary)),
+                    EvaluationPayload.class);
+            validate(payload);
+            String markdown = markdown(session.title(), payload, summary, messages);
+            return resultService.complete(userId, session, messages, previous, payload, summary, markdown);
+        } catch (RuntimeException exception) {
+            try {
+                resultService.failGeneration(userId, sessionId, failureMessage(exception));
+            } catch (RuntimeException persistenceFailure) {
+                exception.addSuppressed(persistenceFailure);
+            }
+            throw exception;
+        }
+    }
+
+    private boolean finalAnswerSaved(int questionLimit, List<InterviewMessageDto> messages) {
+        long questions = messages.stream()
+                .filter(message -> message.role() == Message.Role.ASSISTANT)
+                .count();
+        return questions >= questionLimit && !messages.isEmpty()
+                && messages.getLast().role() == Message.Role.USER;
+    }
+
+    private String failureMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ApplicationException applicationException) {
+                return applicationException.getErrorCode().userMessage();
+            }
+            current = current.getCause();
+        }
+        return "报告生成失败，请重试";
     }
 
     private String evaluationPrompt(String jobTitle, List<InterviewMessageDto> messages, String summary) {

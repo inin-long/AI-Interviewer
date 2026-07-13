@@ -4,9 +4,12 @@ import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.exception.AIException;
+import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
+import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
@@ -173,6 +176,58 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.stage()).isEqualTo(InterviewStage.COMPLETED);
                     assertThat(state.evaluation().overallScore()).isEqualTo(78);
                 });
+    }
+
+    @Test
+    void preservesFinalAnswerRecordsFailureAndRetriesReportWithoutDuplicateMessage() {
+        var user = userService.register("report-retry-owner", "Report Retry", "safe-password");
+        var other = userService.register("report-retry-other", "Other", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "报告重试验证", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 1, null, Map.of(), List.of("INTRODUCTION", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请说明一次线上故障的排查过程。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("invalid-json");
+
+        assertThatThrownBy(() -> agentService.answer(
+                user.id(), session.id(), "我先确认监控异常，再结合日志定位根因。")
+                .collectList().block())
+                .satisfies(throwable -> assertThat(hasCause(throwable, AIException.class)).isTrue());
+
+        assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.RUNNING);
+        assertThat(sessionService.messages(user.id(), session.id()))
+                .extracting(InterviewMessageDto::role)
+                .containsExactly(Message.Role.ASSISTANT, Message.Role.USER);
+        assertThat(completionService.state(user.id(), session.id())).satisfies(state -> {
+            assertThat(state.finalAnswerSaved()).isTrue();
+            assertThat(state.reportStatus()).isEqualTo(ReportStatus.FAILED);
+            assertThat(state.failureMessage()).contains("AI 返回格式无效");
+            assertThat(state.retryable()).isTrue();
+        });
+        assertThat(interviewResultService.find(user.id(), session.id())).isEmpty();
+
+        assertThatThrownBy(() -> agentService.answer(user.id(), session.id(), "不应重复保存的回答")
+                .collectList().block())
+                .satisfies(throwable -> assertThat(hasCause(throwable, BusinessException.class)).isTrue());
+        assertThat(sessionService.messages(user.id(), session.id())).hasSize(2);
+        assertThatThrownBy(() -> completionService.state(other.id(), session.id()))
+                .isInstanceOf(BusinessException.class);
+
+        sessionService.pause(user.id(), session.id());
+        chatService.enqueueChat("""
+                {"overallScore":81,"technicalScore":82,"problemSolvingScore":86,
+                "projectScore":80,"systemDesignScore":75,"communicationScore":84,
+                "comprehensiveScore":80,"summary":"排查过程完整，具备较好的故障定位思路。"}
+                """);
+        var report = completionService.complete(user.id(), session.id());
+
+        assertThat(report.overallScore()).isEqualTo(81);
+        assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
+        assertThat(sessionService.messages(user.id(), session.id())).hasSize(2);
+        assertThat(completionService.state(user.id(), session.id()).reportStatus())
+                .isEqualTo(ReportStatus.COMPLETED);
     }
 
     @Test
