@@ -167,9 +167,9 @@ try {
         Write-Host "Package created under: $OutputDirectory"
     }
 
-    $artifacts = Get-ChildItem -LiteralPath $OutputDirectory -File |
+    $artifacts = @(Get-ChildItem -LiteralPath $OutputDirectory -File |
         Where-Object { $_.Extension -in @('.exe', '.msi', '.zip') } |
-        Sort-Object Name
+        Sort-Object Name)
     if ($artifacts.Count -gt 0) {
         $checksumLines = foreach ($artifact in $artifacts) {
             $hash = (Get-FileHash -LiteralPath $artifact.FullName -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -69,7 +69,8 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 - 可复用 `MarkdownView` 正式报告阅读组件，支持 GFM 表格和文档目录定位
 - Markdown 报告复制、导出、原始问答联动，以及 HTML/危险 URL/远程图片防护
 
-后续按照 `docs/spec` 中的阶段顺序完善 Windows `jpackage` 应用发布配置。
+MVP 业务主流程已经贯通，当前进入 Windows 发布验收阶段。详细进度和不阻塞主线的局部优化清单见
+[`STATUS.md`](STATUS.md)。
 
 ## 本地配置
 

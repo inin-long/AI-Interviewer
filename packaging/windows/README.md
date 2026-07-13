@@ -15,6 +15,10 @@ The application, bundled Java runtime, user data, logs, and configuration remain
 .\packaging\windows\Test-AppImage.ps1
 ```
 
+The smoke test starts the packaged application twice against the same temporary `AI_INTERVIEWER_HOME`.
+It verifies fresh Flyway migration, background worker startup, program/data separation, and retention of
+external user files across restart.
+
 The default output is `target\dist\AI Interviewer`. It contains the executable and a private Java runtime,
 so the destination computer does not need a separately installed JDK.
 `SHA256SUMS.txt` is refreshed whenever file artifacts are present in the output directory.

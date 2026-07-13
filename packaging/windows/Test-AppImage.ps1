@@ -18,37 +18,73 @@ $smokeRoot = Join-Path $projectRoot ('target\package-smoke-' + (Get-Date -Format
 New-Item -ItemType Directory -Path $smokeRoot | Out-Null
 $previousHome = $env:AI_INTERVIEWER_HOME
 $env:AI_INTERVIEWER_HOME = $smokeRoot
+$database = Join-Path $smokeRoot 'database\app.db'
+$log = Join-Path $smokeRoot 'logs\app.log'
+$sentinel = Join-Path $smokeRoot 'users\release-smoke-retention.txt'
 
-try {
-    $process = Start-Process -FilePath $executable -PassThru -WindowStyle Hidden
-    $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
-    $database = Join-Path $smokeRoot 'database\app.db'
-    $log = Join-Path $smokeRoot 'logs\app.log'
-    while ((Get-Date) -lt $deadline -and -not $process.HasExited) {
-        if ((Test-Path -LiteralPath $database) -and (Test-Path -LiteralPath $log)) {
-            $content = Get-Content -LiteralPath $log -Raw -ErrorAction SilentlyContinue
-            if ($content -match 'Started application') { break }
+function Start-AndVerifyApplication {
+    param([Parameter(Mandatory)][int]$ExpectedStartupCount)
+
+    $process = $null
+    try {
+        $process = Start-Process -FilePath $executable -PassThru -WindowStyle Hidden
+        $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
+        $started = $false
+        while ((Get-Date) -lt $deadline -and -not $process.HasExited) {
+            if ((Test-Path -LiteralPath $database) -and (Test-Path -LiteralPath $log)) {
+                $content = Get-Content -LiteralPath $log -Raw -ErrorAction SilentlyContinue
+                $startupCount = [regex]::Matches($content, 'Started application').Count
+                if ($startupCount -ge $ExpectedStartupCount) {
+                    $started = $true
+                    break
+                }
+            }
+            Start-Sleep -Milliseconds 500
         }
-        Start-Sleep -Milliseconds 500
-    }
-    $running = -not $process.HasExited
-    $logText = if (Test-Path -LiteralPath $log) { Get-Content -LiteralPath $log -Raw } else { '' }
-    if ($running) {
-        Stop-Process -Id $process.Id
-        $process.WaitForExit()
-    }
-    if (-not $running -or $logText -notmatch 'Started application') {
-        throw "Packaged application did not finish startup. Inspect: $smokeRoot"
-    }
-    if ($logText -notmatch 'Started 2 background task worker') {
-        throw "Background task workers did not start. Inspect: $smokeRoot"
-    }
-    Write-Host "App image smoke test passed. Runtime data: $smokeRoot"
-} finally {
-    $env:AI_INTERVIEWER_HOME = $previousHome
-    if (Get-Variable process -ErrorAction SilentlyContinue) {
+
+        if (-not $started) {
+            throw "Packaged application did not finish startup #$ExpectedStartupCount. Inspect: $smokeRoot"
+        }
+        return (Get-Content -LiteralPath $log -Raw)
+    } finally {
         if ($null -ne $process -and -not $process.HasExited) {
             Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
+            $process.WaitForExit()
         }
     }
+}
+
+try {
+    $unexpectedRuntimeFiles = @(Get-ChildItem -LiteralPath $appImagePath -Recurse -File -Force |
+        Where-Object { $_.Name -in @('app.db', 'app.log', 'application-local.yml') })
+    if ($unexpectedRuntimeFiles.Count -gt 0) {
+        throw "Application image contains user data or local configuration: $($unexpectedRuntimeFiles.FullName -join ', ')"
+    }
+
+    $firstLog = Start-AndVerifyApplication -ExpectedStartupCount 1
+    if ($firstLog -notmatch 'Started 2 background task worker') {
+        throw "Background task workers did not start. Inspect: $smokeRoot"
+    }
+    if ($firstLog -notmatch 'Successfully applied \d+ migrations') {
+        throw "Fresh database migrations did not complete. Inspect: $smokeRoot"
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $sentinel) | Out-Null
+    [System.IO.File]::WriteAllText($sentinel, 'preserve-across-restart', [System.Text.UTF8Encoding]::new($false))
+
+    $secondLog = Start-AndVerifyApplication -ExpectedStartupCount 2
+    if ($secondLog -match '(?im)^.*(?:migration|flyway).*(?:error|failed).*$') {
+        throw "Database validation failed during restart. Inspect: $smokeRoot"
+    }
+    $sentinelRetained = (Test-Path -LiteralPath $sentinel) -and
+        ((Get-Content -LiteralPath $sentinel -Raw) -eq 'preserve-across-restart')
+    if (-not $sentinelRetained) {
+        throw "External user data was not retained across restart. Inspect: $smokeRoot"
+    }
+    if ((Get-Item -LiteralPath $database).Length -le 0) {
+        throw "Database file is empty after restart. Inspect: $smokeRoot"
+    }
+    Write-Host "App image first-start and restart-retention smoke test passed. Runtime data: $smokeRoot"
+} finally {
+    $env:AI_INTERVIEWER_HOME = $previousHome
 }
