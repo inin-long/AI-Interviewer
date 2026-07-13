@@ -36,24 +36,45 @@
         <VBox spacing="16" styleClass="interview-workspace">
             <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
             <Label fx:id="aiNoticeLabel" text="AI 状态" styleClass="local-data-note" wrapText="true"/>
-            <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
-                <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
-                <HBox alignment="CENTER_LEFT">
-                    <Label text="面试对话" styleClass="module-title"/>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <Label text="每次回答、阶段切换和暂停都会保存 Checkpoint" styleClass="secondary-text"/>
-                </HBox>
-                <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
-                          VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
-                <Separator/>
-                <Label text="你的回答" styleClass="field-label"/>
-                <TextArea fx:id="answerArea" promptText="输入回答；当前里程碑先保存输入和状态，后续接入 Agent 分析"
-                          wrapText="true" prefRowCount="4"/>
-                <HBox alignment="CENTER_RIGHT">
-                    <Button fx:id="submitButton" text="保存回答" onAction="#submitAnswer"
-                            defaultButton="true" styleClass="primary-button"/>
-                </HBox>
-            </VBox>
+            <HBox spacing="16" VBox.vgrow="ALWAYS">
+                <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
+                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="面试对话" styleClass="module-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="回答、阶段切换和暂停均会保存" styleClass="secondary-text"/>
+                    </HBox>
+                    <TextArea fx:id="transcriptArea" editable="false" wrapText="true"
+                              VBox.vgrow="ALWAYS" styleClass="transcript-area"/>
+                    <Separator/>
+                    <Label text="你的回答" styleClass="field-label"/>
+                    <TextArea fx:id="answerArea" promptText="输入你的回答，AI 将结合当前阶段和已关联资料继续提问"
+                              wrapText="true" prefRowCount="4"/>
+                    <HBox alignment="CENTER_RIGHT">
+                        <Button fx:id="submitButton" text="提交回答" onAction="#submitAnswer"
+                                defaultButton="true" styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+                <VBox fx:id="citationRail" spacing="12" minWidth="270" prefWidth="300" maxWidth="330"
+                      styleClass="content-card,citation-rail">
+                    <padding><Insets top="20" right="18" bottom="18" left="18"/></padding>
+                    <HBox alignment="CENTER_LEFT">
+                        <VBox spacing="3">
+                            <Label text="参考依据" styleClass="module-title"/>
+                            <Label text="本次提问实际采用的片段" styleClass="secondary-text"/>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                    </HBox>
+                    <Label fx:id="citationCountLabel" text="暂无引用" styleClass="citation-count"/>
+                    <Separator/>
+                    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS"
+                                styleClass="citation-scroll">
+                        <content>
+                            <VBox fx:id="citationContainer" spacing="10" fillWidth="true"/>
+                        </content>
+                    </ScrollPane>
+                </VBox>
+            </HBox>
         </VBox>
     </center>
 </BorderPane>

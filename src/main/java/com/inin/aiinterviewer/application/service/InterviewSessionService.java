@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeDocumentSnapshotDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -193,10 +195,23 @@ public class InterviewSessionService {
             AnswerAnalysis analysis,
             boolean partial
     ) {
+        return saveAssistantOutput(userId, sessionId, question, analysis, partial, List.of());
+    }
+
+    @Transactional
+    public InterviewState saveAssistantOutput(
+            long userId,
+            long sessionId,
+            String question,
+            AnswerAnalysis analysis,
+            boolean partial,
+            List<KnowledgeCitationDto> citations
+    ) {
         InterviewSessionEntity session = requireEntity(userId, sessionId);
         if (session.getStatus() != InterviewStatus.RUNNING || question == null || question.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
+        List<KnowledgeCitationDto> normalizedCitations = normalizeCitations(session, citations);
 
         InterviewMessageEntity message = new InterviewMessageEntity();
         message.setUserId(userId);
@@ -204,7 +219,7 @@ public class InterviewSessionService {
         message.setSequenceNo(messageMapper.nextSequence(userId, sessionId));
         message.setRole(Message.Role.ASSISTANT);
         message.setContent(question.strip());
-        message.setMetadataJson(partial ? "{\"partial\":true}" : "{}");
+        message.setMetadataJson(writeJson(new MessageMetadata(partial, normalizedCitations)));
         messageMapper.insert(message);
 
         InterviewState previous = loadLatestStateInternal(userId, sessionId)
@@ -341,7 +356,50 @@ public class InterviewSessionService {
     }
 
     private InterviewMessageDto toMessageDto(InterviewMessageEntity entity) {
-        return new InterviewMessageDto(entity.getSequenceNo(), entity.getRole(), entity.getContent(), entity.getCreateTime());
+        MessageMetadata metadata = readMessageMetadata(entity.getMetadataJson(), entity.getId());
+        return new InterviewMessageDto(
+                entity.getSequenceNo(), entity.getRole(), entity.getContent(), entity.getCreateTime(),
+                metadata.partial(), metadata.citations());
+    }
+
+    private List<KnowledgeCitationDto> normalizeCitations(
+            InterviewSessionEntity session,
+            List<KnowledgeCitationDto> citations
+    ) {
+        if (citations == null || citations.isEmpty()) return List.of();
+        if (citations.size() > 10) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        Map<Long, KnowledgeDocumentSnapshotDto> allowedDocuments = new LinkedHashMap<>();
+        for (KnowledgeDocumentSnapshotDto document : readKnowledgeSnapshot(session.getKnowledgeSnapshotJson())) {
+            allowedDocuments.put(document.id(), document);
+        }
+        Map<String, KnowledgeCitationDto> unique = new LinkedHashMap<>();
+        for (KnowledgeCitationDto citation : citations) {
+            KnowledgeDocumentSnapshotDto document = citation == null
+                    ? null : allowedDocuments.get(citation.documentId());
+            if (document == null || citation.chunkIndex() < 0 || citation.excerpt().isBlank()
+                    || !Double.isFinite(citation.score())) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+            }
+            KnowledgeCitationDto normalized = new KnowledgeCitationDto(
+                    document.id(), document.name(), citation.chunkIndex(), citation.excerpt(), citation.score());
+            unique.putIfAbsent(document.id() + ":" + citation.chunkIndex(), normalized);
+        }
+        return List.copyOf(unique.values());
+    }
+
+    private MessageMetadata readMessageMetadata(String json, Long messageId) {
+        if (json == null || json.isBlank() || "{}".equals(json.strip())) {
+            return MessageMetadata.empty();
+        }
+        try {
+            MessageMetadata metadata = objectMapper.readValue(json, MessageMetadata.class);
+            return metadata == null ? MessageMetadata.empty() : metadata;
+        } catch (JsonProcessingException exception) {
+            log.warn("Ignoring invalid metadata for interview message {}", messageId);
+            return MessageMetadata.empty();
+        }
     }
 
     private List<Message> domainMessages(long userId, long sessionId) {
@@ -410,6 +468,16 @@ public class InterviewSessionService {
             return documents == null ? List.of() : List.copyOf(documents);
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
+    private record MessageMetadata(boolean partial, List<KnowledgeCitationDto> citations) {
+        private MessageMetadata {
+            citations = citations == null ? List.of() : List.copyOf(citations);
+        }
+
+        private static MessageMetadata empty() {
+            return new MessageMetadata(false, List.of());
         }
     }
 

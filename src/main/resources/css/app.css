@@ -344,6 +344,64 @@
     -fx-background-color: -surface-muted;
 }
 
+.citation-rail {
+    -fx-background-color: #FBFCFF;
+}
+
+.citation-count {
+    -fx-text-fill: -primary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.citation-scroll,
+.citation-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.citation-card {
+    -fx-background-color: -surface;
+    -fx-border-color: transparent transparent transparent -border-strong;
+    -fx-border-width: 0 0 0 3;
+    -fx-background-radius: 0 7 7 0;
+    -fx-padding: 12 12 12 14;
+}
+
+.citation-card-latest {
+    -fx-border-color: transparent transparent transparent -primary;
+    -fx-background-color: -primary-soft;
+}
+
+.citation-kicker {
+    -fx-text-fill: -text-muted;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.citation-link {
+    -fx-alignment: center-left;
+    -fx-background-color: transparent;
+    -fx-text-fill: -primary;
+    -fx-padding: 0;
+    -fx-font-weight: 700;
+}
+
+.citation-link:hover {
+    -fx-text-fill: -primary-hover;
+    -fx-underline: true;
+}
+
+.citation-excerpt,
+.citation-empty {
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 2px;
+}
+
+.citation-empty {
+    -fx-padding: 8 2;
+}
+
 .status-tag {
     -fx-background-color: -primary-soft;
     -fx-text-fill: -primary;

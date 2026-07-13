@@ -1,6 +1,8 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
+import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
@@ -23,6 +25,7 @@ import reactor.core.publisher.Flux;
 
 import java.nio.file.Path;
 import java.nio.file.Files;
+import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +50,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private InterviewPlanService planService;
     @Autowired private InterviewSessionService sessionService;
     @Autowired private InterviewResultService interviewResultService;
+    @Autowired private InterviewCompletionService completionService;
     @Autowired private InterviewAgentService agentService;
     @Autowired private FakeChatService chatService;
     @Autowired private ResumeService resumeService;
@@ -160,13 +164,27 @@ class InterviewAgentServiceIntegrationTest {
                 .get().satisfies(report -> {
                     assertThat(report.overallScore()).isEqualTo(78);
                     assertThat(report.dimensions()).hasSize(6);
-                    assertThat(report.contentMarkdown()).contains("技术基础", "综合评价", "问答摘要");
+                    assertThat(report.contentMarkdown()).contains(
+                            "技术基础", "综合评价", "问答摘要", "参考依据",
+                            "本次面试未使用知识库片段作为提问依据");
                 });
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
                 .get().satisfies(state -> {
                     assertThat(state.stage()).isEqualTo(InterviewStage.COMPLETED);
                     assertThat(state.evaluation().overallScore()).isEqualTo(78);
                 });
+    }
+
+    @Test
+    void formatsQuestionScopedKnowledgeCitationsForReport() {
+        var message = new InterviewMessageDto(
+                3, Message.Role.ASSISTANT, "请说明 Redis 缓存穿透的处理方式。", LocalDateTime.now(), false,
+                List.of(new KnowledgeCitationDto(
+                        9L, "Redis 设计说明.md", 2,
+                        "缓存穿透可以使用布隆过滤器，并为不存在的数据设置短期空值缓存。", 0.91)));
+
+        assertThat(completionService.citationMarkdown(List.of(message)))
+                .contains("第 1 题", "Redis 设计说明.md", "片段 3", "布隆过滤器");
     }
 
     private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {

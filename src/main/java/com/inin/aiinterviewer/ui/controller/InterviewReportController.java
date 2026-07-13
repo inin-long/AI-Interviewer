@@ -90,6 +90,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private void scrollScores() { reportView.scrollToText("综合得分"); }
     @FXML private void scrollSummary() { reportView.scrollToHeading("综合评价"); }
     @FXML private void scrollTranscriptSummary() { reportView.scrollToHeading("问答摘要"); }
+    @FXML private void scrollSources() { reportView.scrollToHeading("参考依据"); }
 
     @FXML
     private void copyMarkdown() {

@@ -93,7 +93,18 @@ public class InterviewHistoryDetailController implements ContextAwareController<
                     .append(message.createTime() == null ? "" : TIME_FORMAT.format(message.createTime()))
                     .append("\n")
                     .append(message.content())
-                    .append("\n\n");
+                    .append("\n");
+            if (!message.citations().isEmpty()) {
+                value.append("参考依据：");
+                for (int index = 0; index < message.citations().size(); index++) {
+                    var citation = message.citations().get(index);
+                    if (index > 0) value.append("；");
+                    value.append(citation.documentName())
+                            .append("（片段 ").append(citation.chunkIndex() + 1).append("）");
+                }
+                value.append("\n");
+            }
+            value.append("\n");
         }
         return value.toString().stripTrailing();
     }

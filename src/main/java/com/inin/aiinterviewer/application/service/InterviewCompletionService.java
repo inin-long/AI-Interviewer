@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
 
@@ -52,7 +53,7 @@ public class InterviewCompletionService {
                 chatService.chat(evaluationPrompt(session.jobTitle(), messages, summary)),
                 EvaluationPayload.class);
         validate(payload);
-        String markdown = markdown(session.title(), payload, summary);
+        String markdown = markdown(session.title(), payload, summary, messages);
         return resultService.complete(userId, session, messages, previous, payload, summary, markdown);
     }
 
@@ -68,7 +69,11 @@ public class InterviewCompletionService {
                 目标岗位：%s
                 对话摘要：%s
                 完整问答：%s
-                """.formatted(jobTitle, summary, json(messages));
+                """.formatted(jobTitle, summary, json(messages.stream()
+                        .map(message -> java.util.Map.of(
+                                "role", message.role().name(),
+                                "content", message.content()))
+                        .toList()));
     }
 
     private void validate(EvaluationPayload payload) {
@@ -99,7 +104,12 @@ public class InterviewCompletionService {
         return summary.toString().strip();
     }
 
-    private String markdown(String title, EvaluationPayload value, String contextSummary) {
+    private String markdown(
+            String title,
+            EvaluationPayload value,
+            String contextSummary,
+            List<InterviewMessageDto> messages
+    ) {
         return """
                 # %s · 面试报告
 
@@ -121,9 +131,46 @@ public class InterviewCompletionService {
                 ## 问答摘要
 
                 %s
+
+                ## 参考依据
+
+                %s
                 """.formatted(title, value.overallScore(), value.technicalScore(),
                 value.problemSolvingScore(), value.projectScore(), value.systemDesignScore(),
-                value.communicationScore(), value.comprehensiveScore(), value.summary(), contextSummary);
+                value.communicationScore(), value.comprehensiveScore(), value.summary(), contextSummary,
+                citationMarkdown(messages));
+    }
+
+    String citationMarkdown(List<InterviewMessageDto> messages) {
+        StringBuilder markdown = new StringBuilder();
+        int questionNumber = 0;
+        for (InterviewMessageDto message : messages) {
+            if (message.role() != Message.Role.ASSISTANT) continue;
+            questionNumber++;
+            if (message.citations().isEmpty()) continue;
+            markdown.append("### 第 ").append(questionNumber).append(" 题\n\n")
+                    .append("**问题：** ").append(inline(message.content(), 160)).append("\n\n");
+            message.citations().forEach(citation -> markdown
+                    .append("- **").append(inline(citation.documentName(), 100)).append("** · 片段 ")
+                    .append(citation.chunkIndex() + 1).append("\n\n")
+                    .append("  > ").append(quote(citation.excerpt())).append("\n\n"));
+        }
+        return markdown.isEmpty()
+                ? "本次面试未使用知识库片段作为提问依据。"
+                : markdown.toString().stripTrailing();
+    }
+
+    private String inline(String value, int maxLength) {
+        String normalized = value == null ? "" : value.replaceAll("\\s+", " ").strip();
+        if (normalized.length() > maxLength) normalized = normalized.substring(0, maxLength) + "…";
+        return normalized.replace("\\", "\\\\")
+                .replace("*", "\\*").replace("_", "\\_")
+                .replace("[", "\\[").replace("]", "\\]")
+                .replace("#", "\\#").replace("|", "\\|");
+    }
+
+    private String quote(String value) {
+        return inline(value, 320).replace(">", "\\>");
     }
 
     private String json(Object value) {

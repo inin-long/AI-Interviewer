@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.agent.tool.ToolInput;
 import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.event.InterviewTurnCompletedEvent;
 import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.BusinessException;
@@ -22,9 +23,11 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Collectors;
 
 @Service
 public class InterviewAgentService {
@@ -62,7 +65,7 @@ public class InterviewAgentService {
                     session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
                     retrieveCandidateProfile(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
-            return streamAndPersist(userId, sessionId, session.stage(), prompt, null);
+            return streamAndPersist(userId, sessionId, session.stage(), prompt, null, List.of());
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -85,18 +88,18 @@ public class InterviewAgentService {
                 return Flux.empty();
             }
             List<Message> messages = domainMessages(persistedMessages);
-            String retrievedContext = retrieveKnowledge(
+            KnowledgeRetrieval retrieval = retrieveKnowledge(
                     userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
             InterviewTurnPlan turn = interviewGraph.plan(new InterviewTurnInput(
                     session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
-                    session.planSnapshot(), messages, answeredState.summary(), retrievedContext,
+                    session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
                     retrieveCandidateProfile(userId, sessionId)));
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
             }
             return streamAndPersist(
-                    userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis());
+                    userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(), retrieval.citations());
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -105,7 +108,8 @@ public class InterviewAgentService {
             long sessionId,
             InterviewStage stage,
             String prompt,
-            AnswerAnalysis analysis
+            AnswerAnalysis analysis,
+            List<KnowledgeCitationDto> citations
     ) {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
@@ -121,7 +125,7 @@ public class InterviewAgentService {
                     }
                     persistenceAttempted.set(true);
                     sessionService.saveAssistantOutput(
-                            userId, sessionId, generated.toString(), analysis, false);
+                            userId, sessionId, generated.toString(), analysis, false, citations);
                     eventPublisher.publishEvent(
                             new InterviewTurnCompletedEvent(userId, sessionId, stage, false));
                 })
@@ -132,7 +136,7 @@ public class InterviewAgentService {
                     }
                     try {
                         sessionService.saveAssistantOutput(
-                                userId, sessionId, generated.toString(), analysis, true);
+                                userId, sessionId, generated.toString(), analysis, true, citations);
                         eventPublisher.publishEvent(
                                 new InterviewTurnCompletedEvent(userId, sessionId, stage, true));
                     } catch (RuntimeException persistenceFailure) {
@@ -155,12 +159,40 @@ public class InterviewAgentService {
                 .toList();
     }
 
-    private String retrieveKnowledge(long userId, long sessionId, String query) {
-        return toolRegistry.find("knowledge_search")
+    private KnowledgeRetrieval retrieveKnowledge(long userId, long sessionId, String query) {
+        var result = toolRegistry.find("knowledge_search")
                 .map(tool -> tool.execute(new ToolInput(userId, sessionId, Map.of("query", query, "limit", 3))))
-                .filter(result -> result.success())
-                .map(result -> String.valueOf(result.data().getOrDefault("results", "")))
-                .orElse("");
+                .filter(toolResult -> toolResult.success());
+        if (result.isEmpty() || !(result.get().data().get("results") instanceof List<?> items)) {
+            return KnowledgeRetrieval.empty();
+        }
+        List<KnowledgeCitationDto> citations = new ArrayList<>();
+        for (Object item : items) {
+            if (!(item instanceof Map<?, ?> values)) continue;
+            KnowledgeCitationDto citation = toCitation(values);
+            if (citation != null) citations.add(citation);
+        }
+        if (citations.isEmpty()) return KnowledgeRetrieval.empty();
+        String context = citations.stream()
+                .map(citation -> "[来源：%s，片段 %d]\n%s".formatted(
+                        citation.documentName(), citation.chunkIndex() + 1, citation.excerpt()))
+                .collect(Collectors.joining("\n\n"));
+        return new KnowledgeRetrieval(context, citations);
+    }
+
+    private KnowledgeCitationDto toCitation(Map<?, ?> values) {
+        if (!(values.get("documentId") instanceof Number documentId)
+                || !(values.get("chunkIndex") instanceof Number chunkIndex)
+                || !(values.get("score") instanceof Number score)) {
+            return null;
+        }
+        Object documentNameValue = values.get("documentName");
+        Object contentValue = values.get("content");
+        String documentName = documentNameValue == null ? "未命名文档" : String.valueOf(documentNameValue);
+        String content = contentValue == null ? "" : String.valueOf(contentValue);
+        if (documentId.longValue() <= 0 || chunkIndex.intValue() < 0 || content.isBlank()) return null;
+        return new KnowledgeCitationDto(
+                documentId.longValue(), documentName, chunkIndex.intValue(), content, score.doubleValue());
     }
 
     private String retrieveCandidateProfile(long userId, long sessionId) {
@@ -169,5 +201,16 @@ public class InterviewAgentService {
                 .filter(result -> result.success())
                 .map(result -> result.data().toString())
                 .orElse("未关联已确认候选人画像");
+    }
+
+    private record KnowledgeRetrieval(String context, List<KnowledgeCitationDto> citations) {
+        private KnowledgeRetrieval {
+            context = context == null ? "" : context;
+            citations = citations == null ? List.of() : List.copyOf(citations);
+        }
+
+        private static KnowledgeRetrieval empty() {
+            return new KnowledgeRetrieval("", List.of());
+        }
     }
 }

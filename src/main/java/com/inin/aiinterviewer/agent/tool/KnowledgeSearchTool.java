@@ -49,6 +49,7 @@ public class KnowledgeSearchTool implements AgentTool {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("documentId", result.documentId());
                 item.put("documentName", result.documentName());
+                item.put("chunkIndex", result.chunkIndex());
                 item.put("content", result.content());
                 item.put("score", result.score());
                 return Map.copyOf(item);

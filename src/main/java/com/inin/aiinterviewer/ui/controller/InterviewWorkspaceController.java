@@ -15,11 +15,13 @@ import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -47,6 +49,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label statusLabel;
     @FXML private Label progressLabel;
     @FXML private Label aiNoticeLabel;
+    @FXML private Label citationCountLabel;
+    @FXML private VBox citationContainer;
     @FXML private TextArea transcriptArea;
     @FXML private TextArea answerArea;
     @FXML private Button pauseButton;
@@ -157,6 +161,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         stageLabel.setText(stageText(currentSession.stage()));
         statusLabel.setText(statusText(currentSession.status()));
         transcriptArea.setText(transcript(messages));
+        renderCitations(messages);
         long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
         progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
                 + " / " + currentSession.planSnapshot().questionCount() + " 题");
@@ -240,6 +245,69 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                     .append(message.content()).append("\n\n");
         }
         return transcript.toString().stripTrailing();
+    }
+
+    private void renderCitations(List<InterviewMessageDto> messages) {
+        citationContainer.getChildren().clear();
+        int citationCount = messages.stream().mapToInt(message -> message.citations().size()).sum();
+        long citedQuestions = messages.stream()
+                .filter(message -> message.role() == Message.Role.ASSISTANT && !message.citations().isEmpty())
+                .count();
+        citationCountLabel.setText(citationCount == 0
+                ? "暂无引用"
+                : citationCount + " 条引用 · " + citedQuestions + " 个问题");
+        if (citationCount == 0) {
+            Label empty = new Label("AI 使用知识库片段生成问题后，引用会按题目保存在这里。");
+            empty.setWrapText(true);
+            empty.getStyleClass().add("citation-empty");
+            citationContainer.getChildren().add(empty);
+            return;
+        }
+
+        int latestSequence = messages.stream()
+                .filter(message -> message.role() == Message.Role.ASSISTANT && !message.citations().isEmpty())
+                .mapToInt(InterviewMessageDto::sequenceNo)
+                .max().orElse(-1);
+        int questionNumber = 0;
+        for (InterviewMessageDto message : messages) {
+            if (message.role() != Message.Role.ASSISTANT) continue;
+            questionNumber++;
+            for (var citation : message.citations()) {
+                VBox card = new VBox(8);
+                card.getStyleClass().add("citation-card");
+                if (message.sequenceNo() == latestSequence) {
+                    card.getStyleClass().add("citation-card-latest");
+                }
+
+                Label marker = new Label("第 " + questionNumber + " 题 · 片段 " + (citation.chunkIndex() + 1));
+                marker.getStyleClass().add("citation-kicker");
+                Button documentLink = new Button(citation.documentName());
+                documentLink.setAlignment(Pos.CENTER_LEFT);
+                documentLink.setMaxWidth(Double.MAX_VALUE);
+                documentLink.setWrapText(true);
+                documentLink.setAccessibleText("查看来源文档 " + citation.documentName());
+                documentLink.getStyleClass().add("citation-link");
+                documentLink.setOnAction(event -> openCitation(citation.documentId()));
+
+                Label excerpt = new Label(citation.excerpt());
+                excerpt.setWrapText(true);
+                excerpt.getStyleClass().add("citation-excerpt");
+                card.getChildren().addAll(marker, documentLink, excerpt);
+                citationContainer.getChildren().add(card);
+            }
+        }
+    }
+
+    private void openCitation(long documentId) {
+        if (generationInProgress) {
+            viewManager.showInfo("正在生成", "请等待本轮 AI 输出完成后再查看来源文档。");
+            return;
+        }
+        try {
+            contentNavigator.showSubPage("/fxml/knowledge-detail-view.fxml", "知识文档", documentId);
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     private long userId() {

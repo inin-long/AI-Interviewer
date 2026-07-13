@@ -138,6 +138,33 @@ class JavaFxFxmlLoadTest {
     }
 
     @Test
+    void interviewWorkspaceUsesEvidenceRailAndReportLinksToSources() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "citation-layout-user", "引用布局用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent workspace = load("/fxml/interview-workspace-view.fxml");
+            Scene scene = new Scene(workspace, 1280, 860);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            workspace.applyCss();
+            workspace.layout();
+            VBox rail = (VBox) workspace.lookup("#citationRail");
+            VBox citations = (VBox) workspace.lookup("#citationContainer");
+
+            Parent report = load("/fxml/report-detail-view.fxml");
+            Button sourceDirectory = (Button) report.lookup("#sourceDirectoryButton");
+            return new boolean[]{
+                    rail != null && rail.getStyleClass().contains("citation-rail"),
+                    rail != null && rail.getWidth() >= 270 && rail.getWidth() <= 330,
+                    citations != null,
+                    sourceDirectory != null && "参考依据".equals(sourceDirectory.getText())
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
     void sidebarSpansWindowAndNavigationTracksActiveRoute() throws Exception {
         if (sessionState.currentUser().isEmpty()) {
             sessionState.logIn(new UserDto(1L, "navigation-test-user", "导航测试用户", LocalDateTime.now()));

@@ -35,6 +35,8 @@
                 <Button text="能力评分" onAction="#scrollScores" maxWidth="Infinity" styleClass="report-directory-button"/>
                 <Button text="综合评价" onAction="#scrollSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
                 <Button text="问答摘要" onAction="#scrollTranscriptSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
+                <Button fx:id="sourceDirectoryButton" text="参考依据" onAction="#scrollSources"
+                        maxWidth="Infinity" styleClass="report-directory-button"/>
                 <Separator/>
                 <Label text="综合得分" styleClass="summary-label"/>
                 <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score"/>
