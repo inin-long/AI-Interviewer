@@ -30,6 +30,10 @@ class LuceneVectorStoreTest {
                 .extracting(VectorSearchResult::id).containsExactly("a", "b");
         assertThat(store.search(1L, new float[]{1, 0, 0}, 2, 0.0))
                 .extracting(VectorSearchResult::id).doesNotContain("private");
+        assertThat(store.search(1L, new float[]{1, 0, 0}, 5, 0.0, List.of(2L)))
+                .extracting(VectorSearchResult::id).containsExactly("b");
+        assertThat(store.search(1L, new float[]{1, 0, 0}, 5, 0.0, List.of()))
+                .isEmpty();
 
         store.upsert(1L, List.of(new VectorDocument(
                 "a", "更新后的 Redis 内容", new float[]{1, 0, 0}, Map.of("documentId", 1))));

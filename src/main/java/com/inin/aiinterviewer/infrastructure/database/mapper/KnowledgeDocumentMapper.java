@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.Delete;
 
 import java.util.List;
 import java.util.Optional;
@@ -79,4 +80,10 @@ public interface KnowledgeDocumentMapper {
             WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
             """)
     int logicalDelete(long id, long userId);
+
+    @Delete("""
+            DELETE FROM interview_plan_document
+            WHERE document_id = #{documentId} AND user_id = #{userId}
+            """)
+    int deletePlanLinks(long documentId, long userId);
 }

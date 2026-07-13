@@ -18,6 +18,11 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.index.VectorSimilarityFunction;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.KnnFloatVectorQuery;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.stereotype.Service;
@@ -37,6 +42,7 @@ public class LuceneVectorStore implements VectorStorePort {
     private static final String CONTENT = "content";
     private static final String METADATA = "metadata";
     private static final String VECTOR = "vector";
+    private static final String DOCUMENT_ID = "documentId";
 
     private final PathService pathService;
     private final ObjectMapper objectMapper;
@@ -57,6 +63,10 @@ public class LuceneVectorStore implements VectorStorePort {
                 document.add(new StringField(ID, vectorDocument.id(), StringField.Store.YES));
                 document.add(new StoredField(CONTENT, vectorDocument.content()));
                 document.add(new StoredField(METADATA, objectMapper.writeValueAsString(vectorDocument.metadata())));
+                Object documentId = vectorDocument.metadata().get(DOCUMENT_ID);
+                if (documentId != null) {
+                    document.add(new StringField(DOCUMENT_ID, String.valueOf(documentId), StringField.Store.NO));
+                }
                 document.add(new KnnFloatVectorField(VECTOR, vectorDocument.embedding(),
                         VectorSimilarityFunction.COSINE));
                 writer.updateDocument(new Term(ID, vectorDocument.id()), document);
@@ -71,12 +81,44 @@ public class LuceneVectorStore implements VectorStorePort {
     public synchronized List<VectorSearchResult> search(
             long userId, float[] queryEmbedding, int limit, double minimumScore
     ) {
+        return searchInternal(userId, queryEmbedding, limit, minimumScore, null);
+    }
+
+    @Override
+    public synchronized List<VectorSearchResult> search(
+            long userId,
+            float[] queryEmbedding,
+            int limit,
+            double minimumScore,
+            Collection<Long> allowedDocumentIds
+    ) {
+        if (allowedDocumentIds == null || allowedDocumentIds.isEmpty()) return List.of();
+        BooleanQuery.Builder filter = new BooleanQuery.Builder();
+        int count = 0;
+        for (Long documentId : new java.util.LinkedHashSet<>(allowedDocumentIds)) {
+            if (documentId == null || documentId <= 0) continue;
+            filter.add(new TermQuery(new Term(DOCUMENT_ID, String.valueOf(documentId))),
+                    BooleanClause.Occur.SHOULD);
+            filter.add(new PrefixQuery(new Term(ID, documentId + ":")), BooleanClause.Occur.SHOULD);
+            count++;
+        }
+        if (count == 0) return List.of();
+        filter.setMinimumNumberShouldMatch(1);
+        return searchInternal(userId, queryEmbedding, limit, minimumScore, filter.build());
+    }
+
+    private List<VectorSearchResult> searchInternal(
+            long userId, float[] queryEmbedding, int limit, double minimumScore, Query filter
+    ) {
         if (queryEmbedding == null || queryEmbedding.length == 0 || limit <= 0) return List.of();
         try (Directory directory = open(userId)) {
             if (!DirectoryReader.indexExists(directory)) return List.of();
             try (DirectoryReader reader = DirectoryReader.open(directory)) {
                 IndexSearcher searcher = new IndexSearcher(reader);
-                var topDocs = searcher.search(new KnnFloatVectorQuery(VECTOR, queryEmbedding, limit), limit);
+                KnnFloatVectorQuery query = filter == null
+                        ? new KnnFloatVectorQuery(VECTOR, queryEmbedding, limit)
+                        : new KnnFloatVectorQuery(VECTOR, queryEmbedding, limit, filter);
+                var topDocs = searcher.search(query, limit);
                 List<VectorSearchResult> results = new ArrayList<>();
                 var storedFields = searcher.storedFields();
                 for (var scoreDoc : topDocs.scoreDocs) {

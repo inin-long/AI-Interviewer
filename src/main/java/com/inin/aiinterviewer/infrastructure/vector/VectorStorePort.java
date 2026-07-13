@@ -8,6 +8,13 @@ public interface VectorStorePort {
 
     List<VectorSearchResult> search(long userId, float[] queryEmbedding, int limit, double minimumScore);
 
+    List<VectorSearchResult> search(
+            long userId,
+            float[] queryEmbedding,
+            int limit,
+            double minimumScore,
+            Collection<Long> allowedDocumentIds
+    );
+
     void delete(long userId, Collection<String> documentIds);
 }
-

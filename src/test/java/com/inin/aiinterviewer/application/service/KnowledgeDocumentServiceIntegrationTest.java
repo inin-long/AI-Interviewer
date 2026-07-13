@@ -4,6 +4,9 @@ import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
 import com.inin.aiinterviewer.infrastructure.ai.EmbeddingService;
 import com.inin.aiinterviewer.agent.tool.ToolInput;
 import com.inin.aiinterviewer.agent.tool.ToolRegistry;
+import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
+import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
+import com.inin.aiinterviewer.application.exception.BusinessException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +21,10 @@ import org.springframework.test.context.DynamicPropertySource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Import(KnowledgeDocumentServiceIntegrationTest.FakeEmbeddingConfiguration.class)
@@ -40,6 +45,8 @@ class KnowledgeDocumentServiceIntegrationTest {
     @Autowired private KnowledgeDocumentTaskService knowledgeTaskService;
     @Autowired private BackgroundTaskService backgroundTaskService;
     @Autowired private ToolRegistry toolRegistry;
+    @Autowired private InterviewPlanService planService;
+    @Autowired private InterviewSessionService sessionService;
 
     @Test
     void uploadsChunksIndexesSearchesAndIsolatesUsers() throws Exception {
@@ -57,14 +64,55 @@ class KnowledgeDocumentServiceIntegrationTest {
         assertThat(knowledgeService.search(owner.id(), "Redis 缓存", 3))
                 .isNotEmpty().allSatisfy(result -> assertThat(result.documentId()).isEqualTo(document.id()));
         assertThat(knowledgeService.search(other.id(), "Redis 缓存", 3)).isEmpty();
-        var toolResult = toolRegistry.find("knowledge_search").orElseThrow()
-                .execute(new ToolInput(owner.id(), 0L, Map.of("query", "Redis 缓存", "limit", 2)));
-        assertThat(toolResult.success()).isTrue();
-        assertThat((java.util.List<?>) toolResult.data().get("results")).isNotEmpty();
+        assertThatThrownBy(() -> planService.create(other.id(), new SaveInterviewPlanCommand(
+                "跨用户知识文档", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, null, List.of(document.id()), Map.of(), null)))
+                .isInstanceOf(BusinessException.class);
 
+        Path unselectedSource = applicationHome.resolve("mysql-notes.md");
+        Files.writeString(unselectedSource, "MySQL 联合索引需要关注最左匹配原则。\n".repeat(8));
+        var unselected = knowledgeService.uploadAndIndex(owner.id(), unselectedSource, "数据库资料");
+        var plan = planService.create(owner.id(), new SaveInterviewPlanCommand(
+                "知识范围面试", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, null, List.of(document.id()), Map.of(), null));
+        var session = sessionService.create(owner.id(), plan.id());
+        assertThat(session.knowledgeSnapshot()).extracting(snapshot -> snapshot.id())
+                .containsExactly(document.id());
+
+        var toolResult = toolRegistry.find("knowledge_search").orElseThrow()
+                .execute(new ToolInput(owner.id(), session.id(), Map.of("query", "Redis 缓存", "limit", 5)));
+        assertThat(toolResult.success()).isTrue();
+        @SuppressWarnings("unchecked")
+        var scopedResults = (java.util.List<Map<String, Object>>) toolResult.data().get("results");
+        assertThat(scopedResults).isNotEmpty()
+                .allSatisfy(item -> assertThat(item.get("documentId")).isEqualTo(document.id()));
+
+        planService.update(owner.id(), plan.id(), new SaveInterviewPlanCommand(
+                "知识范围已修改", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, null, List.of(), Map.of(), null));
+        assertThat(sessionService.require(owner.id(), session.id()).knowledgeSnapshot())
+                .extracting(snapshot -> snapshot.id()).containsExactly(document.id());
+        assertThat(toolRegistry.find("knowledge_search").orElseThrow()
+                .execute(new ToolInput(other.id(), session.id(), Map.of("query", "Redis"))).success())
+                .isFalse();
+
+        var noKnowledgePlan = planService.create(owner.id(), new SaveInterviewPlanCommand(
+                "无知识范围", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, Map.of(), null));
+        var noKnowledgeSession = sessionService.create(owner.id(), noKnowledgePlan.id());
+        assertThat(toolRegistry.find("knowledge_search").orElseThrow()
+                .execute(new ToolInput(owner.id(), noKnowledgeSession.id(), Map.of("query", "Redis"))).success())
+                .isFalse();
+
+        var deletionPlan = planService.create(owner.id(), new SaveInterviewPlanCommand(
+                "删除解绑验证", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, null, List.of(document.id()), Map.of(), null));
         knowledgeService.delete(owner.id(), document.id());
-        assertThat(knowledgeService.list(owner.id())).isEmpty();
-        assertThat(knowledgeService.search(owner.id(), "Redis 缓存", 3)).isEmpty();
+        assertThat(planService.require(deletionPlan.id(), owner.id()).knowledgeDocumentIds()).isEmpty();
+        assertThat(knowledgeService.list(owner.id())).extracting(item -> item.id())
+                .containsExactly(unselected.id());
+        assertThat(knowledgeService.search(owner.id(), "Redis 缓存", 3))
+                .extracting(result -> result.documentId()).doesNotContain(document.id());
     }
 
     @Test

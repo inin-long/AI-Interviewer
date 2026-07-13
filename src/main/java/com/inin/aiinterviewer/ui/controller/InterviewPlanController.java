@@ -42,6 +42,7 @@ public class InterviewPlanController {
     @FXML private TableColumn<InterviewPlanDto, Integer> durationColumn;
     @FXML private TableColumn<InterviewPlanDto, Integer> questionColumn;
     @FXML private TableColumn<InterviewPlanDto, String> profileColumn;
+    @FXML private TableColumn<InterviewPlanDto, String> knowledgeColumn;
     @FXML private TableColumn<InterviewPlanDto, LocalDateTime> updatedColumn;
     @FXML private Label summaryLabel;
     @FXML private Button editButton;
@@ -74,6 +75,9 @@ public class InterviewPlanController {
         questionColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().questionCount()));
         profileColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
                 cell.getValue().profileId() == null ? "未关联" : "已关联确认画像"));
+        knowledgeColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
+                cell.getValue().knowledgeDocumentIds().isEmpty()
+                        ? "未选择" : cell.getValue().knowledgeDocumentIds().size() + " 个文档"));
         updatedColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().updateTime()));
         updatedColumn.setCellFactory(column -> new javafx.scene.control.TableCell<>() {
             @Override protected void updateItem(LocalDateTime value, boolean empty) {

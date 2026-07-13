@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.agent.tool;
 
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
+import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -10,9 +11,14 @@ import java.util.Map;
 public class KnowledgeSearchTool implements AgentTool {
 
     private final KnowledgeDocumentService knowledgeService;
+    private final InterviewSessionService sessionService;
 
-    public KnowledgeSearchTool(KnowledgeDocumentService knowledgeService) {
+    public KnowledgeSearchTool(
+            KnowledgeDocumentService knowledgeService,
+            InterviewSessionService sessionService
+    ) {
         this.knowledgeService = knowledgeService;
+        this.sessionService = sessionService;
     }
 
     @Override
@@ -33,7 +39,12 @@ public class KnowledgeSearchTool implements AgentTool {
         }
         int limit = input.arguments().get("limit") instanceof Number number ? number.intValue() : 3;
         try {
-            var results = knowledgeService.search(input.userId(), String.valueOf(queryValue), limit);
+            var documentIds = sessionService.knowledgeDocumentIdsSnapshot(input.userId(), input.sessionId());
+            if (documentIds.isEmpty()) {
+                return ToolResult.failure("no knowledge documents are associated with this session");
+            }
+            var results = knowledgeService.search(
+                    input.userId(), String.valueOf(queryValue), limit, documentIds);
             var items = results.stream().map(result -> {
                 Map<String, Object> item = new LinkedHashMap<>();
                 item.put("documentId", result.documentId());

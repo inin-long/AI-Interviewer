@@ -14,9 +14,14 @@ public record SaveInterviewPlanCommand(
         int questionCount,
         Long resumeId,
         Long profileId,
+        List<Long> knowledgeDocumentIds,
         Map<String, Object> rules,
         List<String> stages
 ) {
+    public SaveInterviewPlanCommand {
+        knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
+    }
+
     public SaveInterviewPlanCommand(
             String name,
             String jobTitle,
@@ -29,6 +34,22 @@ public record SaveInterviewPlanCommand(
             List<String> stages
     ) {
         this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, null, rules, stages);
+                resumeId, null, List.of(), rules, stages);
+    }
+
+    public SaveInterviewPlanCommand(
+            String name,
+            String jobTitle,
+            String jobDescription,
+            InterviewDifficulty difficulty,
+            int durationMinutes,
+            int questionCount,
+            Long resumeId,
+            Long profileId,
+            Map<String, Object> rules,
+            List<String> stages
+    ) {
+        this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
+                resumeId, profileId, List.of(), rules, stages);
     }
 }

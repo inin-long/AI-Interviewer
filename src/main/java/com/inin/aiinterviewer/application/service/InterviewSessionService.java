@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeDocumentSnapshotDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -31,15 +32,17 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Service
 public class InterviewSessionService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewSessionService.class);
-    private static final String PROMPT_VERSION = "v1.1";
+    private static final String PROMPT_VERSION = "v1.2";
 
     private final InterviewPlanService planService;
     private final CandidateProfileService profileService;
+    private final KnowledgeDocumentService knowledgeService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final AgentCheckpointMapper checkpointMapper;
@@ -50,6 +53,7 @@ public class InterviewSessionService {
     public InterviewSessionService(
             InterviewPlanService planService,
             CandidateProfileService profileService,
+            KnowledgeDocumentService knowledgeService,
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
             AgentCheckpointMapper checkpointMapper,
@@ -59,6 +63,7 @@ public class InterviewSessionService {
     ) {
         this.planService = planService;
         this.profileService = profileService;
+        this.knowledgeService = knowledgeService;
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
         this.checkpointMapper = checkpointMapper;
@@ -85,6 +90,10 @@ public class InterviewSessionService {
         InterviewPlanDto plan = planService.require(planId, userId);
         CandidateProfileDto profileSnapshot = plan.profileId() == null
                 ? null : profileService.requireConfirmed(userId, plan.profileId());
+        List<KnowledgeDocumentSnapshotDto> knowledgeSnapshot = knowledgeService
+                .requireReadyAll(userId, plan.knowledgeDocumentIds()).stream()
+                .map(KnowledgeDocumentSnapshotDto::from)
+                .toList();
         InterviewStage initialStage = initialStage(plan.stages());
 
         InterviewSessionEntity entity = new InterviewSessionEntity();
@@ -96,6 +105,7 @@ public class InterviewSessionService {
         entity.setJobTitle(plan.jobTitle());
         entity.setPlanSnapshotJson(writeJson(plan));
         entity.setProfileSnapshotJson(profileSnapshot == null ? "{}" : writeJson(profileSnapshot));
+        entity.setKnowledgeSnapshotJson(writeJson(knowledgeSnapshot));
         entity.setStage(initialStage);
         entity.setStatus(InterviewStatus.RUNNING);
         entity.setPromptVersion(PROMPT_VERSION);
@@ -127,6 +137,19 @@ public class InterviewSessionService {
     public Optional<CandidateProfileDto> profileSnapshot(long userId, long sessionId) {
         InterviewSessionEntity session = requireEntity(userId, sessionId);
         return Optional.ofNullable(readProfile(session.getProfileSnapshotJson()));
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeDocumentSnapshotDto> knowledgeSnapshot(long userId, long sessionId) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        return readKnowledgeSnapshot(session.getKnowledgeSnapshotJson());
+    }
+
+    @Transactional(readOnly = true)
+    public List<Long> knowledgeDocumentIdsSnapshot(long userId, long sessionId) {
+        return knowledgeSnapshot(userId, sessionId).stream()
+                .map(KnowledgeDocumentSnapshotDto::id)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -311,7 +334,8 @@ public class InterviewSessionService {
         return new InterviewSessionDto(
                 entity.getId(), entity.getPlanId(), entity.getResumeId(), entity.getProfileId(),
                 entity.getTitle(), entity.getJobTitle(), readPlan(entity.getPlanSnapshotJson()),
-                readProfile(entity.getProfileSnapshotJson()), entity.getStage(), entity.getStatus(),
+                readProfile(entity.getProfileSnapshotJson()),
+                readKnowledgeSnapshot(entity.getKnowledgeSnapshotJson()), entity.getStage(), entity.getStatus(),
                 entity.getPromptVersion(), entity.getStartedTime(), entity.getCompletedTime(),
                 entity.getCreateTime(), entity.getUpdateTime());
     }
@@ -374,6 +398,16 @@ public class InterviewSessionService {
         if (json == null || json.isBlank() || "{}".equals(json.strip())) return null;
         try {
             return objectMapper.readValue(json, CandidateProfileDto.class);
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
+    private List<KnowledgeDocumentSnapshotDto> readKnowledgeSnapshot(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            List<KnowledgeDocumentSnapshotDto> documents = objectMapper.readValue(json, new TypeReference<>() {});
+            return documents == null ? List.of() : List.copyOf(documents);
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }

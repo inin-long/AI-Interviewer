@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record InterviewSessionDto(
         long id,
@@ -14,6 +15,7 @@ public record InterviewSessionDto(
         String jobTitle,
         InterviewPlanDto planSnapshot,
         CandidateProfileDto profileSnapshot,
+        List<KnowledgeDocumentSnapshotDto> knowledgeSnapshot,
         InterviewStage stage,
         InterviewStatus status,
         String promptVersion,
@@ -22,4 +24,7 @@ public record InterviewSessionDto(
         LocalDateTime createTime,
         LocalDateTime updateTime
 ) {
+    public InterviewSessionDto {
+        knowledgeSnapshot = knowledgeSnapshot == null ? List.of() : List.copyOf(knowledgeSnapshot);
+    }
 }

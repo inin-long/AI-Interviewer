@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Collection;
 
 @Service
 public class KnowledgeDocumentService {
@@ -156,6 +158,28 @@ public class KnowledgeDocumentService {
     }
 
     @Transactional(readOnly = true)
+    public List<KnowledgeDocumentDto> listReady(long userId) {
+        return list(userId).stream().filter(document -> document.status() == KnowledgeStatus.READY).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public KnowledgeDocumentDto requireReady(long userId, long documentId) {
+        KnowledgeDocumentDto document = require(userId, documentId);
+        if (document.status() != KnowledgeStatus.READY) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        return document;
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeDocumentDto> requireReadyAll(long userId, List<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) return List.of();
+        return new LinkedHashSet<>(documentIds).stream()
+                .map(documentId -> requireReady(userId, documentId))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public KnowledgeDetailDto detail(long userId, long documentId) {
         KnowledgeDocumentDto document = require(userId, documentId);
         return new KnowledgeDetailDto(document,
@@ -163,9 +187,26 @@ public class KnowledgeDocumentService {
     }
 
     public List<KnowledgeSearchResultDto> search(long userId, String query, int limit) {
+        return searchInternal(userId, query, limit, null);
+    }
+
+    public List<KnowledgeSearchResultDto> search(
+            long userId, String query, int limit, Collection<Long> allowedDocumentIds
+    ) {
+        if (allowedDocumentIds == null || allowedDocumentIds.isEmpty()) return List.of();
+        return searchInternal(userId, query, limit, allowedDocumentIds);
+    }
+
+    private List<KnowledgeSearchResultDto> searchInternal(
+            long userId, String query, int limit, Collection<Long> allowedDocumentIds
+    ) {
         if (query == null || query.isBlank()) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         float[] embedding = embeddingService.embed(query.strip());
-        return vectorStore.search(userId, embedding, Math.max(1, Math.min(limit, 20)), 0.0).stream()
+        int boundedLimit = Math.max(1, Math.min(limit, 20));
+        var results = allowedDocumentIds == null
+                ? vectorStore.search(userId, embedding, boundedLimit, 0.0)
+                : vectorStore.search(userId, embedding, boundedLimit, 0.0, allowedDocumentIds);
+        return results.stream()
                 .map(result -> new KnowledgeSearchResultDto(
                         longMetadata(result.metadata(), "documentId"),
                         intMetadata(result.metadata(), "chunkIndex"),
@@ -182,6 +223,7 @@ public class KnowledgeDocumentService {
                 .map(DocumentChunkEntity::getVectorId).toList();
         vectorStore.delete(userId, vectorIds);
         mapper.deleteChunks(documentId, userId);
+        mapper.deletePlanLinks(documentId, userId);
         if (mapper.logicalDelete(documentId, userId) != 1) {
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }

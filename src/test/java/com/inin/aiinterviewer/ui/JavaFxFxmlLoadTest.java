@@ -10,6 +10,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.ListView;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.css.PseudoClass;
@@ -108,6 +110,31 @@ class JavaFxFxmlLoadTest {
         double[] heights = task.get(15, TimeUnit.SECONDS);
         assertThat(heights[0]).isEqualTo(52.0);
         assertThat(heights[0]).isEqualTo(heights[1]);
+    }
+
+    @Test
+    void planEditorUsesAlignedSelectorsAndMultiSelectKnowledgeList() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "plan-form-user", "方案表单用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/plan-editor-view.fxml");
+            Scene scene = new Scene(root, 1200, 900);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            TextField name = (TextField) root.lookup("#nameField");
+            ComboBox<?> resume = (ComboBox<?>) root.lookup("#resumeBox");
+            ComboBox<?> profile = (ComboBox<?>) root.lookup("#profileBox");
+            ListView<?> knowledge = (ListView<?>) root.lookup("#knowledgeList");
+            return new boolean[]{
+                    name.getHeight() == resume.getHeight(),
+                    name.getHeight() == profile.getHeight(),
+                    knowledge.getSelectionModel().getSelectionMode() == SelectionMode.MULTIPLE
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
     }
 
     @Test

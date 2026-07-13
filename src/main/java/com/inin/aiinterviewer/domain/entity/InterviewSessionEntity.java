@@ -15,6 +15,7 @@ public class InterviewSessionEntity {
     private String jobTitle;
     private String planSnapshotJson;
     private String profileSnapshotJson;
+    private String knowledgeSnapshotJson;
     private InterviewStage stage;
     private InterviewStatus status;
     private String promptVersion;
@@ -42,6 +43,8 @@ public class InterviewSessionEntity {
     public void setPlanSnapshotJson(String planSnapshotJson) { this.planSnapshotJson = planSnapshotJson; }
     public String getProfileSnapshotJson() { return profileSnapshotJson; }
     public void setProfileSnapshotJson(String profileSnapshotJson) { this.profileSnapshotJson = profileSnapshotJson; }
+    public String getKnowledgeSnapshotJson() { return knowledgeSnapshotJson; }
+    public void setKnowledgeSnapshotJson(String knowledgeSnapshotJson) { this.knowledgeSnapshotJson = knowledgeSnapshotJson; }
     public InterviewStage getStage() { return stage; }
     public void setStage(InterviewStage stage) { this.stage = stage; }
     public InterviewStatus getStatus() { return status; }
