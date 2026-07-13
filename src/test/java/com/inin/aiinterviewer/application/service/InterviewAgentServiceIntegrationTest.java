@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
@@ -30,9 +31,13 @@ import java.nio.file.Path;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Queue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -47,6 +52,9 @@ class InterviewAgentServiceIntegrationTest {
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
         registry.add("ai.interviewer.home", () -> applicationHome.toString());
+        registry.add("task.enabled", () -> false);
+        registry.add("task.retry-count", () -> 1);
+        registry.add("task.retry-delay", () -> "0s");
     }
 
     @Autowired private UserService userService;
@@ -54,6 +62,8 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private InterviewSessionService sessionService;
     @Autowired private InterviewResultService interviewResultService;
     @Autowired private InterviewCompletionService completionService;
+    @Autowired private ReportGenerationTaskService reportTaskService;
+    @Autowired private BackgroundTaskService backgroundTaskService;
     @Autowired private InterviewAgentService agentService;
     @Autowired private FakeChatService chatService;
     @Autowired private ResumeService resumeService;
@@ -160,9 +170,16 @@ class InterviewAgentServiceIntegrationTest {
                 .collectList().block()).isEmpty();
 
         assertThat(sessionService.require(user.id(), session.id()).status())
-                .isEqualTo(com.inin.aiinterviewer.domain.enums.InterviewStatus.COMPLETED);
-        assertThat(sessionService.require(user.id(), session.id()).stage())
-                .isEqualTo(InterviewStage.COMPLETED);
+                .isEqualTo(InterviewStatus.RUNNING);
+        assertThat(reportTaskService.state(user.id(), session.id())).satisfies(state -> {
+            assertThat(state.completion().finalAnswerSaved()).isTrue();
+            assertThat(state.completion().reportStatus()).isEqualTo(ReportStatus.GENERATING);
+            assertThat(state.taskStatus()).isEqualTo(BackgroundTaskStatus.PENDING);
+        });
+        assertThat(backgroundTaskService.executeNext("report-success-worker")).isTrue();
+
+        assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
+        assertThat(sessionService.require(user.id(), session.id()).stage()).isEqualTo(InterviewStage.COMPLETED);
         assertThat(interviewResultService.find(user.id(), session.id()))
                 .get().satisfies(report -> {
                     assertThat(report.overallScore()).isEqualTo(78);
@@ -179,6 +196,43 @@ class InterviewAgentServiceIntegrationTest {
     }
 
     @Test
+    void deduplicatesConcurrentReportGenerationRequests() throws Exception {
+        var user = userService.register("report-dedup-owner", "Report Dedup", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "报告并发验证", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 1, null, Map.of(), List.of("INTRODUCTION", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍一次性能优化实践。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        sessionService.appendUserAnswer(user.id(), session.id(), "我通过调用链分析定位并消除了重复查询。");
+
+        ArrayList<Callable<Long>> requests = new ArrayList<>();
+        for (int index = 0; index < 8; index++) {
+            requests.add(() -> reportTaskService.enqueue(user.id(), session.id()));
+        }
+        List<Long> taskIds;
+        try (var executor = Executors.newFixedThreadPool(4)) {
+            taskIds = executor.invokeAll(requests).stream().map(future -> {
+                try { return future.get(); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            }).toList();
+        }
+
+        assertThat(new HashSet<>(taskIds)).hasSize(1);
+        assertThat(reportTaskService.state(user.id(), session.id()).taskStatus())
+                .isEqualTo(BackgroundTaskStatus.PENDING);
+
+        chatService.enqueueChat("""
+                {"overallScore":79,"technicalScore":82,"problemSolvingScore":83,
+                "projectScore":78,"systemDesignScore":73,"communicationScore":80,
+                "comprehensiveScore":78,"summary":"性能定位思路清晰。"}
+                """);
+        assertThat(backgroundTaskService.executeNext("concurrent-report-worker")).isTrue();
+        assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
+    }
+
+    @Test
     void preservesFinalAnswerRecordsFailureAndRetriesReportWithoutDuplicateMessage() {
         var user = userService.register("report-retry-owner", "Report Retry", "safe-password");
         var other = userService.register("report-retry-other", "Other", "safe-password");
@@ -191,10 +245,14 @@ class InterviewAgentServiceIntegrationTest {
         agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
         chatService.enqueueChat("invalid-json");
 
-        assertThatThrownBy(() -> agentService.answer(
+        assertThat(agentService.answer(
                 user.id(), session.id(), "我先确认监控异常，再结合日志定位根因。")
-                .collectList().block())
-                .satisfies(throwable -> assertThat(hasCause(throwable, AIException.class)).isTrue());
+                .collectList().block()).isEmpty();
+
+        var queued = reportTaskService.state(user.id(), session.id());
+        assertThat(queued.taskStatus()).isEqualTo(BackgroundTaskStatus.PENDING);
+        assertThat(queued.completion().reportStatus()).isEqualTo(ReportStatus.GENERATING);
+        assertThat(backgroundTaskService.executeNext("report-failure-worker")).isTrue();
 
         assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.RUNNING);
         assertThat(sessionService.messages(user.id(), session.id()))
@@ -221,7 +279,12 @@ class InterviewAgentServiceIntegrationTest {
                 "projectScore":80,"systemDesignScore":75,"communicationScore":84,
                 "comprehensiveScore":80,"summary":"排查过程完整，具备较好的故障定位思路。"}
                 """);
-        var report = completionService.complete(user.id(), session.id());
+        long retriedTaskId = reportTaskService.enqueue(user.id(), session.id());
+        assertThat(retriedTaskId).isNotEqualTo(queued.taskId());
+        assertThat(reportTaskService.state(user.id(), session.id()).taskStatus())
+                .isEqualTo(BackgroundTaskStatus.PENDING);
+        assertThat(backgroundTaskService.executeNext("report-retry-worker")).isTrue();
+        var report = interviewResultService.find(user.id(), session.id()).orElseThrow();
 
         assertThat(report.overallScore()).isEqualTo(81);
         assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);

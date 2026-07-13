@@ -44,6 +44,39 @@ class BackgroundTaskServiceIntegrationTest {
     @Autowired private ControllableTaskHandler taskHandler;
 
     @Test
+    void deduplicatesActiveTasksAndAllowsANewTaskAfterCompletion() throws Exception {
+        var owner = userService.register("dedup-task-owner", "Dedup Owner", "safe-password");
+
+        ArrayList<Callable<Long>> enqueues = new ArrayList<>();
+        for (int index = 0; index < 10; index++) {
+            enqueues.add(() -> taskService.enqueueUnique(
+                    owner.id(), BackgroundTaskType.VECTOR_UPDATE, "document:42", Map.of("documentId", 42)));
+        }
+        java.util.List<Long> taskIds;
+        try (var executor = Executors.newFixedThreadPool(5)) {
+            taskIds = executor.invokeAll(enqueues).stream().map(future -> {
+                try { return future.get(); }
+                catch (Exception exception) { throw new AssertionError(exception); }
+            }).toList();
+        }
+
+        assertThat(new HashSet<>(taskIds)).hasSize(1);
+        assertThat(taskService.list(owner.id())).hasSize(1);
+        long firstTaskId = taskIds.getFirst();
+        assertThat(taskService.executeNext("dedup-worker")).isTrue();
+        assertThat(taskService.require(owner.id(), firstTaskId).getStatus())
+                .isEqualTo(BackgroundTaskStatus.SUCCESS);
+
+        long nextTaskId = taskService.enqueueUnique(
+                owner.id(), BackgroundTaskType.VECTOR_UPDATE, "document:42", Map.of("documentId", 42));
+        assertThat(nextTaskId).isNotEqualTo(firstTaskId);
+        assertThat(taskService.executeNext("dedup-second-worker")).isTrue();
+        assertThatThrownBy(() -> taskService.enqueueUnique(
+                owner.id(), BackgroundTaskType.VECTOR_UPDATE, " ", Map.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void atomicallyClaimsRecoversRetriesAndRecordsTerminalFailure() throws Exception {
         var owner = userService.register("task-owner", "Task Owner", "safe-password");
         var other = userService.register("task-other", "Other", "safe-password");

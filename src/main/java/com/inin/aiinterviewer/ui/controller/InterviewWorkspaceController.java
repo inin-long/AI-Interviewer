@@ -2,12 +2,13 @@ package com.inin.aiinterviewer.ui.controller;
 
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
-import com.inin.aiinterviewer.application.dto.InterviewCompletionStateDto;
+import com.inin.aiinterviewer.application.dto.ReportGenerationTaskStateDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewAgentService;
-import com.inin.aiinterviewer.application.service.InterviewCompletionService;
+import com.inin.aiinterviewer.application.service.ReportGenerationTaskService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.config.properties.LlmProperties;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
@@ -17,22 +18,24 @@ import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
-import javafx.fxml.FXML;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 @Component
 @Scope("prototype")
@@ -40,13 +43,14 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
 
     private final InterviewSessionService sessionService;
     private final InterviewAgentService agentService;
-    private final InterviewCompletionService completionService;
+    private final ReportGenerationTaskService reportTaskService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
     private final GlobalExceptionHandler exceptionHandler;
     private final LlmProperties llmProperties;
 
+    @FXML private BorderPane workspaceRoot;
     @FXML private Label titleLabel;
     @FXML private Label jobLabel;
     @FXML private Label stageLabel;
@@ -66,11 +70,12 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private long sessionId;
     private InterviewSessionDto currentSession;
     private boolean generationInProgress;
+    private Timeline reportStatePoller;
 
     public InterviewWorkspaceController(
             InterviewSessionService sessionService,
             InterviewAgentService agentService,
-            InterviewCompletionService completionService,
+            ReportGenerationTaskService reportTaskService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -79,7 +84,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     ) {
         this.sessionService = sessionService;
         this.agentService = agentService;
-        this.completionService = completionService;
+        this.reportTaskService = reportTaskService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -93,6 +98,9 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             throw new IllegalArgumentException("Interview workspace requires a session id");
         }
         sessionId = context;
+        workspaceRoot.sceneProperty().addListener((observable, previous, current) -> {
+            if (previous != null && current == null) stopReportStatePolling();
+        });
         transcriptView.setEmptyMessage("会话已创建，等待 AI 面试官生成第一道问题。");
         transcriptView.setCitationHandler(this::openCitation);
         refresh();
@@ -110,7 +118,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             boolean expectsNextQuestion = currentSession != null
                     && transcriptView.getQuestionCount() < currentSession.planSnapshot().questionCount();
             stream(agentService.answer(userId(), sessionId, answer), true,
-                    expectsNextQuestion ? "正在分析回答并准备下一题…" : "正在生成面试报告…",
+                    expectsNextQuestion ? "正在分析回答并准备下一题…" : "正在保存最终回答并创建报告任务…",
                     answer, expectsNextQuestion);
             return;
         }
@@ -163,6 +171,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                 return;
             }
         }
+        stopReportStatePolling();
         contentNavigator.back();
     }
 
@@ -176,7 +185,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         transcriptView.setMessages(messages);
         transcriptView.scrollToBottom();
         renderCitations(messages);
-        InterviewCompletionStateDto completionState = completionService.state(userId(), sessionId);
+        ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
+        var completionState = reportTaskState.completion();
         long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
         progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
                 + " / " + currentSession.planSnapshot().questionCount() + " 题");
@@ -200,11 +210,14 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         retryQuestionButton.setDisable(generationInProgress || !messages.isEmpty());
         retryReportButton.setVisible(awaitingReport);
         retryReportButton.setManaged(awaitingReport);
-        retryReportButton.setDisable(generationInProgress || !llmProperties.isConfigured());
+        retryReportButton.setDisable(generationInProgress
+                || !llmProperties.isConfigured()
+                || reportTaskState.active());
+        retryReportButton.setText(reportActionText(reportTaskState));
         reportButton.setVisible(currentSession.status() == InterviewStatus.COMPLETED);
         reportButton.setManaged(reportButton.isVisible());
         if (awaitingReport) {
-            aiNoticeLabel.setText(completionNotice(completionState));
+            aiNoticeLabel.setText(completionNotice(reportTaskState));
         } else if (currentSession.status() == InterviewStatus.COMPLETED) {
             aiNoticeLabel.setText("面试已完成，六维评分和 Markdown 报告已保存。可从面试记录进入报告页查看。 ");
         } else {
@@ -212,10 +225,12 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                     ? "AI 已配置：回答会先保存，再执行分析、受控阶段决策和流式提问。"
                     : "AI 尚未配置。当前可验证会话、回答保存及暂停恢复，不会生成伪造的 AI 提问。");
         }
+        updateReportStatePolling(reportTaskState);
     }
 
     @FXML
     private void openReport() {
+        stopReportStatePolling();
         contentNavigator.showSubPage(
                 "/fxml/report-detail-view.fxml", "面试报告", sessionId);
     }
@@ -234,22 +249,14 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             viewManager.showInfo("AI 尚未配置", "请先在设置页完成 AI 配置，再重新生成报告。");
             return;
         }
-        generationInProgress = true;
-        setBusyState("最终回答已保存，正在重新生成面试报告…");
-        retryReportButton.setDisable(true);
-        Mono.fromCallable(() -> completionService.complete(userId(), sessionId))
-                .subscribeOn(Schedulers.boundedElastic())
-                .subscribe(
-                        report -> Platform.runLater(() -> {
-                            generationInProgress = false;
-                            refresh();
-                            viewManager.showInfo("报告生成完成", "评分与面试报告已保存。");
-                        }),
-                        throwable -> Platform.runLater(() -> {
-                            generationInProgress = false;
-                            refresh();
-                            viewManager.showError(exceptionHandler.toUserMessage(throwable));
-                        }));
+        try {
+            reportTaskService.enqueue(userId(), sessionId);
+            refresh();
+            viewManager.showInfo("已加入后台队列", "可以继续使用应用，报告完成后本页会自动更新。");
+        } catch (RuntimeException exception) {
+            refresh();
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     private void stream(
@@ -292,18 +299,79 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         statusLabel.setText("生成中");
     }
 
-    private String completionNotice(InterviewCompletionStateDto state) {
+    private String completionNotice(ReportGenerationTaskStateDto state) {
         if (!llmProperties.isConfigured()) {
             return "最终回答已保存。AI 当前未配置，请先前往设置页完成配置，再重新生成报告。";
         }
-        if (state.reportStatus() == ReportStatus.FAILED) {
-            String reason = state.failureMessage().isBlank() ? "评分服务返回异常" : state.failureMessage();
+        if (state.taskStatus() == BackgroundTaskStatus.RUNNING) {
+            return "最终回答已保存，后台正在生成六维评分与面试报告（第 "
+                    + Math.max(1, state.attemptCount()) + " 次尝试）。可离开此页面，任务会继续执行。";
+        }
+        if (state.taskStatus() == BackgroundTaskStatus.PENDING) {
+            if (state.attemptCount() > 0) {
+                return "报告生成遇到短暂异常，后台任务已排队自动重试（已尝试 "
+                        + state.attemptCount() + " 次）。最终回答不会重复保存。";
+            }
+            return "最终回答已保存，报告任务正在后台队列中等待执行。可离开此页面，任务不会丢失。";
+        }
+        if (state.completion().reportStatus() == ReportStatus.FAILED
+                || state.taskStatus() == BackgroundTaskStatus.FAILED) {
+            String reason = state.completion().failureMessage().isBlank()
+                    ? state.taskErrorMessage()
+                    : state.completion().failureMessage();
+            if (reason.isBlank()) reason = "评分服务返回异常";
             return "最终回答已保存，报告生成失败：" + reason + "。可直接重新生成，不会重复保存回答。";
         }
-        if (state.reportStatus() == ReportStatus.GENERATING) {
-            return "最终回答已保存，上次报告生成可能被中断。可重新生成，不会重复保存回答。";
+        if (state.completion().reportStatus() == ReportStatus.GENERATING) {
+            return "最终回答已保存，报告生成状态正在恢复。可以重新提交任务，不会重复保存回答。";
         }
         return "最终回答已保存，报告尚未生成。可直接重新生成，不会重复保存回答。";
+    }
+
+    private String reportActionText(ReportGenerationTaskStateDto state) {
+        if (state.taskStatus() == BackgroundTaskStatus.RUNNING) return "报告生成中";
+        if (state.taskStatus() == BackgroundTaskStatus.PENDING) return "等待生成";
+        return state.taskId() == null ? "生成报告" : "重新生成报告";
+    }
+
+    private void updateReportStatePolling(ReportGenerationTaskStateDto state) {
+        if (!state.active()) {
+            stopReportStatePolling();
+            return;
+        }
+        if (reportStatePoller != null) return;
+        reportStatePoller = new Timeline(new KeyFrame(Duration.seconds(1.2), event -> pollReportState()));
+        reportStatePoller.setCycleCount(Timeline.INDEFINITE);
+        reportStatePoller.play();
+    }
+
+    private void pollReportState() {
+        try {
+            ReportGenerationTaskStateDto state = reportTaskService.state(userId(), sessionId);
+            if (state.completion().reportStatus() == ReportStatus.COMPLETED) {
+                stopReportStatePolling();
+                refresh();
+                return;
+            }
+            boolean awaitingReport = state.completion().finalAnswerSaved()
+                    && currentSession.status() != InterviewStatus.COMPLETED;
+            retryReportButton.setVisible(awaitingReport);
+            retryReportButton.setManaged(awaitingReport);
+            retryReportButton.setDisable(generationInProgress
+                    || !llmProperties.isConfigured()
+                    || state.active());
+            retryReportButton.setText(reportActionText(state));
+            if (awaitingReport) aiNoticeLabel.setText(completionNotice(state));
+            if (!state.active()) stopReportStatePolling();
+        } catch (RuntimeException ignored) {
+            // A later tick can recover from a transient database read failure.
+        }
+    }
+
+    private void stopReportStatePolling() {
+        if (reportStatePoller == null) return;
+        reportStatePoller.stop();
+        reportStatePoller = null;
     }
 
     private void renderCitations(List<InterviewMessageDto> messages) {

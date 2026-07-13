@@ -158,6 +158,7 @@ class JavaFxFxmlLoadTest {
             VBox rail = (VBox) workspace.lookup("#citationRail");
             VBox citations = (VBox) workspace.lookup("#citationContainer");
             Button retryReport = (Button) workspace.lookup("#retryReportButton");
+            BorderPane workspaceRoot = (BorderPane) workspace.lookup("#workspaceRoot");
 
             Parent report = load("/fxml/report-detail-view.fxml");
             Button sourceDirectory = (Button) report.lookup("#sourceDirectoryButton");
@@ -165,6 +166,7 @@ class JavaFxFxmlLoadTest {
                     rail != null && rail.getStyleClass().contains("citation-rail"),
                     rail != null && rail.getWidth() >= 270 && rail.getWidth() <= 330,
                     citations != null,
+                    workspaceRoot == workspace,
                     retryReport != null && "重新生成报告".equals(retryReport.getText()),
                     sourceDirectory != null && "参考依据".equals(sourceDirectory.getText())
             };

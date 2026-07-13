@@ -2,6 +2,7 @@ package com.inin.aiinterviewer.infrastructure.database.mapper;
 
 import com.inin.aiinterviewer.domain.entity.BackgroundTaskEntity;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
@@ -13,13 +14,23 @@ import java.util.Optional;
 public interface BackgroundTaskMapper {
 
     @Insert("""
-            INSERT INTO task(user_id, task_type, status, progress, attempt_count, payload_json,
+            INSERT INTO task(user_id, task_type, status, progress, attempt_count, payload_json, deduplication_key,
                              available_time, create_time, update_time, deleted)
-            VALUES(#{userId}, #{taskType}, 'PENDING', 0, 0, #{payloadJson},
+            VALUES(#{userId}, #{taskType}, 'PENDING', 0, 0, #{payloadJson}, #{deduplicationKey},
                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(BackgroundTaskEntity task);
+
+    @Insert("""
+            INSERT OR IGNORE INTO task(
+                user_id, task_type, status, progress, attempt_count, payload_json, deduplication_key,
+                available_time, create_time, update_time, deleted)
+            VALUES(#{userId}, #{taskType}, 'PENDING', 0, 0, #{payloadJson}, #{deduplicationKey},
+                   CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+            """)
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insertUnique(BackgroundTaskEntity task);
 
     @Select("""
             UPDATE task
@@ -34,6 +45,7 @@ public interface BackgroundTaskMapper {
                      LIMIT 1
              ) AND status = 'PENDING' AND deleted = 0
             RETURNING id, user_id, task_type, status, progress, attempt_count, payload_json,
+                      deduplication_key,
                       error_message, worker_id, available_time, started_time, finished_time,
                       create_time, update_time
             """)
@@ -87,6 +99,7 @@ public interface BackgroundTaskMapper {
 
     @Select("""
             SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
+                   deduplication_key,
                    error_message, worker_id, available_time, started_time, finished_time,
                    create_time, update_time
               FROM task WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
@@ -95,6 +108,34 @@ public interface BackgroundTaskMapper {
 
     @Select("""
             SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
+                   deduplication_key, error_message, worker_id, available_time, started_time,
+                   finished_time, create_time, update_time
+              FROM task
+             WHERE user_id = #{userId} AND task_type = #{taskType}
+               AND deduplication_key = #{deduplicationKey} AND deleted = 0
+               AND status IN ('PENDING', 'RUNNING')
+             ORDER BY id DESC
+             LIMIT 1
+            """)
+    Optional<BackgroundTaskEntity> findActiveByDeduplicationKey(
+            long userId, BackgroundTaskType taskType, String deduplicationKey);
+
+    @Select("""
+            SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
+                   deduplication_key, error_message, worker_id, available_time, started_time,
+                   finished_time, create_time, update_time
+              FROM task
+             WHERE user_id = #{userId} AND task_type = #{taskType}
+               AND deduplication_key = #{deduplicationKey} AND deleted = 0
+             ORDER BY id DESC
+             LIMIT 1
+            """)
+    Optional<BackgroundTaskEntity> findLatestByDeduplicationKey(
+            long userId, BackgroundTaskType taskType, String deduplicationKey);
+
+    @Select("""
+            SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
+                   deduplication_key,
                    error_message, worker_id, available_time, started_time, finished_time,
                    create_time, update_time
               FROM task WHERE user_id = #{userId} AND deleted = 0

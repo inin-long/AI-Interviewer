@@ -36,20 +36,20 @@ public class InterviewAgentService {
 
     private final InterviewSessionService sessionService;
     private final InterviewGraph interviewGraph;
-    private final InterviewCompletionService completionService;
+    private final ReportGenerationTaskService reportTaskService;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
     public InterviewAgentService(
             InterviewSessionService sessionService,
             InterviewGraph interviewGraph,
-            InterviewCompletionService completionService,
+            ReportGenerationTaskService reportTaskService,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
         this.sessionService = sessionService;
         this.interviewGraph = interviewGraph;
-        this.completionService = completionService;
+        this.reportTaskService = reportTaskService;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -72,7 +72,7 @@ public class InterviewAgentService {
     public Flux<String> answer(long userId, long sessionId, String answer) {
         return Flux.defer(() -> {
             InterviewSessionDto session = requireRunning(userId, sessionId);
-            if (completionService.state(userId, sessionId).finalAnswerSaved()) {
+            if (reportTaskService.state(userId, sessionId).completion().finalAnswerSaved()) {
                 return Flux.error(new BusinessException(ErrorCode.REPORT_RETRY_REQUIRED));
             }
             var previous = sessionService.loadLatestState(userId, sessionId)
@@ -87,7 +87,7 @@ public class InterviewAgentService {
                     .filter(message -> message.role() == Message.Role.ASSISTANT)
                     .count();
             if (askedQuestions >= session.planSnapshot().questionCount()) {
-                completionService.complete(userId, sessionId);
+                reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
             }
             List<Message> messages = domainMessages(persistedMessages);

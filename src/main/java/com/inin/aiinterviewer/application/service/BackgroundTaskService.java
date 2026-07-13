@@ -27,6 +27,7 @@ import java.util.Optional;
 public class BackgroundTaskService {
     private static final Logger log = LoggerFactory.getLogger(BackgroundTaskService.class);
     private static final int MAX_ERROR_LENGTH = 1_000;
+    private static final int MAX_DEDUPLICATION_KEY_LENGTH = 255;
 
     private final BackgroundTaskMapper mapper;
     private final BackgroundTaskHandlerRegistry handlers;
@@ -50,12 +51,21 @@ public class BackgroundTaskService {
 
     @Transactional
     public long enqueue(long userId, BackgroundTaskType type, Object payload) {
-        BackgroundTaskEntity task = new BackgroundTaskEntity();
-        task.setUserId(userId);
-        task.setTaskType(type);
-        task.setPayloadJson(writePayload(payload));
+        BackgroundTaskEntity task = newTask(userId, type, payload, null);
         mapper.insert(task);
         return task.getId();
+    }
+
+    @Transactional
+    public long enqueueUnique(long userId, BackgroundTaskType type, String deduplicationKey, Object payload) {
+        String normalizedKey = normalizeDeduplicationKey(deduplicationKey);
+        BackgroundTaskEntity task = newTask(userId, type, payload, normalizedKey);
+        if (mapper.insertUnique(task) == 1) return task.getId();
+        return mapper.findActiveByDeduplicationKey(userId, type, normalizedKey)
+                .map(BackgroundTaskEntity::getId)
+                .orElseThrow(() -> new TaskException(
+                        ErrorCode.TASK_FAILED,
+                        new IllegalStateException("Cannot resolve the active background task")));
     }
 
     public Optional<BackgroundTaskEntity> claimNext(String workerId) {
@@ -102,6 +112,14 @@ public class BackgroundTaskService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<BackgroundTaskEntity> findLatestByDeduplicationKey(
+            long userId, BackgroundTaskType type, String deduplicationKey
+    ) {
+        return mapper.findLatestByDeduplicationKey(userId, type,
+                normalizeDeduplicationKey(deduplicationKey));
+    }
+
+    @Transactional(readOnly = true)
     public BackgroundTaskDto requireDto(long userId, long taskId) {
         return toDto(require(userId, taskId));
     }
@@ -140,6 +158,28 @@ public class BackgroundTaskService {
         } catch (JsonProcessingException exception) {
             throw new TaskException(ErrorCode.TASK_FAILED, exception);
         }
+    }
+
+    private BackgroundTaskEntity newTask(
+            long userId, BackgroundTaskType type, Object payload, String deduplicationKey
+    ) {
+        BackgroundTaskEntity task = new BackgroundTaskEntity();
+        task.setUserId(userId);
+        task.setTaskType(type);
+        task.setPayloadJson(writePayload(payload));
+        task.setDeduplicationKey(deduplicationKey);
+        return task;
+    }
+
+    private String normalizeDeduplicationKey(String key) {
+        if (key == null || key.isBlank()) {
+            throw new IllegalArgumentException("deduplicationKey is required");
+        }
+        String normalized = key.strip();
+        if (normalized.length() > MAX_DEDUPLICATION_KEY_LENGTH) {
+            throw new IllegalArgumentException("deduplicationKey is too long");
+        }
+        return normalized;
     }
 
     private String safeMessage(Exception exception) {

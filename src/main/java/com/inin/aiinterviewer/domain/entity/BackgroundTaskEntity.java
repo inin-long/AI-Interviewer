@@ -13,6 +13,7 @@ public class BackgroundTaskEntity {
     private int progress;
     private int attemptCount;
     private String payloadJson;
+    private String deduplicationKey;
     private String errorMessage;
     private String workerId;
     private LocalDateTime availableTime;
@@ -35,6 +36,8 @@ public class BackgroundTaskEntity {
     public void setAttemptCount(int attemptCount) { this.attemptCount = attemptCount; }
     public String getPayloadJson() { return payloadJson; }
     public void setPayloadJson(String payloadJson) { this.payloadJson = payloadJson; }
+    public String getDeduplicationKey() { return deduplicationKey; }
+    public void setDeduplicationKey(String deduplicationKey) { this.deduplicationKey = deduplicationKey; }
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public String getWorkerId() { return workerId; }
