@@ -1,6 +1,6 @@
 # AI Interviewer 开发状态
 
-最后更新：2026-07-13
+最后更新：2026-07-15
 
 ## 当前结论
 
@@ -20,6 +20,7 @@ MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画
 - [x] 全局任务中心、任务生命周期反馈和失败重新排队
 - [x] 本地确定性 TestFX：注册登录 → 简历解析 → 画像生成确认 → 知识解析/Embedding/Lucene → 三题 Agent 面试/RAG 引用 → 六维评分报告
 - [x] 真实 Provider TestFX：使用环境变量完成真实画像、Embedding、语义检索、单题流式面试和评分报告
+- [x] 真实画像专项测试：完整全栈简历经后台任务、JSON 流式 API 与落库链路；单次 Provider 尝试可观测
 - [x] JaCoCo 覆盖率报告与最低门槛：总体行覆盖率不低于 70%，分支覆盖率不低于 45%
 - [x] `jpackage` app-image、便携 ZIP、EXE/MSI 构建脚本
 - [x] 当前代码构建 app-image，并通过首次启动与同目录重启数据保留冒烟
@@ -55,7 +56,7 @@ MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画
 
 - 降低预期异常测试产生的堆栈日志噪声。
 - 继续补充 UI 控制器的错误、取消、删除、暂停恢复和失败重试分支；当前控制器行覆盖率为 61.9%。
-- 对真实 Provider 增加限流和持续网络中断验收；当前已覆盖短暂 DNS 失败诊断和后台任务重试。
+- 对真实 Provider 增加 429 限流和持续网络中断验收；当前已覆盖 DNS/超时根因诊断、凭据脱敏和后台任务重试。
 - 发布前在干净 Windows 账户完成安装器升级/卸载人工验收记录。
 
 ## 明确延期
@@ -67,6 +68,7 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 - 开发构建：`mvnw clean verify`
 - 本地 TestFX：`mvnw test-compile "-Dit.test=CompleteBusinessFlowE2ETest" failsafe:integration-test failsafe:verify`
 - 真实 Provider TestFX：设置 `AI_LLM_LIVE_TEST=true` 后运行 `mvnw test-compile "-Dit.test=LiveProviderBusinessFlowE2ETest" failsafe:integration-test failsafe:verify`
+- 真实画像专项测试：设置 `AI_LLM_LIVE_TEST=true` 后运行 `mvnw "-Dtest=LiveCandidateProfileApiIntegrationTest" test`
 - 覆盖率报告：`target/site/jacoco/index.html`
 - app-image：`packaging\windows\Build-Package.ps1 -Type app-image`
 - 发布冒烟：`packaging\windows\Test-AppImage.ps1`
@@ -76,6 +78,11 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 
 最近一次本地业务流程验证（2026-07-13）：TestFX 使用临时用户目录、配置式简历/知识路径、确定性 AI 与 Embedding，实现注册登录、全栈简历解析、画像生成确认、知识切片与 Lucene 索引、语义检索、画像/知识会话快照、合法阶段切换、追问、两轮 RAG 引用、三题问答和报告验收；不访问真实 Provider。
 
-最近一次真实 Provider 验证（2026-07-13）：使用环境变量中的 `deepseek-ai/DeepSeek-V4-Pro` 与 `Pro/BAAI/bge-m3` 完成真实画像、知识向量化、页面语义检索、单题流式面试和评分报告，耗时约 3 分 38 秒。测试期间曾捕获一次短暂 DNS 失败，网络恢复后完整场景通过。
+最近一次真实 Provider 验证（2026-07-15）：定位到 Spring AI OpenAI 适配器默认 3 次内部重试与后台任务 3 次重试叠加，旧版 60 秒超时会将一次画像操作放大为最多 12 次 HTTP 尝试；同时 `deepseek-ai/DeepSeek-V4-Pro` 默认思考模式在完整简历画像请求中超过 5 分钟。修复后 SDK 内部重试关闭，SiliconFlow DeepSeek V4 默认关闭思考，完整全栈简历专项测试通过；测试用例耗时 45.7 秒（Maven 总耗时约 65 秒），画像由单次 Provider 请求成功生成并落库。
 
-最近一次稳定覆盖率基线（2026-07-13）：总体行覆盖率 77.4%、分支覆盖率 51.3%；应用服务层行覆盖率 88.0%，Agent 行覆盖率 92.6%，基础设施行覆盖率 75.5%，UI Controller 行覆盖率 61.9%。真实 Provider 测试不计入稳定覆盖率基线。
+最近一次稳定覆盖率基线（2026-07-15）：`mvnw clean verify` 通过；Surefire 72 项（70 通过、2 个真实测试跳过），Failsafe 2 项（本地 TestFX 通过、真实 TestFX 跳过）。总体行覆盖率 77.2%、分支覆盖率 51.5%，均高于 70%/45% 门槛。真实 Provider 测试不计入稳定覆盖率基线。
+
+
+## 自测问题记录
+
+1. 后台任务无法删除

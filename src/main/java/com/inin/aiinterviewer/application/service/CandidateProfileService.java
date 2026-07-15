@@ -137,7 +137,7 @@ public class CandidateProfileService {
 
                 简历文本：
                 """ + resumeText.substring(0, Math.min(resumeText.length(), 30_000));
-        return responseParser.parse(chatService.chat(prompt), CandidateProfileContent.class);
+        return responseParser.parse(chatService.chatJson(prompt), CandidateProfileContent.class);
     }
 
     private void save(

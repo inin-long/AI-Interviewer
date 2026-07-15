@@ -37,7 +37,8 @@ public class OpenAiEmbeddingService implements EmbeddingService {
                 .apiKey(llm.apiKey())
                 .baseUrl(llm.baseUrl())
                 .model(llm.embeddingModel())
-                .timeout(llm.timeout())
+                .timeout(llm.effectiveTimeout())
+                .maxRetries(llm.effectiveMaxRetries())
                 .build();
         return OpenAiEmbeddingModel.builder().options(options).build();
     }

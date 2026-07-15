@@ -108,6 +108,8 @@ class LiveProviderBusinessFlowE2ETest {
         registry.add("task.retry-count", () -> "2");
         registry.add("task.retry-delay", () -> "500ms");
         registry.add("llm.timeout", () -> "300s");
+        registry.add("llm.max-retries", () -> "0");
+        registry.add("llm.max-tokens", () -> "2048");
         registry.add("test.resume-path", () -> fixture("full-stack-engineer-resume.md").toString());
         registry.add("test.knowledge-path", () -> fixture("outbox-and-cache-consistency.md").toString());
     }

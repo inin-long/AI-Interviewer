@@ -24,7 +24,12 @@ llm:
   api-key: ${AI_LLM_API_KEY:}
   chat-model: ${AI_LLM_CHAT_MODEL:}
   embedding-model: ${AI_LLM_EMBEDDING_MODEL:}
-  timeout: 60s
+  # Slow reasoning-capable providers can take more than one minute even for a
+  # short response. Retry is owned by the persisted background-task layer.
+  timeout: 300s
+  max-retries: 0
+  max-tokens: 2048
+  thinking-enabled: ${AI_LLM_THINKING_ENABLED:}
 
 task:
   enabled: true

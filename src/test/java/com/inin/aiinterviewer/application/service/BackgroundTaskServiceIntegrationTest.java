@@ -2,7 +2,9 @@ package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.application.task.BackgroundTaskContext;
 import com.inin.aiinterviewer.application.task.BackgroundTaskHandler;
+import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.BusinessException;
+import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
@@ -158,6 +160,27 @@ class BackgroundTaskServiceIntegrationTest {
                 .isEqualTo(BackgroundTaskStatus.SUCCESS);
     }
 
+    @Test
+    void recordsTheDeepAiFailureWithoutLeakingCredentials() {
+        var owner = userService.register("task-diagnostics", "Diagnostics", "safe-password");
+        taskHandler.failOnce(new AIException(ErrorCode.AI_CALL_FAILED,
+                new IllegalStateException("request timed out; Authorization: Bearer sk-sensitive-test-token",
+                        new IllegalStateException("stream was reset: CANCEL"))));
+        long taskId = taskService.enqueue(owner.id(), BackgroundTaskType.VECTOR_UPDATE, Map.of());
+
+        assertThat(taskService.executeNext("diagnostics-worker")).isTrue();
+
+        var retrying = taskService.require(owner.id(), taskId);
+        assertThat(retrying.getStatus()).isEqualTo(BackgroundTaskStatus.PENDING);
+        assertThat(retrying.getErrorMessage())
+                .contains("AI 服务调用失败", "request timed out", "Bearer ***")
+                .doesNotContain("sensitive-test-token");
+
+        assertThat(taskService.executeNext("diagnostics-recovery-worker")).isTrue();
+        assertThat(taskService.require(owner.id(), taskId).getStatus())
+                .isEqualTo(BackgroundTaskStatus.SUCCESS);
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class TaskHandlerConfiguration {
         @Bean
@@ -168,14 +191,24 @@ class BackgroundTaskServiceIntegrationTest {
 
     static class ControllableTaskHandler implements BackgroundTaskHandler {
         private final AtomicInteger failuresRemaining = new AtomicInteger();
+        private volatile RuntimeException configuredFailure;
 
-        void failNext(int count) { failuresRemaining.set(count); }
+        void failNext(int count) {
+            configuredFailure = null;
+            failuresRemaining.set(count);
+        }
+
+        void failOnce(RuntimeException exception) {
+            configuredFailure = exception;
+            failuresRemaining.set(1);
+        }
 
         @Override public BackgroundTaskType taskType() { return BackgroundTaskType.VECTOR_UPDATE; }
 
         @Override
         public void handle(BackgroundTaskContext context) {
             if (failuresRemaining.getAndUpdate(value -> Math.max(0, value - 1)) > 0) {
+                if (configuredFailure != null) throw configuredFailure;
                 throw new IllegalStateException("planned failure on attempt " + context.attempt());
             }
         }

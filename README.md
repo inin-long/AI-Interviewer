@@ -2,7 +2,7 @@
 
 AI Interviewer 是一款本地运行的 JavaFX AI 技术面试训练工具。项目采用单进程、单 Maven Module 架构，由 Spring Boot 管理业务与基础设施，SQLite 保存本地数据。
 
-## 环境要求
+## 环境要求3
 
 - Windows 10/11 x64
 - JDK 21
@@ -78,7 +78,10 @@ MVP 业务主流程已经贯通，当前进入 Windows 发布验收阶段。详�
 不要把 API Key 写入仓库。可以使用环境变量：
 
 ```powershell
+$env:AI_LLM_BASE_URL='https://api.siliconflow.cn/v1'
 $env:AI_LLM_API_KEY='...'
+$env:AI_LLM_CHAT_MODEL='deepseek-ai/DeepSeek-V4-Pro'
+$env:AI_LLM_EMBEDDING_MODEL='Pro/BAAI/bge-m3'
 ```
 
 长期用于本机开发时，可写入 Windows 当前用户环境变量；新启动的终端和应用会读取它：
@@ -88,6 +91,10 @@ $env:AI_LLM_API_KEY='...'
 ```
 
 或复制 `%LOCALAPPDATA%\AI-Interviewer\config\application-local.example.yml` 为 `application-local.yml` 后填写。
+
+对话请求默认只由持久化后台任务负责重试，避免 SDK 重试与任务重试相乘。SiliconFlow 的
+DeepSeek V4 系列默认关闭高耗时思考以保证桌面交互延迟；需要显式开启时可设置
+`AI_LLM_THINKING_ENABLED=true`。默认请求超时为 300 秒。
 
 真实 Provider 集成测试默认跳过。仅在本机临时设置完整的 `AI_LLM_*` 配置和
 `AI_LLM_LIVE_TEST=true` 时才会执行，API Key 不应写入仓库。
@@ -108,6 +115,13 @@ $env:AI_LLM_API_KEY='...'
 ```powershell
 $env:AI_LLM_LIVE_TEST='true'
 .\mvnw.cmd test-compile "-Dit.test=LiveProviderBusinessFlowE2ETest" failsafe:integration-test failsafe:verify
+```
+
+若只需诊断“简历 → 后台任务 → 真实 JSON API → 候选人画像落库”链路，可运行更聚焦的测试：
+
+```powershell
+$env:AI_LLM_LIVE_TEST='true'
+.\mvnw.cmd "-Dtest=LiveCandidateProfileApiIntegrationTest" test
 ```
 
 JaCoCo HTML 报告位于 `target/site/jacoco/index.html`。构建要求总体行覆盖率至少 70%、分支覆盖率至少 45%。

@@ -38,6 +38,10 @@ class LiveAiProviderIntegrationTest {
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
         registry.add("ai.interviewer.home", () -> applicationHome.toString());
+        registry.add("task.retry-count", () -> "1");
+        registry.add("llm.timeout", () -> "300s");
+        registry.add("llm.max-retries", () -> "0");
+        registry.add("llm.max-tokens", () -> "2048");
     }
 
     @Autowired private ChatService chatService;

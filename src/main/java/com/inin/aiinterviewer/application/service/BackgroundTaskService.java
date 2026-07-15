@@ -26,12 +26,15 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class BackgroundTaskService {
     private static final Logger log = LoggerFactory.getLogger(BackgroundTaskService.class);
     private static final int MAX_ERROR_LENGTH = 1_000;
     private static final int MAX_DEDUPLICATION_KEY_LENGTH = 255;
+    private static final Pattern BEARER_TOKEN = Pattern.compile("(?i)(Bearer\\s+)[^\\s,;]+", Pattern.CASE_INSENSITIVE);
+    private static final Pattern API_KEY = Pattern.compile("(?i)sk-[a-z0-9_-]{8,}");
 
     private final BackgroundTaskMapper mapper;
     private final BackgroundTaskHandlerRegistry handlers;
@@ -220,11 +223,40 @@ public class BackgroundTaskService {
     }
 
     private String safeMessage(Exception exception) {
+        String outerMessage = nonBlankMessage(exception);
+        String detail = outerMessage;
+        int detailScore = diagnosticScore(detail);
         Throwable cause = exception;
-        while (cause.getCause() != null && cause.getMessage() == null) cause = cause.getCause();
-        String message = cause.getMessage();
-        if (message == null || message.isBlank()) message = exception.getClass().getSimpleName();
+        while (cause != null) {
+            String candidate = nonBlankMessage(cause);
+            int candidateScore = diagnosticScore(candidate);
+            if (candidate != null && candidateScore >= detailScore) {
+                detail = candidate;
+                detailScore = candidateScore;
+            }
+            cause = cause.getCause();
+        }
+        String message = outerMessage == null ? detail : outerMessage;
+        if (message == null) message = exception.getClass().getSimpleName();
+        if (detail != null && !detail.equals(message)) message = message + "：" + detail;
+        message = BEARER_TOKEN.matcher(message).replaceAll("$1***");
+        message = API_KEY.matcher(message).replaceAll("sk-***");
         return message.substring(0, Math.min(MAX_ERROR_LENGTH, message.length()));
+    }
+
+    private int diagnosticScore(String message) {
+        if (message == null) return -1;
+        String normalized = message.toLowerCase(java.util.Locale.ROOT);
+        if (normalized.contains("timed out") || normalized.contains("timeout")) return 100;
+        if (normalized.contains("unknownhost") || normalized.contains("name resolution")) return 95;
+        if (normalized.matches(".*\\b(401|403|408|429|500|502|503|504)\\b.*")) return 90;
+        if (normalized.contains("stream was reset") || normalized.contains("cancel")) return 10;
+        return 50;
+    }
+
+    private String nonBlankMessage(Throwable throwable) {
+        if (throwable == null || throwable.getMessage() == null || throwable.getMessage().isBlank()) return null;
+        return throwable.getMessage().strip();
     }
 
     private BackgroundTaskDto toDto(BackgroundTaskEntity task) {

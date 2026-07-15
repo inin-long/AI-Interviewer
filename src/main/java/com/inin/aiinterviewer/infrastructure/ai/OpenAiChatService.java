@@ -9,15 +9,21 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
+import java.util.Objects;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class OpenAiChatService implements ChatService {
 
     private final LlmProperties properties;
     private final ChatClient chatClient;
+    private final OpenAiChatOptions defaultOptions;
 
     public OpenAiChatService(LlmProperties properties) {
         this.properties = properties;
-        this.chatClient = properties.isConfigured() ? createClient(properties) : null;
+        this.defaultOptions = properties.isConfigured() ? createOptions(properties) : null;
+        this.chatClient = defaultOptions == null ? null : createClient(defaultOptions);
     }
 
     @Override
@@ -31,20 +37,55 @@ public class OpenAiChatService implements ChatService {
     }
 
     @Override
+    public String chatJson(String prompt) {
+        requireConfigured();
+        try {
+            OpenAiChatModel.ResponseFormat responseFormat = OpenAiChatModel.ResponseFormat.builder()
+                    .type(OpenAiChatModel.ResponseFormat.Type.JSON_OBJECT)
+                    .build();
+            String content = chatClient.prompt()
+                    .user(prompt)
+                    .options(defaultOptions.mutate()
+                            .responseFormat(responseFormat)
+                            .maxTokens(properties.effectiveMaxTokens()))
+                    .stream()
+                    .content()
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.joining())
+                    .block(properties.effectiveTimeout().plusSeconds(5));
+            if (content == null || content.isBlank()) {
+                throw new IllegalStateException("AI response is empty");
+            }
+            return content;
+        } catch (RuntimeException exception) {
+            throw new AIException(ErrorCode.AI_CALL_FAILED, exception);
+        }
+    }
+
+    @Override
     public Flux<String> stream(String prompt) {
         requireConfigured();
         return chatClient.prompt().user(prompt).stream().content()
                 .onErrorMap(exception -> new AIException(ErrorCode.AI_CALL_FAILED, exception));
     }
 
-    private ChatClient createClient(LlmProperties llm) {
-        OpenAiChatOptions options = OpenAiChatOptions.builder()
+    private OpenAiChatOptions createOptions(LlmProperties llm) {
+        OpenAiChatOptions.Builder builder = OpenAiChatOptions.builder();
+        builder
                 .apiKey(llm.apiKey())
                 .baseUrl(llm.baseUrl())
                 .model(llm.chatModel())
-                .timeout(llm.timeout())
-                .temperature(0.1)
-                .build();
+                .timeout(llm.effectiveTimeout())
+                .maxRetries(llm.effectiveMaxRetries())
+                .maxTokens(llm.effectiveMaxTokens())
+                .temperature(0.1);
+        if (llm.effectiveThinkingEnabled() != null) {
+            builder.extraBody(Map.of("enable_thinking", llm.effectiveThinkingEnabled()));
+        }
+        return builder.build();
+    }
+
+    private ChatClient createClient(OpenAiChatOptions options) {
         OpenAiChatModel model = OpenAiChatModel.builder().options(options).build();
         return ChatClient.create(model);
     }
@@ -55,4 +96,3 @@ public class OpenAiChatService implements ChatService {
         }
     }
 }
-
