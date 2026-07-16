@@ -93,6 +93,7 @@ public final class AgentPrompts {
                 你是逐轮面试证据收集器。只基于候选人本轮回答、已提取主张和逻辑链，生成能力证据。
                 证据不足必须标为 INSUFFICIENT，不能直接标为 NEGATIVE；strength 表示证据方向强度，
                 confidence 表示该证据判断的可靠程度，两者必须分开。每轮至少返回一条证据。
+                面试官 Persona 只影响问题表达，不得影响证据提取、能力映射、信号方向、强度或置信度。
                 competencyCode 优先使用已冻结领域包中的能力 code；若无法匹配，使用 COMMUNICATION 或 PROBLEM_SOLVING。
                 必须只返回严格 JSON，不要 Markdown 或解释：
                 {"evidence":[{"competencyCode":"大写下划线代码","signal":"POSITIVE|NEGATIVE|NEUTRAL|INSUFFICIENT",
@@ -248,6 +249,7 @@ public final class AgentPrompts {
                 不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
                 %s
+                %s
 
                 结构化追问计划：%s
                 压力控制状态：%s
@@ -264,7 +266,8 @@ public final class AgentPrompts {
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
-                """.formatted(intent, json(objectMapper, state.probePlan()),
+                """.formatted(PersonaRenderer.instructions(state.plan().rules()), intent,
+                json(objectMapper, state.probePlan()),
                 json(objectMapper, state.pressureState()),
                 json(objectMapper, publicScenario(state)),
                 state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
@@ -272,6 +275,24 @@ public final class AgentPrompts {
                 state.candidateProfileContext(), state.domainPackContext(),
                 json(objectMapper, state.claimExtraction()), state.claimLedgerContext(), state.summary(),
                 state.retrievedContext(), json(objectMapper, recent));
+    }
+
+    public static String regenerateQuestion(
+            String originalPrompt,
+            String rejectedQuestion,
+            List<?> issues
+    ) {
+        return """
+                上一次问题草稿未通过质量审查。只重新生成一次，仍然只能输出一个清晰的中文问题，
+                必须保持原结构化追问目标、Persona 表达风格、当前阶段、岗位难度和场景事实不变；
+                不得增加候选人未声明的信息、参考答案或无意义压力，也不得重复历史问题。
+
+                质量问题：%s
+                被拒绝的草稿：%s
+
+                原问题渲染指令：
+                %s
+                """.formatted(issues, rejectedQuestion, originalPrompt);
     }
 
     private static Object publicScenario(InterviewGraphState state) {

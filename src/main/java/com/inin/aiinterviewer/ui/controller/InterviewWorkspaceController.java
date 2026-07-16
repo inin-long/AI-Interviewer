@@ -11,7 +11,12 @@ import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.enums.InterviewMode;
+import com.inin.aiinterviewer.domain.enums.InterviewerPersona;
+import com.inin.aiinterviewer.domain.enums.PressureLevel;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
+import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
@@ -55,6 +60,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label jobLabel;
     @FXML private Label stageLabel;
     @FXML private Label statusLabel;
+    @FXML private Label modeLabel;
+    @FXML private Label personaLabel;
+    @FXML private Label pressureLabel;
+    @FXML private Label scenarioLabel;
     @FXML private Label progressLabel;
     @FXML private Label aiNoticeLabel;
     @FXML private Label citationCountLabel;
@@ -183,6 +192,24 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         jobLabel.setText(currentSession.jobTitle());
         stageLabel.setText(stageText(currentSession.stage()));
         statusLabel.setText(statusText(currentSession.status()));
+        InterviewPlanSettings settings = InterviewPlanSettings.fromRules(
+                currentSession.planSnapshot().rules());
+        modeLabel.setText(modeText(settings.mode()));
+        personaLabel.setText(personaText(settings.persona()));
+        var latestState = sessionService.loadLatestState(userId(), sessionId);
+        PressureLevel pressure = latestState.map(state -> state.pressureState().level())
+                .orElse(settings.pressureLevel());
+        pressureLabel.setText(pressureText(pressure));
+        latestState.map(state -> state.activeScenario())
+                .filter(scenario -> scenario.status() == ScenarioStatus.ACTIVE)
+                .ifPresentOrElse(scenario -> {
+                    scenarioLabel.setText("场景 " + scenario.currentRound() + " / " + scenario.maxRounds());
+                    scenarioLabel.setVisible(true);
+                    scenarioLabel.setManaged(true);
+                }, () -> {
+                    scenarioLabel.setVisible(false);
+                    scenarioLabel.setManaged(false);
+                });
         transcriptView.setMessages(messages);
         renderCitations(messages);
         ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
@@ -462,6 +489,34 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             case BEHAVIORAL -> "行为面试";
             case SUMMARY -> "总结";
             case COMPLETED -> "已完成";
+        };
+    }
+
+    private String modeText(InterviewMode mode) {
+        return switch (mode) {
+            case FORMAL_SIMULATION -> "正式模拟";
+            case COACHING -> "教练训练";
+            case SCENARIO_SIMULATION -> "情境沙盘";
+        };
+    }
+
+    private String personaText(InterviewerPersona persona) {
+        return switch (persona) {
+            case PROFESSIONAL_INTERVIEWER -> "专业面试官";
+            case FUTURE_PEER -> "未来同事";
+            case TECH_LEAD -> "技术负责人";
+            case ARCHITECT -> "架构师";
+            case INCIDENT_COMMANDER -> "故障指挥者";
+            case PRODUCT_LEADER -> "产品负责人";
+        };
+    }
+
+    private String pressureText(PressureLevel pressure) {
+        return switch (pressure) {
+            case RELAXED -> "轻松压力";
+            case STANDARD -> "标准压力";
+            case CHALLENGING -> "挑战压力";
+            case HIGH_PRESSURE -> "高压";
         };
     }
 }

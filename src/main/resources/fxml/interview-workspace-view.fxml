@@ -23,6 +23,11 @@
                     <Label fx:id="jobLabel" text="目标岗位" styleClass="secondary-text"/>
                     <Label fx:id="stageLabel" text="开场介绍" styleClass="status-tag"/>
                     <Label fx:id="statusLabel" text="进行中" styleClass="status-tag"/>
+                    <Label fx:id="modeLabel" text="正式模拟" styleClass="status-tag"/>
+                    <Label fx:id="personaLabel" text="专业面试官" styleClass="status-tag"/>
+                    <Label fx:id="pressureLabel" text="标准压力" styleClass="status-tag"/>
+                    <Label fx:id="scenarioLabel" text="场景 0 / 0" styleClass="status-tag"
+                           visible="false" managed="false"/>
                     <Label fx:id="progressLabel" text="第 0 / 0 题" styleClass="secondary-text"/>
                 </HBox>
             </VBox>

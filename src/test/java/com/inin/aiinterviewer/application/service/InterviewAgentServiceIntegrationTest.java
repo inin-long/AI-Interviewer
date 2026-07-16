@@ -188,6 +188,81 @@ class InterviewAgentServiceIntegrationTest {
     }
 
     @Test
+    void blocksInvalidQuestionsRetriesOnceAndUsesTrustedFallback() {
+        var user = userService.register("quality-owner", "Quality Owner", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "质量门验证", "Java 后端工程师", "高并发核心服务", InterviewDifficulty.SENIOR,
+                45, 6, null, null,
+                Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
+                        "TECH_LEAD"),
+                List.of("INTRODUCTION", "TECHNICAL_DEEP_DIVE", "SUMMARY")));
+
+        var retriedSession = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("正确答案是直接使用 Redis，你是否同意？"));
+        chatService.enqueueStream(Flux.just("请介绍一段最能体现你后端能力的经历，并说明个人职责。"));
+
+        assertThat(agentService.generateInitialQuestion(user.id(), retriedSession.id())
+                .collectList().block())
+                .containsExactly("请介绍一段最能体现你后端能力的经历，并说明个人职责。");
+        assertThat(sessionService.messages(user.id(), retriedSession.id()))
+                .singleElement().satisfies(message -> assertThat(message.content())
+                        .doesNotContain("正确答案")
+                        .contains("个人职责"));
+        assertThat(chatService.lastStreamPrompt())
+                .contains("上一次问题草稿未通过质量审查", "技术负责人", "只控制表达方式");
+
+        var fallbackSession = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("你的婚姻情况是什么？"));
+        chatService.enqueueStream(Flux.just("这都不会，你根本不懂 Java，请解释。"));
+
+        assertThat(agentService.generateInitialQuestion(user.id(), fallbackSession.id())
+                .collectList().block())
+                .singleElement().asString()
+                .contains("Java 后端工程师", "相关的一段经历", "承担的职责")
+                .doesNotContain("婚姻", "根本不懂");
+    }
+
+    @Test
+    void persistsCollaborationEvidenceIndependentlyFromTheInterviewerPersona() {
+        var user = userService.register("collaboration-owner", "Collaboration Owner", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "协作证据验证", "Java 后端工程师", "跨团队核心服务", InterviewDifficulty.MEDIUM,
+                45, 6, null, null,
+                Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
+                        "INCIDENT_COMMANDER"),
+                List.of("INTRODUCTION", "PROJECT_EXPERIENCE", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("请介绍一次需要跨团队协作的项目经历。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":80,"depth":76,"missingPoints":[],"feedback":"协作边界清楚"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"验证协作推进方式"}
+                """);
+        chatService.enqueueStream(Flux.just("请说明你如何与相关团队对齐约束并验证推进结果。"));
+
+        agentService.answer(user.id(), session.id(),
+                "我想确认这里指的是发布窗口吗？目前信息不足，我们可以一起先对齐约束并共同推进。")
+                .collectList().block();
+
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence())
+                .filteredOn(evidence -> evidence.competencyCode().equals(
+                        CollaborationEvidenceCollector.COMPETENCY_CODE))
+                .extracting(com.inin.aiinterviewer.domain.model.EvaluationEvidence::reason)
+                .anyMatch(reason -> reason.contains("ACTIVE_CLARIFICATION"))
+                .anyMatch(reason -> reason.contains("ACKNOWLEDGES_UNCERTAINTY"))
+                .anyMatch(reason -> reason.contains("JOINT_PROBLEM_SOLVING"));
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> assertThat(state.evidenceLedger().evidence())
+                        .anyMatch(evidence -> evidence.competencyCode().equals(
+                                CollaborationEvidenceCollector.COMPETENCY_CODE)));
+        assertThat(chatService.lastStreamPrompt())
+                .contains("故障指挥者", "只控制表达方式")
+                .doesNotContain("COLLABORATION_ADAPTABILITY");
+    }
+
+    @Test
     void asksNeutralClarificationBeforeResolvingCrossTurnConflict() {
         var user = userService.register("agent-consistency", "Agent Consistency", "safe-password");
         var plan = planService.create(user.id(), new SaveInterviewPlanCommand(

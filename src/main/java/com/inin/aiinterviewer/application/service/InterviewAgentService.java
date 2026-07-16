@@ -4,7 +4,10 @@ import com.inin.aiinterviewer.agent.graph.InterviewGraph;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.QuestionQualityContext;
 import com.inin.aiinterviewer.agent.model.ScenarioDirectionResult;
+import com.inin.aiinterviewer.agent.node.QuestionQualityGateNode;
+import com.inin.aiinterviewer.agent.prompt.AgentPrompts;
 import com.inin.aiinterviewer.agent.tool.ToolInput;
 import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -45,6 +48,8 @@ public class InterviewAgentService {
     private final DeferredProbeService deferredProbeService;
     private final ScenarioEngine scenarioEngine;
     private final ScenarioSchedulingService scenarioSchedulingService;
+    private final CollaborationEvidenceCollector collaborationEvidenceCollector;
+    private final QuestionQualityGateNode questionQualityGate;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -58,6 +63,8 @@ public class InterviewAgentService {
             DeferredProbeService deferredProbeService,
             ScenarioEngine scenarioEngine,
             ScenarioSchedulingService scenarioSchedulingService,
+            CollaborationEvidenceCollector collaborationEvidenceCollector,
+            QuestionQualityGateNode questionQualityGate,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -70,6 +77,8 @@ public class InterviewAgentService {
         this.deferredProbeService = deferredProbeService;
         this.scenarioEngine = scenarioEngine;
         this.scenarioSchedulingService = scenarioSchedulingService;
+        this.collaborationEvidenceCollector = collaborationEvidenceCollector;
+        this.questionQualityGate = questionQualityGate;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -88,7 +97,8 @@ public class InterviewAgentService {
                     evidenceLedgerService.compactSummary(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(
-                    userId, sessionId, session.stage(), prompt, null, List.of(), null, null, null);
+                    userId, sessionId, session.stage(), prompt, null, List.of(), null, null, null,
+                    qualityContext(input, session.stage(), null));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -127,7 +137,8 @@ public class InterviewAgentService {
             var logicChain = interviewGraph.evaluateLogic(turnInput);
             sessionService.updateLogicChain(userId, sessionId, logicChain);
             turnInput = turnInput.withLogicChainResult(logicChain);
-            var evidenceResult = interviewGraph.collectEvidence(turnInput);
+            var evidenceResult = collaborationEvidenceCollector.enrich(
+                    answeredState.latestAnswer(), interviewGraph.collectEvidence(turnInput));
             var evidenceLedger = evidenceLedgerService.recordLatestAnswer(userId, sessionId, evidenceResult);
             sessionService.updateEvidenceLedger(userId, sessionId, evidenceLedger);
             turnInput = turnInput.withEvidenceContext(
@@ -197,7 +208,8 @@ public class InterviewAgentService {
             return streamAndPersist(
                     userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(),
                     retrieval.citations(), turn.probePlan(),
-                    activeScenario == null ? null : activeScenario.id(), scenarioDirection);
+                    activeScenario == null ? null : activeScenario.id(), scenarioDirection,
+                    qualityContext(turnInput, turn.stage(), turn.probePlan()));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -210,11 +222,13 @@ public class InterviewAgentService {
             List<KnowledgeCitationDto> citations,
             ProbePlan probePlan,
             String scenarioId,
-            ScenarioDirectionResult scenarioDirection
+            ScenarioDirectionResult scenarioDirection,
+            QuestionQualityContext qualityContext
     ) {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
-        return interviewGraph.questionRenderer().stream(prompt)
+        AtomicBoolean qualityFallbackUsed = new AtomicBoolean(false);
+        return reviewedQuestion(prompt, qualityContext, qualityFallbackUsed)
                 .filter(chunk -> chunk != null && !chunk.isEmpty())
                 .switchIfEmpty(Flux.error(new AIException(
                         ErrorCode.AI_CALL_FAILED, new IllegalStateException("AI returned an empty stream"))))
@@ -226,7 +240,8 @@ public class InterviewAgentService {
                     }
                     persistenceAttempted.set(true);
                     sessionService.saveAssistantOutput(
-                            userId, sessionId, generated.toString(), analysis, false, citations);
+                            userId, sessionId, generated.toString(), analysis, false,
+                            qualityFallbackUsed.get() ? List.of() : citations);
                     if (probePlan != null && probePlan.targetsConsistencyIssue()) {
                         var ledger = consistencyIssueService.markClarificationAsked(
                                 userId, sessionId, probePlan.targetConsistencyIssueId());
@@ -268,13 +283,86 @@ public class InterviewAgentService {
                     }
                     try {
                         sessionService.saveAssistantOutput(
-                                userId, sessionId, generated.toString(), analysis, true, citations);
+                                userId, sessionId, generated.toString(), analysis, true,
+                                qualityFallbackUsed.get() ? List.of() : citations);
                         eventPublisher.publishEvent(
                                 new InterviewTurnCompletedEvent(userId, sessionId, stage, true));
                     } catch (RuntimeException persistenceFailure) {
                         log.error("Cannot preserve partial AI output for session {}", sessionId, persistenceFailure);
                     }
                 });
+    }
+
+    private Flux<String> reviewedQuestion(
+            String prompt,
+            QuestionQualityContext context,
+            AtomicBoolean fallbackUsed
+    ) {
+        return renderDraft(prompt).flatMapMany(draft -> {
+            var firstReview = questionQualityGate.review(context, draft.text());
+            if (firstReview.approved()) return Flux.fromIterable(draft.chunks());
+            String retryPrompt = AgentPrompts.regenerateQuestion(
+                    prompt, draft.text(), firstReview.issues());
+            return renderDraft(retryPrompt).flatMapMany(retry -> {
+                var secondReview = questionQualityGate.review(context, retry.text());
+                if (secondReview.approved()) return Flux.fromIterable(retry.chunks());
+                log.warn("Question quality gate rejected both drafts for stage {}: first={}, second={}",
+                        context.stage(), firstReview.issues(), secondReview.issues());
+                fallbackUsed.set(true);
+                return Flux.just(questionQualityGate.fallback(context));
+            });
+        }).onErrorResume(QuestionRenderingException.class, failure -> {
+            Flux<String> partial = Flux.fromIterable(failure.partialChunks());
+            return failure.partialChunks().isEmpty()
+                    ? Flux.error(failure.getCause())
+                    : partial.concatWith(Flux.error(failure.getCause()));
+        });
+    }
+
+    private reactor.core.publisher.Mono<RenderedQuestion> renderDraft(String prompt) {
+        List<String> chunks = new ArrayList<>();
+        return interviewGraph.questionRenderer().stream(prompt)
+                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .doOnNext(chunks::add)
+                .collectList()
+                .flatMap(ignored -> {
+                    String text = String.join("", chunks);
+                    if (text.isBlank()) {
+                        return reactor.core.publisher.Mono.error(new AIException(
+                                ErrorCode.AI_CALL_FAILED,
+                                new IllegalStateException("AI returned an empty question stream")));
+                    }
+                    return reactor.core.publisher.Mono.just(
+                            new RenderedQuestion(List.copyOf(chunks), text));
+                })
+                .onErrorMap(exception -> exception instanceof QuestionRenderingException
+                        ? exception : new QuestionRenderingException(exception, List.copyOf(chunks)));
+    }
+
+    private QuestionQualityContext qualityContext(
+            InterviewTurnInput input,
+            InterviewStage stage,
+            ProbePlan probePlan
+    ) {
+        return new QuestionQualityContext(
+                stage, input.plan(), probePlan, input.pressureState(), input.activeScenario(),
+                input.messages(), input.candidateProfileContext(), input.domainPackContext());
+    }
+
+    private record RenderedQuestion(List<String> chunks, String text) {
+    }
+
+    private static final class QuestionRenderingException extends RuntimeException {
+        private final List<String> partialChunks;
+
+        private QuestionRenderingException(Throwable cause, List<String> partialChunks) {
+            super(cause);
+            this.partialChunks = partialChunks;
+        }
+
+        private List<String> partialChunks() {
+            return partialChunks;
+        }
     }
 
     private InterviewSessionDto requireRunning(long userId, long sessionId) {
