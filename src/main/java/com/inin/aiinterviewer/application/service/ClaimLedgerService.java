@@ -8,9 +8,12 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.entity.InterviewClaimEntity;
+import com.inin.aiinterviewer.domain.entity.ConsistencyIssueEntity;
 import com.inin.aiinterviewer.domain.enums.ClaimStatus;
 import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.InterviewClaim;
+import com.inin.aiinterviewer.domain.model.ConsistencyIssue;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ConsistencyIssueMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
@@ -25,17 +28,20 @@ public class ClaimLedgerService {
     private final InterviewClaimMapper claimMapper;
     private final InterviewMessageMapper messageMapper;
     private final InterviewSessionMapper sessionMapper;
+    private final ConsistencyIssueMapper consistencyIssueMapper;
     private final ObjectMapper objectMapper;
 
     public ClaimLedgerService(
             InterviewClaimMapper claimMapper,
             InterviewMessageMapper messageMapper,
             InterviewSessionMapper sessionMapper,
+            ConsistencyIssueMapper consistencyIssueMapper,
             ObjectMapper objectMapper
     ) {
         this.claimMapper = claimMapper;
         this.messageMapper = messageMapper;
         this.sessionMapper = sessionMapper;
+        this.consistencyIssueMapper = consistencyIssueMapper;
         this.objectMapper = objectMapper;
     }
 
@@ -70,7 +76,10 @@ public class ClaimLedgerService {
     @Transactional(readOnly = true)
     public ClaimLedger ledger(long userId, long sessionId) {
         requireSession(userId, sessionId);
-        return new ClaimLedger(claimMapper.findAll(userId, sessionId).stream().map(this::toModel).toList());
+        return new ClaimLedger(
+                claimMapper.findAll(userId, sessionId).stream().map(this::toModel).toList(),
+                consistencyIssueMapper.findAll(userId, sessionId).stream()
+                        .map(this::toConsistencyIssue).toList());
     }
 
     @Transactional(readOnly = true)
@@ -125,6 +134,14 @@ public class ClaimLedgerService {
                 entity.getContent(), entity.getImportance(), entity.getCredibility(), entity.getStatus(),
                 readList(entity.getMissingEvidenceJson()), readList(entity.getSupportingEvidenceIdsJson()),
                 readList(entity.getConflictingEvidenceIdsJson()), entity.getCreateTime(), entity.getUpdateTime());
+    }
+
+    private ConsistencyIssue toConsistencyIssue(ConsistencyIssueEntity entity) {
+        return new ConsistencyIssue(
+                entity.getId(), entity.getSessionId(), entity.getIssueType(), entity.getStatus(),
+                entity.getDescription(), readList(entity.getRelatedClaimIdsJson()),
+                entity.getClarificationMessageId(), entity.getClarificationQuestion(), entity.getResolution(),
+                entity.getCreateTime(), entity.getUpdateTime());
     }
 
     private void requireSession(long userId, long sessionId) {

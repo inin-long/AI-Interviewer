@@ -220,6 +220,9 @@ class KnowledgeDocumentServiceIntegrationTest {
                         "relatedClaimIds":[]}]}
                         """;
             }
+            if (prompt.contains("跨轮面试一致性检查器")) {
+                return "{\"issues\":[],\"resolutions\":[]}";
+            }
             return chats.remove();
         }
 

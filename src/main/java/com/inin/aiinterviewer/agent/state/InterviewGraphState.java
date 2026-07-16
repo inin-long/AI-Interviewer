@@ -4,6 +4,8 @@ import com.inin.aiinterviewer.agent.model.AgentDecision;
 import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.model.EvidenceCollectionResult;
+import com.inin.aiinterviewer.agent.model.ConsistencyCheckResult;
+import com.inin.aiinterviewer.agent.model.ConsistencyContext;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
@@ -34,6 +36,8 @@ public class InterviewGraphState extends AgentState {
     public static final String LOGIC_CHAIN_RESULT = "logicChainResult";
     public static final String EVIDENCE_LEDGER_CONTEXT = "evidenceLedgerContext";
     public static final String EVIDENCE_COLLECTION_RESULT = "evidenceCollectionResult";
+    public static final String CONSISTENCY_CONTEXT = "consistencyContext";
+    public static final String CONSISTENCY_CHECK_RESULT = "consistencyCheckResult";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -112,5 +116,15 @@ public class InterviewGraphState extends AgentState {
     public EvidenceCollectionResult evidenceCollectionResult() {
         return this.<EvidenceCollectionResult>value(EVIDENCE_COLLECTION_RESULT)
                 .orElseGet(() -> EvidenceCollectionResult.degraded("not_collected"));
+    }
+
+    public ConsistencyContext consistencyContext() {
+        return this.<ConsistencyContext>value(CONSISTENCY_CONTEXT)
+                .orElseGet(() -> ConsistencyContext.skipped("not_prepared"));
+    }
+
+    public ConsistencyCheckResult consistencyCheckResult() {
+        return this.<ConsistencyCheckResult>value(CONSISTENCY_CHECK_RESULT)
+                .orElseGet(() -> ConsistencyCheckResult.skipped("not_checked"));
     }
 }

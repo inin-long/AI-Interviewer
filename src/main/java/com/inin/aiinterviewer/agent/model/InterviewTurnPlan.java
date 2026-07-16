@@ -11,6 +11,7 @@ public record InterviewTurnPlan(
         ClaimExtractionResult claimExtraction,
         LogicChainResult logicChainResult,
         EvidenceCollectionResult evidenceCollectionResult,
+        ConsistencyCheckResult consistencyCheckResult,
         ProbePlan probePlan
 ) {
     public InterviewTurnPlan(
@@ -21,6 +22,7 @@ public record InterviewTurnPlan(
     ) {
         this(analysis, decision, stage, questionPrompt,
                 new ClaimExtractionResult(java.util.List.of()), LogicChainResult.skippedResult(),
-                EvidenceCollectionResult.degraded("not_collected"), null);
+                EvidenceCollectionResult.degraded("not_collected"),
+                ConsistencyCheckResult.skipped("not_collected"), null);
     }
 }

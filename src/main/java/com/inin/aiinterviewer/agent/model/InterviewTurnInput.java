@@ -18,9 +18,11 @@ public record InterviewTurnInput(
         String domainPackContext,
         String claimLedgerContext,
         String evidenceLedgerContext,
+        ConsistencyContext consistencyContext,
         ClaimExtractionResult claimExtraction,
         LogicChainResult logicChainResult,
-        EvidenceCollectionResult evidenceCollectionResult
+        EvidenceCollectionResult evidenceCollectionResult,
+        ConsistencyCheckResult consistencyCheckResult
 ) {
     public InterviewTurnInput(
             InterviewStage stage,
@@ -32,7 +34,8 @@ public record InterviewTurnInput(
             String retrievedContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                "", "", "", "", null, null, null);
+                "", "", "", "", ConsistencyContext.skipped("not_prepared"),
+                null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -46,7 +49,8 @@ public record InterviewTurnInput(
             String candidateProfileContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, "", "", "", null, null, null);
+                candidateProfileContext, "", "", "", ConsistencyContext.skipped("not_prepared"),
+                null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -62,7 +66,8 @@ public record InterviewTurnInput(
             String claimLedgerContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, domainPackContext, claimLedgerContext, "", null, null, null);
+                candidateProfileContext, domainPackContext, claimLedgerContext, "",
+                ConsistencyContext.skipped("not_prepared"), null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -80,7 +85,8 @@ public record InterviewTurnInput(
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
-                evidenceLedgerContext, null, null, null);
+                evidenceLedgerContext, ConsistencyContext.skipped("not_prepared"),
+                null, null, null, null);
     }
 
     public InterviewTurnInput {
@@ -91,13 +97,16 @@ public record InterviewTurnInput(
         domainPackContext = domainPackContext == null ? "" : domainPackContext;
         claimLedgerContext = claimLedgerContext == null ? "" : claimLedgerContext;
         evidenceLedgerContext = evidenceLedgerContext == null ? "" : evidenceLedgerContext;
+        consistencyContext = consistencyContext == null
+                ? ConsistencyContext.skipped("not_prepared") : consistencyContext;
     }
 
     public InterviewTurnInput withClaimExtraction(ClaimExtractionResult extraction) {
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, evidenceLedgerContext,
-                extraction, logicChainResult, evidenceCollectionResult);
+                consistencyContext, extraction, logicChainResult, evidenceCollectionResult,
+                consistencyCheckResult);
     }
 
     public InterviewTurnInput withClaimContext(
@@ -107,14 +116,16 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, updatedClaimLedgerContext, evidenceLedgerContext,
-                extraction, logicChainResult, evidenceCollectionResult);
+                consistencyContext, extraction, logicChainResult, evidenceCollectionResult,
+                consistencyCheckResult);
     }
 
     public InterviewTurnInput withLogicChainResult(LogicChainResult result) {
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, evidenceLedgerContext,
-                claimExtraction, result, evidenceCollectionResult);
+                consistencyContext, claimExtraction, result, evidenceCollectionResult,
+                consistencyCheckResult);
     }
 
     public InterviewTurnInput withEvidenceContext(
@@ -124,6 +135,19 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
-                updatedEvidenceLedgerContext, claimExtraction, logicChainResult, result);
+                updatedEvidenceLedgerContext, consistencyContext, claimExtraction, logicChainResult,
+                result, consistencyCheckResult);
+    }
+
+    public InterviewTurnInput withConsistencyContext(
+            ConsistencyContext context,
+            ConsistencyCheckResult result,
+            String updatedClaimLedgerContext
+    ) {
+        return new InterviewTurnInput(
+                stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, updatedClaimLedgerContext,
+                evidenceLedgerContext, context, claimExtraction, logicChainResult,
+                evidenceCollectionResult, result);
     }
 }

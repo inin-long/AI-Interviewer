@@ -125,6 +125,49 @@ public final class AgentPrompts {
                 """.formatted(state.answer(), response);
     }
 
+    public static String consistencyCheck(InterviewGraphState state) {
+        return """
+                你是跨轮面试一致性检查器。只比较本轮主张、相关历史主张与待澄清问题。
+                语义差异只能标记为潜在矛盾，不能认定候选人撒谎、欺骗、不诚实或作任何人格判断。
+                新矛盾必须生成中性、具体的澄清问题；只有已经标为 CLARIFIED 的问题，才可根据本轮解释
+                输出 RESOLVED 或 CONFIRMED_CONFLICT。无法确定时不要输出负面结论。
+                必须只返回严格 JSON，不要 Markdown 或解释：
+                {"issues":[{"issueId":"","type":"FACT_CONFLICT|TIMELINE_CONFLICT|OWNERSHIP_CONFLICT|TECHNOLOGY_CONFLICT|METRIC_CONFLICT|DECISION_PRINCIPLE_CONFLICT|VALUE_CONFLICT",
+                "description":"两项陈述之间的客观差异","relatedClaimIds":["至少两个真实主张ID"],
+                "clarificationQuestion":"引用两项说法并请候选人解释范围或条件","confidence":0.0到1.0}],
+                "resolutions":[{"issueId":"已存在且处于CLARIFIED的矛盾ID","status":"RESOLVED|CONFIRMED_CONFLICT",
+                "resolution":"候选人解释及客观判断","confidence":0.0到1.0}]}
+                没有潜在矛盾或可处理澄清时返回空数组。不得编造主张 ID 或矛盾 ID。
+
+                当前阶段：%s
+                本轮回答：%s
+                调度原因：%s
+                本轮主张：%s
+                相关历史主张：%s
+                待澄清问题：%s
+                """.formatted(state.stage(), state.answer(), state.consistencyContext().reason(),
+                state.consistencyContext().currentClaims(),
+                state.consistencyContext().historicalClaims(),
+                state.consistencyContext().openIssues());
+    }
+
+    public static String repairConsistencyCheck(InterviewGraphState state, String invalidResponse) {
+        String response = invalidResponse == null ? "" : invalidResponse;
+        if (response.length() > 8_000) response = response.substring(0, 8_000);
+        return """
+                你是 JSON 格式修复器。重新检查跨轮陈述，只输出严格 JSON：
+                {"issues":[],"resolutions":[]}
+                如有潜在矛盾，issues 中必须含 type、description、至少两个真实 relatedClaimIds、
+                中性 clarificationQuestion 和 0 到 1 的 confidence；issueId 留空。
+                只有已处于 CLARIFIED 的问题才能输出 RESOLVED 或 CONFIRMED_CONFLICT。
+                禁止人格判断，无法确定时返回空数组。
+
+                调度上下文：%s
+                本轮回答：%s
+                无效结果：%s
+                """.formatted(state.consistencyContext(), state.answer(), response);
+    }
+
     public static String analysis(InterviewGraphState state) {
         return """
                 你是严谨的技术面试回答分析器。只基于问题和回答评分，不补充候选人没有表达的事实。
@@ -164,7 +207,8 @@ public final class AgentPrompts {
                 : "这是本场面试的第一题。";
         return """
                 你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
-                当追问计划含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
+                当追问计划含 targetConsistencyIssueId 时，必须忠实使用 objective 中的中性澄清问题，
+                不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
                 %s
 

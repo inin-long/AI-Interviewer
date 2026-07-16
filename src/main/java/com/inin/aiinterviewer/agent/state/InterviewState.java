@@ -31,7 +31,7 @@ public record InterviewState(
         LogicChainResult logicChainResult,
         ProbePlan probePlan
 ) {
-    public static final String CURRENT_VERSION = "2.3";
+    public static final String CURRENT_VERSION = "2.4";
 
     public InterviewState(
             String stateVersion,

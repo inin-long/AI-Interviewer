@@ -489,6 +489,9 @@ class CompleteBusinessFlowE2ETest {
                                 "relatedClaimIds":[]}]}
                                 """;
                     }
+                    if (prompt.contains("跨轮面试一致性检查器")) {
+                        return "{\"issues\":[],\"resolutions\":[]}";
+                    }
                     if (prompt.contains("技术面试评分器")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,

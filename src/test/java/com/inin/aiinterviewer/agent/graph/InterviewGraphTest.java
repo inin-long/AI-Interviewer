@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
+import com.inin.aiinterviewer.agent.node.ConsistencyCheckNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -49,6 +50,7 @@ class InterviewGraphTest {
                 new ClaimExtractorNode(chatService, parser),
                 new LogicChainEvaluatorNode(chatService, parser),
                 new EvidenceCollectorNode(chatService, parser),
+                new ConsistencyCheckNode(chatService, parser),
                 new AnswerAnalyzerNode(chatService, parser),
                 new FollowUpDecisionNode(chatService, parser, stageManager, objectMapper),
                 new StageTransitionNode(stageManager),

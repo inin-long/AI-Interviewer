@@ -57,6 +57,17 @@ public interface InterviewMessageMapper {
             """)
     Optional<InterviewMessageEntity> findLatestUserMessage(long userId, long sessionId);
 
+    @Select("""
+            SELECT id, user_id, session_id, sequence_no, role, content,
+                   metadata_json, create_time, deleted
+            FROM message
+            WHERE user_id = #{userId} AND session_id = #{sessionId}
+              AND role = 'ASSISTANT' AND deleted = 0
+            ORDER BY sequence_no DESC
+            LIMIT 1
+            """)
+    Optional<InterviewMessageEntity> findLatestAssistantMessage(long userId, long sessionId);
+
     @Update("""
             UPDATE message
             SET deleted = 1

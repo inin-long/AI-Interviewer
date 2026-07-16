@@ -34,7 +34,12 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
     @Override
     public Map<String, Object> apply(InterviewGraphState state) {
         ProbePlan plan;
-        if (!state.data().containsKey(InterviewGraphState.DECISION)
+        var consistencyIssue = state.consistencyCheckResult().issues().stream()
+                .filter(issue -> !issue.issueId().isBlank())
+                .findFirst();
+        if (consistencyIssue.isPresent()) {
+            plan = planForConsistency(consistencyIssue.get());
+        } else if (!state.data().containsKey(InterviewGraphState.DECISION)
                 || state.decision().action() == AgentAction.NEXT_STAGE) {
             plan = ProbePlan.stageOpening("验证 " + state.stage().name() + " 阶段的岗位核心能力");
         } else {
@@ -47,6 +52,17 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
                     .orElseGet(() -> fallback(state)));
         }
         return Map.of(InterviewGraphState.PROBE_PLAN, plan);
+    }
+
+    private ProbePlan planForConsistency(
+            com.inin.aiinterviewer.agent.model.ConsistencyCheckResult.IssueCandidate issue
+    ) {
+        String claimId = issue.relatedClaimIds().isEmpty() ? "" : issue.relatedClaimIds().getFirst();
+        return new ProbePlan(
+                claimId, "", issue.issueId(), issue.clarificationQuestion(),
+                ProbeStrategy.CROSS_CHECK_HISTORY, PressureLevel.STANDARD,
+                "发现需要候选人澄清的潜在陈述差异：“" + abbreviate(issue.description()) + "”",
+                List.of("两次陈述的适用范围", "各自发生的时间或条件", "职责与决策边界"), false);
     }
 
     private List<InterviewClaim> pendingClaims(InterviewGraphState state) {

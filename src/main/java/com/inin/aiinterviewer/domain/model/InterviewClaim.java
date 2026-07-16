@@ -20,7 +20,7 @@ public record InterviewClaim(
         List<String> conflictingEvidenceIds,
         LocalDateTime createTime,
         LocalDateTime updateTime
-) {
+) implements java.io.Serializable {
     public InterviewClaim {
         missingEvidence = missingEvidence == null ? List.of() : List.copyOf(missingEvidence);
         supportingEvidenceIds = supportingEvidenceIds == null ? List.of() : List.copyOf(supportingEvidenceIds);

@@ -32,6 +32,7 @@ import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapp
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.EvaluationEvidenceMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ConsistencyIssueMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ public class InterviewSessionService {
     private final InterviewMessageMapper messageMapper;
     private final InterviewClaimMapper claimMapper;
     private final EvaluationEvidenceMapper evidenceMapper;
+    private final ConsistencyIssueMapper consistencyIssueMapper;
     private final AgentCheckpointMapper checkpointMapper;
     private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
@@ -74,6 +76,7 @@ public class InterviewSessionService {
             InterviewMessageMapper messageMapper,
             InterviewClaimMapper claimMapper,
             EvaluationEvidenceMapper evidenceMapper,
+            ConsistencyIssueMapper consistencyIssueMapper,
             AgentCheckpointMapper checkpointMapper,
             InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
@@ -88,6 +91,7 @@ public class InterviewSessionService {
         this.messageMapper = messageMapper;
         this.claimMapper = claimMapper;
         this.evidenceMapper = evidenceMapper;
+        this.consistencyIssueMapper = consistencyIssueMapper;
         this.checkpointMapper = checkpointMapper;
         this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
@@ -616,6 +620,7 @@ public class InterviewSessionService {
         resultMapper.deleteReport(userId, sessionId);
         resultMapper.deleteEvaluation(userId, sessionId);
         evidenceMapper.deleteBySession(userId, sessionId);
+        consistencyIssueMapper.deleteBySession(userId, sessionId);
         claimMapper.deleteBySession(userId, sessionId);
         messageMapper.deleteBySession(userId, sessionId);
         checkpointMapper.deleteBySession(userId, sessionId);

@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
+import com.inin.aiinterviewer.domain.enums.ConsistencyIssueStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
@@ -70,6 +71,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private CandidateProfileService profileService;
     @Autowired private ClaimLedgerService claimLedgerService;
     @Autowired private EvidenceLedgerService evidenceLedgerService;
+    @Autowired private ConsistencyIssueService consistencyIssueService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -173,6 +175,87 @@ class InterviewAgentServiceIntegrationTest {
                 });
         assertThat(chatService.lastStreamPrompt()).contains("结构化追问计划", "targetClaimId")
                 .doesNotContain("\"targetClaimId\":\"\"");
+    }
+
+    @Test
+    void asksNeutralClarificationBeforeResolvingCrossTurnConflict() {
+        var user = userService.register("agent-consistency", "Agent Consistency", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "跨轮一致性面试", "Java 工程师", "架构职责验证", InterviewDifficulty.MEDIUM,
+                30, 4, null, Map.of(), List.of("PROJECT_EXPERIENCE", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍你在订单系统中的架构职责。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":78,"depth":70,"missingPoints":["职责边界"],"feedback":"继续核实"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续核实职责"}
+                """);
+        chatService.enqueueStream(Flux.just("你具体负责了哪些架构设计工作？"));
+        agentService.answer(user.id(), session.id(), "我主导了订单系统技术方案设计。")
+                .collectList().block();
+        String firstClaimId = claimLedgerService.ledger(user.id(), session.id()).claims().stream()
+                .filter(claim -> claim.content().contains("负责订单系统核心链路"))
+                .findFirst().orElseThrow().id();
+
+        chatService.enqueueConsistency("""
+                {"issues":[{"issueId":"","type":"OWNERSHIP_CONFLICT",
+                "description":"技术方案主导权与架构选型责任的范围需要澄清",
+                "relatedClaimIds":["%s","CURRENT_CLAIM"],
+                "clarificationQuestion":"前面你提到主导技术方案，现在又说架构选型由架构师决定，请说明双方各自负责哪些决策？",
+                "confidence":0.86}],"resolutions":[]}
+                """.formatted(firstClaimId));
+        chatService.enqueueChat("""
+                {"correctness":76,"depth":68,"missingPoints":["决策边界"],"feedback":"需要澄清"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"澄清前后陈述"}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "前面你提到主导技术方案，现在又说架构选型由架构师决定，",
+                "请说明双方各自负责哪些决策？"));
+
+        agentService.answer(user.id(), session.id(), "架构选型主要由架构师决定。")
+                .collectList().block();
+
+        var clarified = consistencyIssueService.ledger(user.id(), session.id()).issues();
+        assertThat(clarified).singleElement().satisfies(issue -> {
+            assertThat(issue.status()).isEqualTo(ConsistencyIssueStatus.CLARIFIED);
+            assertThat(issue.description()).doesNotContain("撒谎", "不诚实");
+            assertThat(issue.clarificationMessageId()).isPositive();
+        });
+        assertThat(sessionService.messages(user.id(), session.id()).getLast().content())
+                .contains("双方各自负责哪些决策").doesNotContain("撒谎", "不诚实");
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.probePlan().targetsConsistencyIssue()).isTrue();
+                    assertThat(state.claimLedger().issues()).singleElement();
+                });
+
+        String issueId = clarified.getFirst().id();
+        chatService.enqueueConsistency("""
+                {"issues":[],"resolutions":[{"issueId":"%s","status":"RESOLVED",
+                "resolution":"候选人说明自己负责接口与数据模型设计，架构师负责公司级技术栈选型，职责边界不冲突。",
+                "confidence":0.91}]}
+                """.formatted(issueId));
+        chatService.enqueueChat("""
+                {"correctness":86,"depth":82,"missingPoints":[],"feedback":"职责边界已澄清"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证架构能力"}
+                """);
+        chatService.enqueueStream(Flux.just("请继续说明接口设计中的关键取舍。"));
+        agentService.answer(user.id(), session.id(),
+                "我负责接口与数据模型设计，架构师负责公司级技术栈选型。")
+                .collectList().block();
+
+        assertThat(consistencyIssueService.ledger(user.id(), session.id()).issues())
+                .singleElement().satisfies(issue -> {
+                    assertThat(issue.status()).isEqualTo(ConsistencyIssueStatus.RESOLVED);
+                    assertThat(issue.resolution()).contains("职责边界不冲突");
+                });
     }
 
     @Test
@@ -386,6 +469,7 @@ class InterviewAgentServiceIntegrationTest {
 
     static class FakeChatService implements ChatService {
         private final Queue<String> chats = new ArrayDeque<>();
+        private final Queue<String> consistencyChats = new ArrayDeque<>();
         private final Queue<Flux<String>> streams = new ArrayDeque<>();
         private String lastStreamPrompt;
         private String lastChatPrompt;
@@ -398,10 +482,20 @@ class InterviewAgentServiceIntegrationTest {
             streams.add(response);
         }
 
+        synchronized void enqueueConsistency(String response) {
+            consistencyChats.add(response);
+        }
+
         @Override
         public synchronized String chat(String prompt) {
             lastChatPrompt = prompt;
             if (prompt.contains("候选人主张提取器")) {
+                if (prompt.contains("接口与数据模型设计")) {
+                    return claim("负责接口与数据模型设计，架构师负责技术栈选型");
+                }
+                if (prompt.contains("架构选型主要由架构师决定")) {
+                    return claim("架构选型主要由架构师决定");
+                }
                 return """
                         {"claims":[{"type":"OWNERSHIP","content":"负责订单系统核心链路",
                         "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
@@ -423,6 +517,17 @@ class InterviewAgentServiceIntegrationTest {
                         "relatedClaimIds":[]}]}
                         """;
             }
+            if (prompt.contains("跨轮面试一致性检查器")) {
+                if (consistencyChats.isEmpty()) {
+                    return "{\"issues\":[],\"resolutions\":[]}";
+                }
+                String response = consistencyChats.remove();
+                if (response.contains("CURRENT_CLAIM")) {
+                    String currentClaimId = extractCurrentClaimId(prompt);
+                    return response.replace("CURRENT_CLAIM", currentClaimId);
+                }
+                return response;
+            }
             return chats.remove();
         }
 
@@ -442,9 +547,25 @@ class InterviewAgentServiceIntegrationTest {
 
         synchronized void clear() {
             chats.clear();
+            consistencyChats.clear();
             streams.clear();
             lastStreamPrompt = null;
             lastChatPrompt = null;
+        }
+
+        private String claim(String content) {
+            return """
+                    {"claims":[{"type":"OWNERSHIP","content":"%s",
+                    "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
+                    """.formatted(content);
+        }
+
+        private String extractCurrentClaimId(String prompt) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("本轮主张：\\[InterviewClaim\\[id=([0-9a-f-]{36})")
+                    .matcher(prompt);
+            if (!matcher.find()) throw new IllegalStateException("Current claim id missing from prompt");
+            return matcher.group(1);
         }
     }
 }

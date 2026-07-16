@@ -6,11 +6,13 @@ import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.model.EvidenceCollectionResult;
+import com.inin.aiinterviewer.agent.model.ConsistencyCheckResult;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
+import com.inin.aiinterviewer.agent.node.ConsistencyCheckNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -33,6 +35,7 @@ public class InterviewGraph {
     private static final String EXTRACT_CLAIMS = "claim_extractor";
     private static final String EVALUATE_LOGIC = "logic_chain_evaluator";
     private static final String COLLECT_EVIDENCE = "evidence_collector";
+    private static final String CHECK_CONSISTENCY = "consistency_check";
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
     private static final String PLAN_PROBE = "probe_planner";
@@ -44,11 +47,13 @@ public class InterviewGraph {
     private final ProbePlannerNode probePlanner;
     private final LogicChainEvaluatorNode logicChainEvaluator;
     private final EvidenceCollectorNode evidenceCollector;
+    private final ConsistencyCheckNode consistencyCheck;
 
     public InterviewGraph(
             ClaimExtractorNode claimExtractor,
             LogicChainEvaluatorNode logicChainEvaluator,
             EvidenceCollectorNode evidenceCollector,
+            ConsistencyCheckNode consistencyCheck,
             AnswerAnalyzerNode answerAnalyzer,
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
@@ -60,11 +65,13 @@ public class InterviewGraph {
         this.probePlanner = probePlanner;
         this.logicChainEvaluator = logicChainEvaluator;
         this.evidenceCollector = evidenceCollector;
+        this.consistencyCheck = consistencyCheck;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
                     .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
                     .addNode(EVALUATE_LOGIC, AsyncNodeAction.node_async(logicChainEvaluator))
                     .addNode(COLLECT_EVIDENCE, AsyncNodeAction.node_async(evidenceCollector))
+                    .addNode(CHECK_CONSISTENCY, AsyncNodeAction.node_async(consistencyCheck))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
@@ -73,10 +80,13 @@ public class InterviewGraph {
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
                     .addEdge(EXTRACT_CLAIMS, EVALUATE_LOGIC)
                     .addEdge(EVALUATE_LOGIC, COLLECT_EVIDENCE)
-                    .addEdge(COLLECT_EVIDENCE, ANALYZE)
+                    .addEdge(COLLECT_EVIDENCE, CHECK_CONSISTENCY)
+                    .addEdge(CHECK_CONSISTENCY, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
-                            AsyncEdgeAction.edge_async(state -> state.decision().action() == AgentAction.NEXT_STAGE
+                            AsyncEdgeAction.edge_async(state -> state.consistencyCheckResult()
+                                    .requiresClarification() ? "probe"
+                                    : state.decision().action() == AgentAction.NEXT_STAGE
                                     ? "transition" : "probe"),
                             Map.of("transition", TRANSITION, "probe", PLAN_PROBE))
                     .addEdge(TRANSITION, PLAN_PROBE)
@@ -94,7 +104,7 @@ public class InterviewGraph {
         return new InterviewTurnPlan(
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
                 state.claimExtraction(), state.logicChainResult(), state.evidenceCollectionResult(),
-                state.probePlan());
+                state.consistencyCheckResult(), state.probePlan());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -145,6 +155,18 @@ public class InterviewGraph {
         }
     }
 
+    public ConsistencyCheckResult checkConsistency(InterviewTurnInput input) {
+        try {
+            InterviewGraphState state = new InterviewGraphState(input(input));
+            Object result = consistencyCheck.apply(state)
+                    .get(InterviewGraphState.CONSISTENCY_CHECK_RESULT);
+            return result instanceof ConsistencyCheckResult consistency
+                    ? consistency : ConsistencyCheckResult.degraded("consistency_check_returned_no_result");
+        } catch (Exception exception) {
+            return ConsistencyCheckResult.degraded("consistency_check_failed");
+        }
+    }
+
     public QuestionRendererNode questionRenderer() {
         return questionRenderer;
     }
@@ -163,6 +185,7 @@ public class InterviewGraph {
         values.put(InterviewGraphState.DOMAIN_PACK_CONTEXT, input.domainPackContext());
         values.put(InterviewGraphState.CLAIM_LEDGER_CONTEXT, input.claimLedgerContext());
         values.put(InterviewGraphState.EVIDENCE_LEDGER_CONTEXT, input.evidenceLedgerContext());
+        values.put(InterviewGraphState.CONSISTENCY_CONTEXT, input.consistencyContext());
         if (input.claimExtraction() != null) {
             values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
         }
@@ -171,6 +194,9 @@ public class InterviewGraph {
         }
         if (input.evidenceCollectionResult() != null) {
             values.put(InterviewGraphState.EVIDENCE_COLLECTION_RESULT, input.evidenceCollectionResult());
+        }
+        if (input.consistencyCheckResult() != null) {
+            values.put(InterviewGraphState.CONSISTENCY_CHECK_RESULT, input.consistencyCheckResult());
         }
         return values;
     }

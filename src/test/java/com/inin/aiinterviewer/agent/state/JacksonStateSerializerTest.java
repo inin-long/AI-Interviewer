@@ -5,6 +5,9 @@ import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.EvaluationEvidence;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.enums.EvidenceSignal;
+import com.inin.aiinterviewer.domain.enums.ConsistencyIssueStatus;
+import com.inin.aiinterviewer.domain.enums.ConsistencyIssueType;
+import com.inin.aiinterviewer.domain.model.ConsistencyIssue;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -114,5 +117,30 @@ class JacksonStateSerializerTest {
                     assertThat(evidence.signal()).isEqualTo(EvidenceSignal.POSITIVE);
                     assertThat(evidence.relatedClaimIds()).containsExactly("claim-1");
                 });
+    }
+
+    @Test
+    void upgradesVersionTwoPointThreeAndPreservesConsistencyIssues() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        ConsistencyIssue issue = new ConsistencyIssue(
+                "issue-1", 12, ConsistencyIssueType.OWNERSHIP_CONFLICT,
+                ConsistencyIssueStatus.CLARIFIED, "职责范围需要澄清",
+                List.of("claim-1", "claim-2"), 88L, "请说明职责边界", "",
+                LocalDateTime.of(2026, 1, 2, 3, 4), LocalDateTime.of(2026, 1, 2, 3, 5));
+        InterviewState previous = new InterviewState(
+                "2.3", 12, 34, InterviewStage.PROJECT_EXPERIENCE, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", new ClaimLedger(List.of(), List.of(issue)),
+                EvidenceLedger.empty(), com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("澄清职责"));
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.claimLedger().issues()).singleElement().satisfies(value -> {
+            assertThat(value.id()).isEqualTo("issue-1");
+            assertThat(value.status()).isEqualTo(ConsistencyIssueStatus.CLARIFIED);
+            assertThat(value.relatedClaimIds()).containsExactly("claim-1", "claim-2");
+        });
     }
 }
