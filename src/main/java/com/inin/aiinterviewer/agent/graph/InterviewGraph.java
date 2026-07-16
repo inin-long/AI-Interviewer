@@ -186,6 +186,7 @@ public class InterviewGraph {
         values.put(InterviewGraphState.CLAIM_LEDGER_CONTEXT, input.claimLedgerContext());
         values.put(InterviewGraphState.EVIDENCE_LEDGER_CONTEXT, input.evidenceLedgerContext());
         values.put(InterviewGraphState.CONSISTENCY_CONTEXT, input.consistencyContext());
+        values.put(InterviewGraphState.DEFERRED_PROBES, input.deferredProbes());
         if (input.claimExtraction() != null) {
             values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
         }

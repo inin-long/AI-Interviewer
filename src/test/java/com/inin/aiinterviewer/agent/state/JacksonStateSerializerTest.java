@@ -8,6 +8,8 @@ import com.inin.aiinterviewer.domain.enums.EvidenceSignal;
 import com.inin.aiinterviewer.domain.enums.ConsistencyIssueStatus;
 import com.inin.aiinterviewer.domain.enums.ConsistencyIssueType;
 import com.inin.aiinterviewer.domain.model.ConsistencyIssue;
+import com.inin.aiinterviewer.domain.model.DeferredProbe;
+import com.inin.aiinterviewer.domain.enums.ProbeStrategy;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -142,5 +144,41 @@ class JacksonStateSerializerTest {
             assertThat(value.status()).isEqualTo(ConsistencyIssueStatus.CLARIFIED);
             assertThat(value.relatedClaimIds()).containsExactly("claim-1", "claim-2");
         });
+    }
+
+    @Test
+    void upgradesVersionTwoPointFourWithAnEmptyDeferredProbeList() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        InterviewState previous = new InterviewState(
+                "2.4", 12, 34, InterviewStage.PROJECT_EXPERIENCE, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证项目经验"));
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.deferredProbes()).isEmpty();
+    }
+
+    @Test
+    void roundTripsDeferredProbesInCurrentVersion() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        DeferredProbe deferred = new DeferredProbe(
+                "probe-1", 12, "claim-1", InterviewStage.SYSTEM_DESIGN,
+                ProbeStrategy.ASK_TRADE_OFF, "延迟验证取舍", false,
+                LocalDateTime.of(2026, 1, 2, 3, 4), LocalDateTime.of(2026, 1, 2, 3, 5));
+        InterviewState current = new InterviewState(
+                InterviewState.CURRENT_VERSION, 12, 34, InterviewStage.PROJECT_EXPERIENCE,
+                List.of(), "问题", "回答", null, null, null, Map.of(), "",
+                ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证项目经验"), List.of(deferred));
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(current));
+
+        assertThat(restored).isEqualTo(current);
     }
 }

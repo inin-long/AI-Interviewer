@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.EvaluationResult;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.DeferredProbe;
 
 import java.util.List;
 import java.util.Map;
@@ -29,9 +30,33 @@ public record InterviewState(
         ClaimLedger claimLedger,
         EvidenceLedger evidenceLedger,
         LogicChainResult logicChainResult,
-        ProbePlan probePlan
+        ProbePlan probePlan,
+        List<DeferredProbe> deferredProbes
 ) {
-    public static final String CURRENT_VERSION = "2.4";
+    public static final String CURRENT_VERSION = "2.5";
+
+    public InterviewState(
+            String stateVersion,
+            long sessionId,
+            long userId,
+            InterviewStage stage,
+            List<Message> messages,
+            String currentQuestion,
+            String latestAnswer,
+            AnswerAnalysis analysis,
+            EvaluationResult evaluation,
+            CandidateProfile profile,
+            Map<String, Object> rules,
+            String summary,
+            ClaimLedger claimLedger,
+            EvidenceLedger evidenceLedger,
+            LogicChainResult logicChainResult,
+            ProbePlan probePlan
+    ) {
+        this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
+                analysis, evaluation, profile, rules, summary, claimLedger, evidenceLedger,
+                logicChainResult, probePlan, List.of());
+    }
 
     public InterviewState(
             String stateVersion,
@@ -101,5 +126,6 @@ public record InterviewState(
         claimLedger = claimLedger == null ? ClaimLedger.empty() : claimLedger;
         evidenceLedger = evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger;
         logicChainResult = logicChainResult == null ? LogicChainResult.skippedResult() : logicChainResult;
+        deferredProbes = deferredProbes == null ? List.of() : List.copyOf(deferredProbes);
     }
 }

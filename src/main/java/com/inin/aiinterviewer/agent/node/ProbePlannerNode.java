@@ -41,17 +41,42 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
             plan = planForConsistency(consistencyIssue.get());
         } else if (!state.data().containsKey(InterviewGraphState.DECISION)
                 || state.decision().action() == AgentAction.NEXT_STAGE) {
-            plan = ProbePlan.stageOpening("验证 " + state.stage().name() + " 阶段的岗位核心能力");
+            plan = state.deferredProbes().stream()
+                    .filter(probe -> probe.dueAt(state.stage()))
+                    .findFirst()
+                    .map(probe -> planForDeferred(state, probe))
+                    .orElseGet(() -> ProbePlan.stageOpening(
+                            "验证 " + state.stage().name() + " 阶段的岗位核心能力"));
         } else {
-            var importantGap = state.logicChainResult().gaps().stream()
-                    .filter(gap -> gap.severity() >= 0.65)
-                    .max(Comparator.comparingDouble(LogicGap::severity));
-            plan = importantGap.map(this::planForGap).orElseGet(() -> pendingClaims(state).stream()
-                    .max(Comparator.comparingDouble(this::priority))
-                    .map(this::planFor)
-                    .orElseGet(() -> fallback(state)));
+            plan = state.deferredProbes().stream()
+                    .filter(probe -> probe.dueAt(state.stage()))
+                    .findFirst()
+                    .map(probe -> planForDeferred(state, probe))
+                    .orElseGet(() -> {
+                        var importantGap = state.logicChainResult().gaps().stream()
+                                .filter(gap -> gap.severity() >= 0.65)
+                                .max(Comparator.comparingDouble(LogicGap::severity));
+                        return importantGap.map(this::planForGap).orElseGet(() -> pendingClaims(state).stream()
+                                .max(Comparator.comparingDouble(this::priority))
+                                .map(this::planFor)
+                                .orElseGet(() -> fallback(state)));
+                    });
         }
         return Map.of(InterviewGraphState.PROBE_PLAN, plan);
+    }
+
+    private ProbePlan planForDeferred(
+            InterviewGraphState state,
+            com.inin.aiinterviewer.domain.model.DeferredProbe deferred
+    ) {
+        String claim = pendingClaims(state).stream()
+                .filter(value -> value.id().equals(deferred.targetClaimId()))
+                .map(InterviewClaim::content).findFirst().orElse("待验证的历史主张");
+        return new ProbePlan(
+                deferred.targetClaimId(), "", "", deferred.id(),
+                "在当前阶段延迟验证主张：“%s”".formatted(abbreviate(claim)),
+                deferred.strategy(), PressureLevel.STANDARD, deferred.reason(),
+                defaultEvidence(deferred.strategy()), false);
     }
 
     private ProbePlan planForConsistency(
@@ -59,7 +84,7 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
     ) {
         String claimId = issue.relatedClaimIds().isEmpty() ? "" : issue.relatedClaimIds().getFirst();
         return new ProbePlan(
-                claimId, "", issue.issueId(), issue.clarificationQuestion(),
+                claimId, "", issue.issueId(), "", issue.clarificationQuestion(),
                 ProbeStrategy.CROSS_CHECK_HISTORY, PressureLevel.STANDARD,
                 "发现需要候选人澄清的潜在陈述差异：“" + abbreviate(issue.description()) + "”",
                 List.of("两次陈述的适用范围", "各自发生的时间或条件", "职责与决策边界"), false);

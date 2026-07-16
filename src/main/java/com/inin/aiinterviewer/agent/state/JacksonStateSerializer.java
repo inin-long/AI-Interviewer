@@ -31,13 +31,13 @@ public class JacksonStateSerializer implements StateSerializer {
             if (InterviewState.CURRENT_VERSION.equals(state.stateVersion())) return state;
             if ("1.0".equals(state.stateVersion()) || "2.0".equals(state.stateVersion())
                     || "2.1".equals(state.stateVersion()) || "2.2".equals(state.stateVersion())
-                    || "2.3".equals(state.stateVersion())) {
+                    || "2.3".equals(state.stateVersion()) || "2.4".equals(state.stateVersion())) {
                 return new InterviewState(
                         InterviewState.CURRENT_VERSION, state.sessionId(), state.userId(), state.stage(),
                         state.messages(), state.currentQuestion(), state.latestAnswer(), state.analysis(),
                         state.evaluation(), state.profile(), state.rules(), state.summary(),
                         state.claimLedger(), state.evidenceLedger(), state.logicChainResult(),
-                        state.probePlan());
+                        state.probePlan(), state.deferredProbes());
             }
             throw new IllegalStateException("Unsupported interview state version: " + state.stateVersion());
         } catch (JsonProcessingException exception) {

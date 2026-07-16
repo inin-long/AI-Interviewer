@@ -28,11 +28,13 @@ import com.inin.aiinterviewer.domain.model.CandidateProfile;
 import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
+import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.EvaluationEvidenceMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ConsistencyIssueMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.DeferredProbeMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
@@ -61,6 +63,7 @@ public class InterviewSessionService {
     private final InterviewClaimMapper claimMapper;
     private final EvaluationEvidenceMapper evidenceMapper;
     private final ConsistencyIssueMapper consistencyIssueMapper;
+    private final DeferredProbeMapper deferredProbeMapper;
     private final AgentCheckpointMapper checkpointMapper;
     private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
@@ -77,6 +80,7 @@ public class InterviewSessionService {
             InterviewClaimMapper claimMapper,
             EvaluationEvidenceMapper evidenceMapper,
             ConsistencyIssueMapper consistencyIssueMapper,
+            DeferredProbeMapper deferredProbeMapper,
             AgentCheckpointMapper checkpointMapper,
             InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
@@ -92,6 +96,7 @@ public class InterviewSessionService {
         this.claimMapper = claimMapper;
         this.evidenceMapper = evidenceMapper;
         this.consistencyIssueMapper = consistencyIssueMapper;
+        this.deferredProbeMapper = deferredProbeMapper;
         this.checkpointMapper = checkpointMapper;
         this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
@@ -219,7 +224,8 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, previous.stage(), messages,
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan());
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -268,7 +274,8 @@ public class InterviewSessionService {
                 allMessages, question.strip(), previous.latestAnswer(),
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
                 previous.profile(), previous.rules(), summary, previous.claimLedger(),
-                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan());
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -308,7 +315,8 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, stage, previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan());
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
         return updated;
     }
@@ -323,7 +331,8 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(),
                 claimLedger == null ? ClaimLedger.empty() : claimLedger,
-                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan());
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
         return updated;
     }
@@ -340,7 +349,8 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.evidenceLedger(), previous.logicChainResult(), probePlan);
+                previous.evidenceLedger(), previous.logicChainResult(), probePlan,
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "probe_planned", updated);
         return updated;
     }
@@ -355,7 +365,8 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.evidenceLedger(), logicChainResult, previous.probePlan());
+                previous.evidenceLedger(), logicChainResult, previous.probePlan(),
+                previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "logic_chain_evaluated", updated);
         return updated;
     }
@@ -370,8 +381,27 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger,
-                previous.logicChainResult(), previous.probePlan());
+                previous.logicChainResult(), previous.probePlan(), previous.deferredProbes());
         saveCheckpointInternal(userId, sessionId, "evidence_ledger_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateDeferredProbes(
+            long userId,
+            long sessionId,
+            List<DeferredProbe> deferredProbes
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                deferredProbes == null ? List.of() : deferredProbes);
+        saveCheckpointInternal(userId, sessionId, "deferred_probes_updated", updated);
         return updated;
     }
 
@@ -621,6 +651,7 @@ public class InterviewSessionService {
         resultMapper.deleteEvaluation(userId, sessionId);
         evidenceMapper.deleteBySession(userId, sessionId);
         consistencyIssueMapper.deleteBySession(userId, sessionId);
+        deferredProbeMapper.deleteBySession(userId, sessionId);
         claimMapper.deleteBySession(userId, sessionId);
         messageMapper.deleteBySession(userId, sessionId);
         checkpointMapper.deleteBySession(userId, sessionId);

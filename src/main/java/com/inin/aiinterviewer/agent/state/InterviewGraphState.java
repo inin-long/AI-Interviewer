@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
@@ -38,6 +39,7 @@ public class InterviewGraphState extends AgentState {
     public static final String EVIDENCE_COLLECTION_RESULT = "evidenceCollectionResult";
     public static final String CONSISTENCY_CONTEXT = "consistencyContext";
     public static final String CONSISTENCY_CHECK_RESULT = "consistencyCheckResult";
+    public static final String DEFERRED_PROBES = "deferredProbes";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -126,5 +128,9 @@ public class InterviewGraphState extends AgentState {
     public ConsistencyCheckResult consistencyCheckResult() {
         return this.<ConsistencyCheckResult>value(CONSISTENCY_CHECK_RESULT)
                 .orElseGet(() -> ConsistencyCheckResult.skipped("not_checked"));
+    }
+
+    public List<DeferredProbe> deferredProbes() {
+        return this.<List<DeferredProbe>>value(DEFERRED_PROBES).orElseGet(List::of);
     }
 }

@@ -41,6 +41,7 @@ public class InterviewAgentService {
     private final ClaimLedgerService claimLedgerService;
     private final EvidenceLedgerService evidenceLedgerService;
     private final ConsistencyIssueService consistencyIssueService;
+    private final DeferredProbeService deferredProbeService;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -51,6 +52,7 @@ public class InterviewAgentService {
             ClaimLedgerService claimLedgerService,
             EvidenceLedgerService evidenceLedgerService,
             ConsistencyIssueService consistencyIssueService,
+            DeferredProbeService deferredProbeService,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -60,6 +62,7 @@ public class InterviewAgentService {
         this.claimLedgerService = claimLedgerService;
         this.evidenceLedgerService = evidenceLedgerService;
         this.consistencyIssueService = consistencyIssueService;
+        this.deferredProbeService = deferredProbeService;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -130,6 +133,11 @@ public class InterviewAgentService {
             turnInput = turnInput.withConsistencyContext(
                     consistencyContext, appliedConsistency.result(),
                     claimLedgerService.compactSummary(userId, sessionId));
+            var deferredProbes = deferredProbeService.scheduleLatestAnswer(
+                    userId, sessionId, session.planSnapshot(), session.stage(),
+                    appliedConsistency.result().degraded());
+            sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
+            turnInput = turnInput.withDeferredProbes(deferredProbes);
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
@@ -175,6 +183,11 @@ public class InterviewAgentService {
                         var ledger = consistencyIssueService.markClarificationAsked(
                                 userId, sessionId, probePlan.targetConsistencyIssueId());
                         sessionService.updateClaimLedger(userId, sessionId, ledger);
+                    }
+                    if (probePlan != null && probePlan.targetsDeferredProbe()) {
+                        var deferredProbes = deferredProbeService.markCompleted(
+                                userId, sessionId, probePlan.targetDeferredProbeId());
+                        sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
                     }
                     eventPublisher.publishEvent(
                             new InterviewTurnCompletedEvent(userId, sessionId, stage, false));
