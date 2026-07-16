@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.config.properties.TaskProperties;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import com.inin.aiinterviewer.infrastructure.ai.EmbeddingService;
 import com.inin.aiinterviewer.infrastructure.file.PathService;
+import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import javafx.css.PseudoClass;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -38,6 +39,7 @@ public class SettingsController {
     private final ChatService chatService;
     private final EmbeddingService embeddingService;
     private final GlobalExceptionHandler exceptionHandler;
+    private final JavaFxViewManager viewManager;
 
     @FXML private Button generalNavButton;
     @FXML private Button aiNavButton;
@@ -60,6 +62,7 @@ public class SettingsController {
     @FXML private Label connectionStatusLabel;
     @FXML private Label connectionDetailLabel;
     @FXML private Button testConnectionButton;
+    @FXML private Button saveConfigButton;
 
     @FXML private TextField dataRootField;
     @FXML private Label databasePathLabel;
@@ -77,7 +80,8 @@ public class SettingsController {
             PathService pathService,
             ChatService chatService,
             EmbeddingService embeddingService,
-            GlobalExceptionHandler exceptionHandler
+            GlobalExceptionHandler exceptionHandler,
+            JavaFxViewManager viewManager
     ) {
         this.appProperties = appProperties;
         this.llmProperties = llmProperties;
@@ -86,6 +90,7 @@ public class SettingsController {
         this.chatService = chatService;
         this.embeddingService = embeddingService;
         this.exceptionHandler = exceptionHandler;
+        this.viewManager = viewManager;
     }
 
     @FXML
@@ -202,6 +207,48 @@ public class SettingsController {
         if (envKey != null && !envKey.isBlank()) return "Windows 用户/进程环境变量";
         if (llmProperties.isConfigured()) return "外部 application-local.yml 或启动参数";
         return "未检测到完整配置";
+    }
+
+    @FXML
+    private void saveConfig() {
+        String baseUrl = baseUrlField.getText().trim();
+        String apiKey = apiKeyField.getText().trim();
+        String chatModel = chatModelField.getText().trim();
+        String embeddingModel = embeddingModelField.getText().trim();
+
+        if (apiKey.isBlank()) {
+            viewManager.showError("API Key 不能为空");
+            return;
+        }
+        if (chatModel.isBlank()) {
+            viewManager.showError("Chat Model 不能为空");
+            return;
+        }
+
+        try {
+            Path configDir = pathService.applicationRoot().resolve("config");
+            Files.createDirectories(configDir);
+            Path configFile = configDir.resolve("application-local.yml");
+
+            StringBuilder yaml = new StringBuilder();
+            yaml.append("llm:\n");
+            if (!baseUrl.isBlank()) {
+                yaml.append("  base-url: ").append(baseUrl).append("\n");
+            }
+            yaml.append("  api-key: ").append(apiKey).append("\n");
+            yaml.append("  chat-model: ").append(chatModel).append("\n");
+            if (!embeddingModel.isBlank()) {
+                yaml.append("  embedding-model: ").append(embeddingModel).append("\n");
+            }
+            yaml.append("  timeout: 300s\n");
+            yaml.append("  max-retries: 0\n");
+            yaml.append("  max-tokens: 2048\n");
+
+            Files.writeString(configFile, yaml.toString());
+            viewManager.showInfo("配置已保存", "配置已保存到 " + configFile + "，请重启应用使配置生效。");
+        } catch (IOException exception) {
+            viewManager.showError("保存配置失败：" + exception.getMessage());
+        }
     }
 
     private void copy(String value) {
