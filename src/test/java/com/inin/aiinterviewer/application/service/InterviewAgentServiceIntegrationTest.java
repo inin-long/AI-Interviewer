@@ -561,10 +561,18 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(report.overallScore()).isEqualTo(78);
                     assertThat(report.dimensions()).hasSize(6);
                     assertThat(report.confidence()).containsKey("PROBLEM_SOLVING");
-                    assertThat(report.evidence()).singleElement();
+                    assertThat(report.evidence()).singleElement()
+                            .satisfies(evidence -> assertThat(evidence.questionNumber()).isEqualTo(1));
                     assertThat(report.contentMarkdown()).contains(
                             "技术基础", "综合评价", "问答摘要", "证据与置信度", "证据明细", "参考依据",
-                            "本次面试未使用知识库片段作为提问依据");
+                            "本次面试未使用知识库片段作为提问依据",
+                            "## 1. 面试基本信息", "## 2. 综合结论", "## 3. 能力评分与置信度",
+                            "## 4. 关键能力证据", "## 5. 核心主张可信度", "## 6. 逻辑链完整度",
+                            "## 7. 压力场景表现", "## 8. 决策与取舍风格",
+                            "## 9. 协作与观点修正能力", "## 10. 前后不一致及澄清结果",
+                            "## 11. 优势", "## 12. 风险点", "## 13. 改进建议",
+                            "## 14. 学习计划", "## 15. 关键问答证据",
+                            "证据 `", "Q1");
                 });
         assertThat(chatService.lastChatPrompt()).contains(
                 "评分必须以证据账本为主要依据", "PROBLEM_SOLVING", "逐条证据");

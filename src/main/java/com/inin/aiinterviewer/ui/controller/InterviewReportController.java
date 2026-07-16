@@ -52,6 +52,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private Label communicationScoreLabel;
     @FXML private Label comprehensiveScoreLabel;
     @FXML private MarkdownView reportView;
+    @FXML private VBox evidenceNavigationContainer;
     @FXML private VBox citationNavigationContainer;
 
     public InterviewReportController(
@@ -87,6 +88,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         comprehensiveScoreLabel.setText(score(report, "comprehensive"));
         markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
         reportView.setMarkdown(markdown);
+        renderEvidenceNavigation(report.evidence());
         renderCitationNavigation(sessionService.messages(userId, interviewId));
     }
 
@@ -127,6 +129,39 @@ public class InterviewReportController implements ContextAwareController<Long> {
             empty.getStyleClass().add("citation-empty");
             citationNavigationContainer.getChildren().add(empty);
         }
+    }
+
+    private void renderEvidenceNavigation(
+            List<com.inin.aiinterviewer.application.dto.EvaluationEvidenceDto> evidence
+    ) {
+        evidenceNavigationContainer.getChildren().clear();
+        evidence.stream()
+                .filter(item -> item.questionNumber() > 0)
+                .forEach(item -> {
+                    Button link = new Button("Q" + item.questionNumber() + " · "
+                            + evidenceSignalText(item.signal()) + " · " + item.competencyCode());
+                    link.setMaxWidth(Double.MAX_VALUE);
+                    link.getStyleClass().add("report-question-link");
+                    link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
+                    link.setTooltip(new Tooltip(preview(item.reason())));
+                    link.setOnAction(event -> openTranscriptAt(item.questionNumber()));
+                    evidenceNavigationContainer.getChildren().add(link);
+                });
+        if (evidenceNavigationContainer.getChildren().isEmpty()) {
+            Label empty = new Label("暂无可定位的评分证据");
+            empty.setWrapText(true);
+            empty.getStyleClass().add("citation-empty");
+            evidenceNavigationContainer.getChildren().add(empty);
+        }
+    }
+
+    private String evidenceSignalText(com.inin.aiinterviewer.domain.enums.EvidenceSignal signal) {
+        return switch (signal) {
+            case POSITIVE -> "正向";
+            case NEGATIVE -> "负向";
+            case NEUTRAL -> "中性";
+            case INSUFFICIENT -> "证据不足";
+        };
     }
 
     private void openTranscriptAt(int questionNumber) {

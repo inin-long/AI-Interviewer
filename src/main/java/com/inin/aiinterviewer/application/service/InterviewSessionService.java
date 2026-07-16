@@ -206,6 +206,18 @@ public class InterviewSessionService {
         return messageMapper.findAll(userId, sessionId).stream().map(this::toMessageDto).toList();
     }
 
+    @Transactional(readOnly = true)
+    public Map<Long, Integer> messageQuestionNumbers(long userId, long sessionId) {
+        requireEntity(userId, sessionId);
+        Map<Long, Integer> result = new java.util.LinkedHashMap<>();
+        int questionNumber = 0;
+        for (InterviewMessageEntity message : messageMapper.findAll(userId, sessionId)) {
+            if (message.getRole() == Message.Role.ASSISTANT) questionNumber++;
+            if (questionNumber > 0) result.put(message.getId(), questionNumber);
+        }
+        return Map.copyOf(result);
+    }
+
     @Transactional
     public InterviewState appendUserAnswer(long userId, long sessionId, String answer) {
         InterviewSessionEntity session = requireEntity(userId, sessionId);

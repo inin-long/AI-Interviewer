@@ -22,6 +22,7 @@ import com.inin.aiinterviewer.domain.model.EvaluationResult;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +37,7 @@ public class InterviewResultService {
     private final InterviewResultMapper resultMapper;
     private final InterviewSessionMapper sessionMapper;
     private final AgentCheckpointMapper checkpointMapper;
+    private final InterviewMessageMapper messageMapper;
     private final StateSerializer stateSerializer;
     private final ObjectMapper objectMapper;
     private final EvidenceLedgerService evidenceLedgerService;
@@ -44,6 +46,7 @@ public class InterviewResultService {
             InterviewResultMapper resultMapper,
             InterviewSessionMapper sessionMapper,
             AgentCheckpointMapper checkpointMapper,
+            InterviewMessageMapper messageMapper,
             StateSerializer stateSerializer,
             ObjectMapper objectMapper,
             EvidenceLedgerService evidenceLedgerService
@@ -51,6 +54,7 @@ public class InterviewResultService {
         this.resultMapper = resultMapper;
         this.sessionMapper = sessionMapper;
         this.checkpointMapper = checkpointMapper;
+        this.messageMapper = messageMapper;
         this.stateSerializer = stateSerializer;
         this.objectMapper = objectMapper;
         this.evidenceLedgerService = evidenceLedgerService;
@@ -173,12 +177,34 @@ public class InterviewResultService {
 
     private InterviewReportDto toDto(InterviewReportEntity report, EvaluationPayload payload) {
         var ledger = evidenceLedgerService.ledger(report.getUserId(), report.getInterviewId());
+        Map<Long, Integer> questionNumbers = messageQuestionNumbers(
+                report.getUserId(), report.getInterviewId());
         Map<String, Double> confidence = ledger.summaries().entrySet().stream()
                 .collect(java.util.stream.Collectors.toUnmodifiableMap(
                         Map.Entry::getKey, entry -> entry.getValue().confidence()));
         return new InterviewReportDto(report.getId(), report.getInterviewId(), report.getTitle(),
                 payload.overallScore(), dimensions(payload), payload.summary(), report.getContentMarkdown(),
-                confidence, ledger.evidence().stream().map(EvaluationEvidenceDto::from).toList());
+                confidence, ledger.evidence().stream()
+                        .map(evidence -> EvaluationEvidenceDto.from(
+                                evidence, questionNumbers.getOrDefault(evidence.messageId(), 0)))
+                        .toList());
+    }
+
+    private Map<Long, Integer> messageQuestionNumbers(long userId, long sessionId) {
+        Map<Long, Integer> result = new java.util.LinkedHashMap<>();
+        int questionNumber = 0;
+        for (var message : sessionMessageEntities(userId, sessionId)) {
+            if (message.getRole() == Message.Role.ASSISTANT) questionNumber++;
+            if (questionNumber > 0) result.put(message.getId(), questionNumber);
+        }
+        return Map.copyOf(result);
+    }
+
+    private List<com.inin.aiinterviewer.domain.entity.InterviewMessageEntity> sessionMessageEntities(
+            long userId,
+            long sessionId
+    ) {
+        return messageMapper.findAll(userId, sessionId);
     }
 
     private Map<String, Integer> dimensions(EvaluationPayload payload) {

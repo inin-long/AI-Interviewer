@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewCompletionStateDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportDto;
+import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.exception.ApplicationException;
 import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.BusinessException;
@@ -16,11 +17,14 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.EvidenceSignal;
 import com.inin.aiinterviewer.domain.model.EvaluationEvidence;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
+import com.inin.aiinterviewer.domain.model.ClaimLedger;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,6 +37,7 @@ public class InterviewCompletionService {
     private final StructuredAiResponseParser parser;
     private final ObjectMapper objectMapper;
     private final EvidenceLedgerService evidenceLedgerService;
+    private final ConsistencyIssueService consistencyIssueService;
     private final Set<String> generationsInProgress = ConcurrentHashMap.newKeySet();
 
     public InterviewCompletionService(
@@ -41,7 +46,8 @@ public class InterviewCompletionService {
             ChatService chatService,
             StructuredAiResponseParser parser,
             ObjectMapper objectMapper,
-            EvidenceLedgerService evidenceLedgerService
+            EvidenceLedgerService evidenceLedgerService,
+            ConsistencyIssueService consistencyIssueService
     ) {
         this.sessionService = sessionService;
         this.resultService = resultService;
@@ -49,6 +55,7 @@ public class InterviewCompletionService {
         this.parser = parser;
         this.objectMapper = objectMapper;
         this.evidenceLedgerService = evidenceLedgerService;
+        this.consistencyIssueService = consistencyIssueService;
     }
 
     public InterviewReportDto complete(long userId, long sessionId) {
@@ -84,6 +91,8 @@ public class InterviewCompletionService {
         var previous = sessionService.loadLatestState(userId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHECKPOINT_NOT_FOUND));
         EvidenceLedger evidenceLedger = evidenceLedgerService.ledger(userId, sessionId);
+        ClaimLedger claimLedger = consistencyIssueService.ledger(userId, sessionId);
+        Map<Long, Integer> questionNumbers = sessionService.messageQuestionNumbers(userId, sessionId);
         String summary = compactSummary(messages);
         resultService.beginGeneration(userId, session);
         try {
@@ -93,7 +102,8 @@ public class InterviewCompletionService {
                     EvaluationPayload.class);
             validate(payload);
             String markdown = markdown(
-                    session.title(), payload, summary, messages, evidenceLedger);
+                    session, previous, payload, summary, messages, evidenceLedger,
+                    claimLedger, questionNumbers);
             return resultService.complete(userId, session, messages, previous, payload, summary, markdown);
         } catch (RuntimeException exception) {
             try {
@@ -183,16 +193,45 @@ public class InterviewCompletionService {
     }
 
     private String markdown(
-            String title,
+            InterviewSessionDto session,
+            com.inin.aiinterviewer.agent.state.InterviewState state,
             EvaluationPayload value,
             String contextSummary,
             List<InterviewMessageDto> messages,
-            EvidenceLedger evidenceLedger
+            EvidenceLedger evidenceLedger,
+            ClaimLedger claimLedger,
+            Map<Long, Integer> questionNumbers
     ) {
+        InterviewPlanSettings settings = InterviewPlanSettings.fromRules(session.planSnapshot().rules());
+        String trace = evidenceLedger.evidence().isEmpty()
+                ? "当前没有形成可用评分证据，所有能力结论均应视为证据不足。"
+                : "综合判断关联证据：" + evidenceLedger.evidence().stream().limit(8)
+                        .map(evidence -> "`" + evidence.id() + "`（Q"
+                                + questionNumbers.getOrDefault(evidence.messageId(), 0) + "）")
+                        .collect(java.util.stream.Collectors.joining("、"));
         return """
-                # %s · 面试报告
+                # 技术面试报告
+
+                ## 1. 面试基本信息
+
+                - 面试：%s
+                - 目标岗位：%s
+                - 模式：%s
+                - Persona：%s（仅影响提问语气，不影响评分）
+                - 难度：%s
+                - 已完成问题：%d
+
+                ## 2. 综合结论
 
                 **综合得分：%d / 100**
+
+                **综合评价：**
+
+                %s
+
+                %s
+
+                ## 3. 能力评分与置信度
 
                 | 维度 | 得分 |
                 | --- | ---: |
@@ -203,28 +242,88 @@ public class InterviewCompletionService {
                 | 沟通表达 | %d |
                 | 综合能力 | %d |
 
-                ## 综合评价
+                ### 证据与置信度摘要
 
                 %s
 
-                ## 问答摘要
+                ## 4. 关键能力证据
 
                 %s
 
-                ## 证据与置信度
+                ## 5. 核心主张可信度
 
                 %s
 
-                ## 参考依据
+                ## 6. 逻辑链完整度
 
                 %s
-                """.formatted(title, value.overallScore(), value.technicalScore(),
-                value.problemSolvingScore(), value.projectScore(), value.systemDesignScore(),
-                value.communicationScore(), value.comprehensiveScore(), value.summary(), contextSummary,
-                evidenceMarkdown(evidenceLedger), citationMarkdown(messages));
+
+                ## 7. 压力场景表现
+
+                %s
+
+                ## 8. 决策与取舍风格
+
+                %s
+
+                ## 9. 协作与观点修正能力
+
+                %s
+
+                ## 10. 前后不一致及澄清结果
+
+                %s
+
+                ## 11. 优势
+
+                %s
+
+                ## 12. 风险点
+
+                %s
+
+                ## 13. 改进建议
+
+                %s
+
+                ## 14. 学习计划
+
+                %s
+
+                ## 15. 关键问答证据
+
+                %s
+
+                ### 知识库参考依据
+
+                %s
+
+                ### 问答摘要
+
+                %s
+                """.formatted(
+                inline(session.title(), 128), inline(session.jobTitle(), 128), settings.mode(),
+                settings.persona(), session.planSnapshot().difficulty(),
+                messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count(),
+                value.overallScore(), inline(value.summary(), 1_200), trace,
+                value.technicalScore(), value.problemSolvingScore(), value.projectScore(),
+                value.systemDesignScore(), value.communicationScore(), value.comprehensiveScore(),
+                confidenceMarkdown(evidenceLedger), evidenceMarkdown(evidenceLedger, questionNumbers),
+                claimMarkdown(claimLedger, questionNumbers), logicMarkdown(state.logicChainResult()),
+                pressureScenarioMarkdown(state), decisionMarkdown(claimLedger, state.logicChainResult()),
+                collaborationMarkdown(evidenceLedger, questionNumbers), consistencyMarkdown(claimLedger),
+                strengthsMarkdown(evidenceLedger, questionNumbers), risksMarkdown(evidenceLedger, questionNumbers),
+                improvementMarkdown(evidenceLedger, state.logicChainResult()),
+                learningMarkdown(evidenceLedger, state.logicChainResult(), session.knowledgeSnapshot()),
+                keyQaMarkdown(messages, evidenceLedger, questionNumbers), citationMarkdown(messages),
+                inline(contextSummary, 2_400));
     }
 
     String evidenceMarkdown(EvidenceLedger ledger) {
+        return evidenceMarkdown(ledger, Map.of());
+    }
+
+    private String evidenceMarkdown(EvidenceLedger ledger, Map<Long, Integer> questionNumbers) {
         if (ledger.evidence().isEmpty()) {
             return "本次面试没有形成可用的能力证据，评分置信度不足。";
         }
@@ -245,6 +344,7 @@ public class InterviewCompletionService {
                     .append(signalLabel(evidence.signal()))
                     .append(" · 强度 ").append(format(evidence.strength()))
                     .append(" · 置信度 ").append(format(evidence.confidence()))
+                    .append(" · Q").append(questionNumbers.getOrDefault(evidence.messageId(), 0))
                     .append(" · 消息 `").append(evidence.messageId()).append("`\n\n")
                     .append("  ").append(inline(evidence.reason(), 320)).append("\n\n");
             if (!evidence.relatedClaimIds().isEmpty()) {
@@ -256,6 +356,232 @@ public class InterviewCompletionService {
             }
         }
         return markdown.toString().stripTrailing();
+    }
+
+    private String confidenceMarkdown(EvidenceLedger ledger) {
+        if (ledger.summaries().isEmpty()) return "暂无能力证据，评分置信度不足。";
+        StringBuilder markdown = new StringBuilder("| 能力 | 证据数 | 评分置信度 |\n| --- | ---: | ---: |\n");
+        ledger.summaries().values().stream()
+                .sorted(java.util.Comparator.comparing(summary -> summary.competencyCode()))
+                .forEach(summary -> markdown.append("| ").append(inline(summary.competencyCode(), 64))
+                        .append(" | ").append(summary.evidenceCount()).append(" | ")
+                        .append(format(summary.confidence())).append(" |\n"));
+        return markdown.toString().stripTrailing();
+    }
+
+    private String claimMarkdown(ClaimLedger ledger, Map<Long, Integer> questionNumbers) {
+        if (ledger.claims().isEmpty()) return "本次回答未提取到可独立验证的核心主张。";
+        StringBuilder markdown = new StringBuilder();
+        ledger.claims().stream()
+                .sorted(java.util.Comparator.comparingDouble(
+                        com.inin.aiinterviewer.domain.model.InterviewClaim::importance).reversed())
+                .limit(20)
+                .forEach(claim -> markdown.append("- `").append(claim.id()).append("` · Q")
+                        .append(questionNumbers.getOrDefault(claim.sourceMessageId(), 0)).append(" · **")
+                        .append(claim.type()).append(" / ").append(claim.status()).append("** · 可信度 ")
+                        .append(format(claim.credibility())).append(" · ")
+                        .append(inline(claim.content(), 260))
+                        .append(claim.missingEvidence().isEmpty() ? ""
+                                : "；仍缺：" + inline(String.join("、", claim.missingEvidence()), 240))
+                        .append("\n"));
+        return markdown.toString().stripTrailing();
+    }
+
+    private String logicMarkdown(com.inin.aiinterviewer.agent.model.LogicChainResult logic) {
+        if (logic == null || logic.skipped()) return "本次没有形成可用的逻辑链分析。";
+        if (logic.degraded()) return "逻辑链分析节点已安全降级，本节不作推测性判断。";
+        StringBuilder markdown = new StringBuilder();
+        appendField(markdown, "问题判断", logic.problemDiagnosis());
+        appendField(markdown, "备选方案", String.join("、", logic.alternatives()));
+        appendField(markdown, "决策", logic.decision());
+        appendField(markdown, "依据与机制", logic.reasoning());
+        appendField(markdown, "执行动作", String.join("、", logic.actions()));
+        appendField(markdown, "结果", logic.outcome());
+        appendField(markdown, "验证", logic.validation());
+        appendField(markdown, "反思", logic.reflection());
+        if (!logic.gaps().isEmpty()) {
+            markdown.append("\n**仍存在的逻辑缺口：**\n\n");
+            logic.gaps().forEach(gap -> markdown.append("- **").append(gap.type())
+                    .append("** · 严重度 ").append(format(gap.severity())).append(" · ")
+                    .append(inline(gap.description(), 260))
+                    .append(gap.relatedClaimIds().isEmpty() ? ""
+                            : " · 关联主张 " + gap.relatedClaimIds().stream()
+                                    .map(id -> "`" + id + "`")
+                                    .collect(java.util.stream.Collectors.joining("、")))
+                    .append("\n"));
+        }
+        return markdown.isEmpty() ? "当前逻辑链字段不足，暂不下结论。" : markdown.toString().stripTrailing();
+    }
+
+    private String pressureScenarioMarkdown(com.inin.aiinterviewer.agent.state.InterviewState state) {
+        var pressure = state.pressureState();
+        StringBuilder markdown = new StringBuilder("- 最终压力等级：**")
+                .append(pressure.level()).append("**\n- 连续施压轮数：")
+                .append(pressure.consecutivePressureTurns()).append("\n- 安全调整：")
+                .append(pressure.safetyAdjusted() ? "是" : "否").append("\n- 控制依据：")
+                .append(inline(pressure.reason(), 300));
+        var scenario = state.activeScenario();
+        if (scenario == null) {
+            markdown.append("\n\n本次未进入持续情境场景，不据此评价压力场景能力。");
+            return markdown.toString();
+        }
+        markdown.append("\n\n**场景：** ").append(inline(scenario.objective(), 240))
+                .append("（").append(scenario.status()).append("，")
+                .append(scenario.currentRound()).append(" / ").append(scenario.maxRounds()).append(" 轮）\n\n");
+        for (var event : scenario.events()) {
+            markdown.append("- 第 ").append(event.round()).append(" 轮 · ")
+                    .append(event.type()).append(" · ").append(inline(event.description(), 240))
+                    .append(" · 变量变化：`").append(inline(String.valueOf(event.changes()), 200))
+                    .append("`\n");
+        }
+        return markdown.toString().stripTrailing();
+    }
+
+    private String decisionMarkdown(
+            ClaimLedger ledger,
+            com.inin.aiinterviewer.agent.model.LogicChainResult logic
+    ) {
+        List<com.inin.aiinterviewer.domain.model.InterviewClaim> decisions = ledger.claims().stream()
+                .filter(claim -> claim.type() == com.inin.aiinterviewer.domain.enums.ClaimType.DECISION)
+                .toList();
+        if (decisions.isEmpty() && (logic == null || logic.decision().isBlank())) {
+            return "缺少可追溯的决策或取舍证据，本节不作风格推断。";
+        }
+        StringBuilder markdown = new StringBuilder();
+        decisions.stream().limit(8).forEach(claim -> markdown.append("- `").append(claim.id())
+                .append("` · ").append(inline(claim.content(), 280)).append("\n"));
+        if (logic != null && !logic.decision().isBlank()) {
+            markdown.append("\n- 最近一轮决策链：").append(inline(logic.decision(), 260));
+            if (!logic.reasoning().isBlank()) {
+                markdown.append("；依据：").append(inline(logic.reasoning(), 260));
+            }
+        }
+        return markdown.toString().stripTrailing();
+    }
+
+    private String collaborationMarkdown(EvidenceLedger ledger, Map<Long, Integer> questionNumbers) {
+        List<EvaluationEvidence> evidence = ledger.evidence().stream()
+                .filter(item -> item.competencyCode().equals(
+                        CollaborationEvidenceCollector.COMPETENCY_CODE)).toList();
+        if (evidence.isEmpty()) return "未观察到足以判断协作或观点修正方式的明确行为证据。";
+        return evidence.stream().map(item -> "- `" + item.id() + "` · Q"
+                        + questionNumbers.getOrDefault(item.messageId(), 0) + " · "
+                        + signalLabel(item.signal()) + " · " + inline(item.reason(), 300))
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String consistencyMarkdown(ClaimLedger ledger) {
+        if (ledger.issues().isEmpty()) return "本次未形成需要报告的跨轮一致性问题。";
+        return ledger.issues().stream().map(issue -> "- `" + issue.id() + "` · **"
+                        + issue.type() + " / " + issue.status() + "** · "
+                        + inline(issue.description(), 260)
+                        + (issue.resolution().isBlank() ? "；尚待澄清"
+                        : "；澄清结果：" + inline(issue.resolution(), 260))
+                        + " · 关联主张 " + issue.relatedClaimIds().stream()
+                                .map(id -> "`" + id + "`")
+                                .collect(java.util.stream.Collectors.joining("、")))
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String strengthsMarkdown(EvidenceLedger ledger, Map<Long, Integer> questionNumbers) {
+        List<EvaluationEvidence> strengths = ledger.evidence().stream()
+                .filter(item -> item.signal() == EvidenceSignal.POSITIVE)
+                .filter(item -> item.confidence() >= 0.55)
+                .sorted(java.util.Comparator.comparingDouble(EvaluationEvidence::strength).reversed())
+                .limit(8).toList();
+        if (strengths.isEmpty()) return "当前没有达到报告阈值的正向证据，不推测优势。";
+        return strengths.stream().map(item -> "- " + inline(item.reason(), 280)
+                        + "（证据 `" + item.id() + "`，Q"
+                        + questionNumbers.getOrDefault(item.messageId(), 0) + "）")
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String risksMarkdown(EvidenceLedger ledger, Map<Long, Integer> questionNumbers) {
+        List<EvaluationEvidence> risks = ledger.evidence().stream()
+                .filter(item -> item.signal() == EvidenceSignal.NEGATIVE
+                        || item.signal() == EvidenceSignal.INSUFFICIENT)
+                .limit(10).toList();
+        if (risks.isEmpty()) return "当前没有达到报告阈值的负向证据；未覆盖能力仍需在后续面试中验证。";
+        return risks.stream().map(item -> "- " + (item.signal() == EvidenceSignal.INSUFFICIENT
+                        ? "**证据不足（不等同能力不足）：** " : "**待改进证据：** ")
+                        + inline(item.reason(), 280) + "（证据 `" + item.id() + "`，Q"
+                        + questionNumbers.getOrDefault(item.messageId(), 0) + "）")
+                .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String improvementMarkdown(
+            EvidenceLedger ledger,
+            com.inin.aiinterviewer.agent.model.LogicChainResult logic
+    ) {
+        List<String> items = new java.util.ArrayList<>();
+        ledger.evidence().stream()
+                .filter(item -> item.signal() == EvidenceSignal.NEGATIVE
+                        || item.signal() == EvidenceSignal.INSUFFICIENT)
+                .limit(5).forEach(item -> items.add("围绕 " + item.competencyCode()
+                        + " 补充可验证案例（来源证据 `" + item.id() + "`）"));
+        if (logic != null) logic.gaps().stream().limit(5).forEach(gap -> items.add(
+                "练习补全 " + gap.type() + "：" + inline(gap.description(), 180)));
+        return items.isEmpty() ? "继续积累带基线、个人行动和验证结果的岗位案例。"
+                : items.stream().map(item -> "- " + item).collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String learningMarkdown(
+            EvidenceLedger ledger,
+            com.inin.aiinterviewer.agent.model.LogicChainResult logic,
+            List<com.inin.aiinterviewer.application.dto.KnowledgeDocumentSnapshotDto> knowledge
+    ) {
+        java.util.LinkedHashSet<String> topics = new java.util.LinkedHashSet<>();
+        ledger.evidence().stream()
+                .filter(item -> item.signal() == EvidenceSignal.NEGATIVE
+                        || item.signal() == EvidenceSignal.INSUFFICIENT)
+                .map(EvaluationEvidence::competencyCode).forEach(topics::add);
+        if (logic != null) logic.gaps().stream().map(gap -> gap.type().name()).forEach(topics::add);
+        if (topics.isEmpty()) topics.add("岗位核心能力的可验证案例复盘");
+        String topicList = topics.stream().limit(8).map(topic -> "- 学习主题：**" + topic + "**")
+                .collect(java.util.stream.Collectors.joining("\n"));
+        String documents = knowledge == null || knowledge.isEmpty()
+                ? "- 尚无关联知识文档，可在知识库补充对应材料。"
+                : knowledge.stream().limit(8)
+                        .map(document -> "- 关联知识：**" + inline(document.name(), 120) + "**")
+                        .collect(java.util.stream.Collectors.joining("\n"));
+        return topicList + "\n" + documents
+                + "\n- 建议使用报告页的“创建专项训练方案”，以教练模式完成针对性复试。";
+    }
+
+    private String keyQaMarkdown(
+            List<InterviewMessageDto> messages,
+            EvidenceLedger ledger,
+            Map<Long, Integer> questionNumbers
+    ) {
+        Map<Integer, List<EvaluationEvidence>> evidenceByQuestion = ledger.evidence().stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        item -> questionNumbers.getOrDefault(item.messageId(), 0),
+                        java.util.LinkedHashMap::new, java.util.stream.Collectors.toList()));
+        StringBuilder markdown = new StringBuilder();
+        int questionNumber = 0;
+        String currentQuestion = "";
+        for (InterviewMessageDto message : messages) {
+            if (message.role() == Message.Role.ASSISTANT) {
+                questionNumber++;
+                currentQuestion = message.content();
+            } else if (message.role() == Message.Role.USER && questionNumber > 0) {
+                markdown.append("### Q").append(questionNumber).append("\n\n**问题：** ")
+                        .append(inline(currentQuestion, 420)).append("\n\n**回答：** ")
+                        .append(inline(message.content(), 700)).append("\n\n**评分证据：** ");
+                List<EvaluationEvidence> evidence = evidenceByQuestion.getOrDefault(questionNumber, List.of());
+                markdown.append(evidence.isEmpty() ? "暂无" : evidence.stream()
+                        .map(item -> "`" + item.id() + "`")
+                        .collect(java.util.stream.Collectors.joining("、"))).append("\n\n");
+            }
+        }
+        return markdown.isEmpty() ? "暂无完整问答。" : markdown.toString().stripTrailing();
+    }
+
+    private void appendField(StringBuilder markdown, String label, String value) {
+        if (value != null && !value.isBlank()) {
+            markdown.append("- **").append(label).append("：** ")
+                    .append(inline(value, 500)).append("\n");
+        }
     }
 
     private String signalLabel(EvidenceSignal signal) {
