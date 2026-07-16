@@ -28,8 +28,10 @@
             <padding><Insets top="22" right="28" bottom="28" left="28"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
                 <Label fx:id="summaryLabel" text="共 0 项" styleClass="summary-value"/>
-                <Label text="失败任务可进入详情后手动重新排队" styleClass="secondary-text"/>
+                <Label text="失败任务可重新排队；已完成或失败的任务可删除" styleClass="secondary-text"/>
                 <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="deleteButton" text="删除任务" onAction="#deleteSelected"
+                        styleClass="danger-button" disable="true"/>
                 <Button fx:id="detailButton" text="查看详情" onAction="#viewSelected" styleClass="primary-button"/>
             </HBox>
             <TableView fx:id="taskTable" VBox.vgrow="ALWAYS" styleClass="data-table">

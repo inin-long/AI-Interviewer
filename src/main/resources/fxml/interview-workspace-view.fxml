@@ -52,7 +52,9 @@
                     <Separator/>
                     <Label text="你的回答" styleClass="field-label"/>
                     <TextArea fx:id="answerArea" promptText="输入你的回答，AI 将结合当前阶段和已关联资料继续提问"
-                              wrapText="true" prefRowCount="4"/>
+                              wrapText="true" prefRowCount="5" prefColumnCount="80"
+                              minHeight="132" prefHeight="156" maxWidth="Infinity"
+                              styleClass="answer-input"/>
                     <HBox alignment="CENTER_RIGHT">
                         <Button fx:id="submitButton" text="提交回答" onAction="#submitAnswer"
                                 defaultButton="true" styleClass="primary-button"/>

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 @Component
 public class ContentNavigator {
@@ -20,6 +22,7 @@ public class ContentNavigator {
 
     private StackPane contentHost;
     private Label titleLabel;
+    private Consumer<Route> routeListener = ignored -> { };
     private PageDescriptor currentPage;
 
     public ContentNavigator(ApplicationContext applicationContext) {
@@ -27,8 +30,13 @@ public class ContentNavigator {
     }
 
     public void attach(StackPane contentHost, Label titleLabel) {
+        attach(contentHost, titleLabel, ignored -> { });
+    }
+
+    public void attach(StackPane contentHost, Label titleLabel, Consumer<Route> routeListener) {
         this.contentHost = contentHost;
         this.titleLabel = titleLabel;
+        this.routeListener = Objects.requireNonNull(routeListener, "routeListener");
         this.currentPage = null;
         history.clear();
     }
@@ -38,6 +46,7 @@ public class ContentNavigator {
         history.clear();
         PageDescriptor descriptor = new PageDescriptor(route.contentPath(), route.title(), null);
         show(descriptor, false);
+        routeListener.accept(route);
     }
 
     public void showSubPage(String fxmlPath, String title, Object context) {
@@ -104,4 +113,3 @@ public class ContentNavigator {
     private record PageDescriptor(String fxmlPath, String title, Object context) {
     }
 }
-

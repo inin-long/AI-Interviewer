@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.ui.state;
 
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
+import com.inin.aiinterviewer.application.event.BackgroundTaskDeletedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskFailedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskQueuedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskStartedEvent;
@@ -51,6 +52,12 @@ public class TaskNotificationCenter {
                 event.taskId(), event.userId(), event.taskType(), Outcome.FAILED, event.errorMessage()));
     }
 
+    @EventListener
+    public void taskDeleted(BackgroundTaskDeletedEvent event) {
+        dispatch(new TaskNotification(
+                event.taskId(), event.userId(), event.taskType(), Outcome.DELETED, ""));
+    }
+
     private void dispatch(TaskNotification notification) {
         for (Subscriber subscriber : subscribers) {
             if (subscriber.userId() != notification.userId()) continue;
@@ -66,7 +73,8 @@ public class TaskNotificationCenter {
         QUEUED,
         RUNNING,
         COMPLETED,
-        FAILED
+        FAILED,
+        DELETED
     }
 
     public record TaskNotification(

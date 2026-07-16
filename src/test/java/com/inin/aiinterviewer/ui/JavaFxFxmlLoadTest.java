@@ -259,6 +259,12 @@ class JavaFxFxmlLoadTest {
             Button settings = (Button) root.lookup("#settingsNavButton");
             Button taskStatus = (Button) root.lookup("#taskStatusButton");
             HBox activityReceipt = (HBox) root.lookup("#activityReceipt");
+            VBox sidebar = (VBox) root.lookup("#sidebar");
+            var navigationOrder = sidebar.getChildren().stream()
+                    .filter(Button.class::isInstance)
+                    .map(Button.class::cast)
+                    .map(Button::getText)
+                    .toList();
             PseudoClass selected = PseudoClass.getPseudoClass("selected");
             boolean initialSelection = dashboard.getPseudoClassStates().contains(selected);
             plans.fire();
@@ -285,8 +291,12 @@ class JavaFxFxmlLoadTest {
                     && activityReceipt != null
                     && !activityReceipt.isVisible()
                     && !activityReceipt.isManaged();
+            boolean expectedNavigationOrder = navigationOrder.equals(List.of(
+                    "首页", "简历", "候选人画像", "面试方案",
+                    "面试记录", "知识库", "任务中心", "设置"));
             return new boolean[]{initialSelection, switchedSelection, fullHeight,
-                    topbarInsideContent, profilesLoaded, tasksLoaded, settingsLoaded, taskFeedbackReady};
+                    topbarInsideContent, profilesLoaded, tasksLoaded, settingsLoaded,
+                    taskFeedbackReady, expectedNavigationOrder};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);

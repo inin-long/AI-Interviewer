@@ -98,6 +98,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             throw new IllegalArgumentException("Interview workspace requires a session id");
         }
         sessionId = context;
+        viewManager.maximizePrimaryStage();
         workspaceRoot.sceneProperty().addListener((observable, previous, current) -> {
             if (previous != null && current == null) stopReportStatePolling();
         });
@@ -183,7 +184,6 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         stageLabel.setText(stageText(currentSession.stage()));
         statusLabel.setText(statusText(currentSession.status()));
         transcriptView.setMessages(messages);
-        transcriptView.scrollToBottom();
         renderCitations(messages);
         ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
         var completionState = reportTaskState.completion();

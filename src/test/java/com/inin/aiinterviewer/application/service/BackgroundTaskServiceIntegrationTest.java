@@ -181,6 +181,28 @@ class BackgroundTaskServiceIntegrationTest {
                 .isEqualTo(BackgroundTaskStatus.SUCCESS);
     }
 
+    @Test
+    void deletesOnlyTerminalTasksOwnedByTheCurrentUser() {
+        var owner = userService.register("task-delete-owner", "Delete Owner", "safe-password");
+        var other = userService.register("task-delete-other", "Delete Other", "safe-password");
+        long taskId = taskService.enqueue(owner.id(), BackgroundTaskType.VECTOR_UPDATE, Map.of());
+
+        assertThatThrownBy(() -> taskService.deleteTerminal(owner.id(), taskId))
+                .isInstanceOf(BusinessException.class);
+        assertThat(taskService.executeNext("delete-test-worker")).isTrue();
+        assertThat(taskService.require(owner.id(), taskId).getStatus())
+                .isEqualTo(BackgroundTaskStatus.SUCCESS);
+        assertThatThrownBy(() -> taskService.deleteTerminal(other.id(), taskId))
+                .isInstanceOf(BusinessException.class);
+
+        taskService.deleteTerminal(owner.id(), taskId);
+
+        assertThat(taskService.list(owner.id()))
+                .noneSatisfy(task -> assertThat(task.getId()).isEqualTo(taskId));
+        assertThatThrownBy(() -> taskService.require(owner.id(), taskId))
+                .isInstanceOf(BusinessException.class);
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class TaskHandlerConfiguration {
         @Bean

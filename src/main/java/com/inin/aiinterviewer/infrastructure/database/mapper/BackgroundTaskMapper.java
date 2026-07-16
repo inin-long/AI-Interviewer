@@ -97,6 +97,13 @@ public interface BackgroundTaskMapper {
             """)
     int retryFailed(long id, long userId);
 
+    @Update("""
+            UPDATE task SET deleted = 1, worker_id = NULL, update_time = CURRENT_TIMESTAMP
+             WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+               AND status IN ('SUCCESS', 'FAILED')
+            """)
+    int softDeleteTerminal(long id, long userId);
+
     @Select("""
             SELECT id, user_id, task_type, status, progress, attempt_count, payload_json,
                    deduplication_key,

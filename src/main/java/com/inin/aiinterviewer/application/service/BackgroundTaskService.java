@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.application.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
+import com.inin.aiinterviewer.application.event.BackgroundTaskDeletedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskFailedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskQueuedEvent;
 import com.inin.aiinterviewer.application.event.BackgroundTaskStartedEvent;
@@ -14,6 +15,7 @@ import com.inin.aiinterviewer.application.task.BackgroundTaskContext;
 import com.inin.aiinterviewer.application.task.BackgroundTaskHandlerRegistry;
 import com.inin.aiinterviewer.config.properties.TaskProperties;
 import com.inin.aiinterviewer.domain.entity.BackgroundTaskEntity;
+import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.infrastructure.database.mapper.BackgroundTaskMapper;
 import org.slf4j.Logger;
@@ -159,6 +161,20 @@ public class BackgroundTaskService {
         BackgroundTaskEntity task = require(userId, taskId);
         publishAfterCommit(new BackgroundTaskQueuedEvent(taskId, userId, task.getTaskType()));
         return true;
+    }
+
+    @Transactional
+    public void deleteTerminal(long userId, long taskId) {
+        BackgroundTaskEntity task = require(userId, taskId);
+        if (task.getStatus() == BackgroundTaskStatus.PENDING
+                || task.getStatus() == BackgroundTaskStatus.RUNNING) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        if (mapper.softDeleteTerminal(taskId, userId) != 1) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        publishAfterCommit(new BackgroundTaskDeletedEvent(
+                taskId, userId, task.getTaskType()));
     }
 
     private void handleFailure(BackgroundTaskEntity task, String workerId, Exception exception) {

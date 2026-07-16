@@ -88,6 +88,11 @@ public class JavaFxViewManager implements ViewManager {
         alert.showAndWait();
     }
 
+    public void maximizePrimaryStage() {
+        requireStage();
+        primaryStage.setMaximized(true);
+    }
+
     private Parent load(Route route) throws IOException {
         URL location = Objects.requireNonNull(getClass().getResource(route.fxmlPath()),
                 () -> "Missing FXML resource: " + route.fxmlPath());
@@ -110,4 +115,3 @@ public class JavaFxViewManager implements ViewManager {
         }
     }
 }
-
