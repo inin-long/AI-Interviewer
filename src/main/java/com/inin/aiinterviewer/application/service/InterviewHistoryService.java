@@ -52,4 +52,9 @@ public class InterviewHistoryService {
     private boolean contains(String value, String keyword) {
         return value != null && value.toLowerCase(Locale.ROOT).contains(keyword);
     }
+
+    @Transactional
+    public void delete(long userId, long sessionId) {
+        sessionService.delete(userId, sessionId);
+    }
 }

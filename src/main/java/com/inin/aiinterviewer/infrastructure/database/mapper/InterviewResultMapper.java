@@ -83,4 +83,18 @@ public interface InterviewResultMapper {
             LIMIT 1
             """)
     Optional<EvaluationEntity> findEvaluation(long userId, long interviewId);
+
+    @Update("""
+            UPDATE report
+            SET deleted = 1, update_time = CURRENT_TIMESTAMP
+            WHERE user_id = #{userId} AND interview_id = #{interviewId} AND deleted = 0
+            """)
+    int deleteReport(long userId, long interviewId);
+
+    @Update("""
+            UPDATE evaluation
+            SET deleted = 1, update_time = CURRENT_TIMESTAMP
+            WHERE user_id = #{userId} AND interview_id = #{interviewId} AND deleted = 0
+            """)
+    int deleteEvaluation(long userId, long interviewId);
 }

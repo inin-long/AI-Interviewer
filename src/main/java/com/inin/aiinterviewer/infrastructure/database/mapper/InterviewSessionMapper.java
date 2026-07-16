@@ -83,4 +83,11 @@ public interface InterviewSessionMapper {
               AND status IN ('RUNNING', 'PAUSED')
             """)
     int complete(long id, long userId);
+
+    @Update("""
+            UPDATE interview_session
+            SET deleted = 1, update_time = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+            """)
+    int delete(long id, long userId);
 }

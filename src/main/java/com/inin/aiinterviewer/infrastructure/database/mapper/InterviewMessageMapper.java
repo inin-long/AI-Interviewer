@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.entity.InterviewMessageEntity;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -33,4 +34,11 @@ public interface InterviewMessageMapper {
             ORDER BY sequence_no
             """)
     List<InterviewMessageEntity> findAll(long userId, long sessionId);
+
+    @Update("""
+            UPDATE message
+            SET deleted = 1
+            WHERE user_id = #{userId} AND session_id = #{sessionId} AND deleted = 0
+            """)
+    int deleteBySession(long userId, long sessionId);
 }

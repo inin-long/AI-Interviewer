@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.entity.AgentCheckpointEntity;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
 
@@ -26,4 +27,11 @@ public interface AgentCheckpointMapper {
             ORDER BY id DESC
             """)
     List<AgentCheckpointEntity> findLatestFirst(long userId, long sessionId);
+
+    @Update("""
+            UPDATE agent_checkpoint
+            SET deleted = 1, update_time = CURRENT_TIMESTAMP
+            WHERE user_id = #{userId} AND session_id = #{sessionId} AND deleted = 0
+            """)
+    int deleteBySession(long userId, long sessionId);
 }

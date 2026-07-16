@@ -24,6 +24,7 @@ import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ public class InterviewSessionService {
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final AgentCheckpointMapper checkpointMapper;
+    private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
     private final StageManager stageManager;
     private final ObjectMapper objectMapper;
@@ -59,6 +61,7 @@ public class InterviewSessionService {
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
             AgentCheckpointMapper checkpointMapper,
+            InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
             StageManager stageManager,
             ObjectMapper objectMapper
@@ -69,6 +72,7 @@ public class InterviewSessionService {
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
         this.checkpointMapper = checkpointMapper;
+        this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
         this.stageManager = stageManager;
         this.objectMapper = objectMapper;
@@ -490,5 +494,15 @@ public class InterviewSessionService {
                 content.experience().stream().map(value -> Map.<String, Object>of("description", value)).toList(),
                 content.education().isBlank() ? Map.of() : Map.of("description", content.education()),
                 content.summary());
+    }
+
+    @Transactional
+    public void delete(long userId, long sessionId) {
+        requireEntity(userId, sessionId);
+        resultMapper.deleteReport(userId, sessionId);
+        resultMapper.deleteEvaluation(userId, sessionId);
+        messageMapper.deleteBySession(userId, sessionId);
+        checkpointMapper.deleteBySession(userId, sessionId);
+        sessionMapper.delete(sessionId, userId);
     }
 }

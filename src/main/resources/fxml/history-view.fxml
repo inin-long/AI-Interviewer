@@ -44,6 +44,8 @@
             <Button fx:id="detailButton" text="查看记录" onAction="#openDetail" styleClass="secondary-button"/>
             <Button fx:id="reportButton" text="查看报告" onAction="#openReport"
                     disable="true" styleClass="primary-button"/>
+            <Button fx:id="deleteButton" text="删除记录" onAction="#deleteRecord"
+                    disable="true" styleClass="danger-button"/>
         </HBox>
     </VBox>
 </VBox>
