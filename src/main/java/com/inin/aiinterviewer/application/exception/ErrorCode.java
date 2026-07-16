@@ -15,6 +15,7 @@ public enum ErrorCode {
     REPORT_RETRY_REQUIRED("INTERVIEW_003", "最终回答已保存，请重新生成报告"),
     SCENARIO_NOT_FOUND("SCENARIO_001", "场景会话不存在"),
     SCENARIO_STATE_INVALID("SCENARIO_002", "场景状态不一致，已停止场景"),
+    BRANCH_NOT_FOUND("BRANCH_001", "复盘分支不存在"),
     DATA_ACCESS_FAILED("DATA_001", "本地数据访问失败"),
     AI_NOT_CONFIGURED("AI_001", "AI 服务尚未配置"),
     AI_CALL_FAILED("AI_002", "AI 服务调用失败"),

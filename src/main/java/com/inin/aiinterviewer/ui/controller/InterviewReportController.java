@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
+import com.inin.aiinterviewer.application.service.SessionBranchService;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
@@ -21,6 +22,8 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.FileChooser;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +39,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     private final InterviewResultService resultService;
     private final InterviewSessionService sessionService;
+    private final SessionBranchService branchService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -53,11 +57,13 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private Label comprehensiveScoreLabel;
     @FXML private MarkdownView reportView;
     @FXML private VBox evidenceNavigationContainer;
+    @FXML private VBox branchNavigationContainer;
     @FXML private VBox citationNavigationContainer;
 
     public InterviewReportController(
             InterviewResultService resultService,
             InterviewSessionService sessionService,
+            SessionBranchService branchService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -65,6 +71,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     ) {
         this.resultService = resultService;
         this.sessionService = sessionService;
+        this.branchService = branchService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -89,6 +96,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
         reportView.setMarkdown(markdown);
         renderEvidenceNavigation(report.evidence());
+        renderBranchNavigation(branchService.list(userId, interviewId));
         renderCitationNavigation(sessionService.messages(userId, interviewId));
     }
 
@@ -145,7 +153,13 @@ public class InterviewReportController implements ContextAwareController<Long> {
                     link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
                     link.setTooltip(new Tooltip(preview(item.reason())));
                     link.setOnAction(event -> openTranscriptAt(item.questionNumber()));
-                    evidenceNavigationContainer.getChildren().add(link);
+                    Button replay = new Button("重答");
+                    replay.getStyleClass().add("secondary-button");
+                    replay.setAccessibleText("重新回答第 " + item.questionNumber() + " 题");
+                    replay.setOnAction(event -> createBranch(item.questionNumber()));
+                    HBox row = new HBox(6, link, replay);
+                    HBox.setHgrow(link, Priority.ALWAYS);
+                    evidenceNavigationContainer.getChildren().add(row);
                 });
         if (evidenceNavigationContainer.getChildren().isEmpty()) {
             Label empty = new Label("暂无可定位的评分证据");
@@ -153,6 +167,50 @@ public class InterviewReportController implements ContextAwareController<Long> {
             empty.getStyleClass().add("citation-empty");
             evidenceNavigationContainer.getChildren().add(empty);
         }
+    }
+
+    private void renderBranchNavigation(
+            List<com.inin.aiinterviewer.application.dto.SessionBranchDto> branches
+    ) {
+        branchNavigationContainer.getChildren().clear();
+        branches.stream().limit(6).forEach(branch -> {
+            Button link = new Button("Q" + branch.sourceQuestionNumber() + " · "
+                    + branchStatusText(branch.status()));
+            link.setMaxWidth(Double.MAX_VALUE);
+            link.getStyleClass().add("report-question-link");
+            link.setOnAction(event -> openBranch(branch.id()));
+            branchNavigationContainer.getChildren().add(link);
+        });
+        if (branchNavigationContainer.getChildren().isEmpty()) {
+            Label empty = new Label("从评分证据点击“重答”创建分支");
+            empty.setWrapText(true);
+            empty.getStyleClass().add("citation-empty");
+            branchNavigationContainer.getChildren().add(empty);
+        }
+    }
+
+    private void createBranch(int questionNumber) {
+        try {
+            long userId = sessionState.requireCurrentUser().id();
+            var branch = branchService.create(userId, interviewId, questionNumber, null);
+            openBranch(branch.id());
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    private void openBranch(String branchId) {
+        contentNavigator.showSubPage(
+                "/fxml/session-branch-view.fxml", "分支复盘", branchId);
+    }
+
+    private String branchStatusText(com.inin.aiinterviewer.domain.enums.SessionBranchStatus status) {
+        return switch (status) {
+            case DRAFT -> "待重答";
+            case PROCESSING -> "比较中";
+            case COMPLETED -> "已完成";
+            case FAILED -> "可重试";
+        };
     }
 
     private String evidenceSignalText(com.inin.aiinterviewer.domain.enums.EvidenceSignal signal) {

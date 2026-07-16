@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.MarkdownView?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.SessionBranchController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回面试报告"/>
+            <VBox spacing="4">
+                <Label fx:id="titleLabel" text="分支复盘" styleClass="page-title"/>
+                <HBox spacing="8" alignment="CENTER_LEFT">
+                    <Label fx:id="questionNumberLabel" text="Q1" styleClass="status-tag"/>
+                    <Label fx:id="statusLabel" text="待重答" styleClass="status-tag"/>
+                    <Label text="从历史 Checkpoint 创建，不改写原面试与原报告" styleClass="secondary-text"/>
+                </HBox>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="submitButton" text="生成局部对比" onAction="#submitAnswer"
+                    styleClass="primary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <HBox spacing="20" styleClass="editor-page">
+            <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+            <VBox spacing="14" minWidth="390" prefWidth="460" maxWidth="540" styleClass="content-card">
+                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                <Label text="原始问答" styleClass="module-title"/>
+                <Label text="原始问题" styleClass="field-label"/>
+                <Label fx:id="originalQuestionLabel" wrapText="true" styleClass="summary-value"/>
+                <Separator/>
+                <Label text="原始回答" styleClass="field-label"/>
+                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS">
+                    <content><Label fx:id="originalAnswerLabel" wrapText="true"/></content>
+                </ScrollPane>
+                <Separator/>
+                <Label text="重新回答" styleClass="module-title"/>
+                <TextArea fx:id="newAnswerArea" wrapText="true" prefRowCount="10"
+                          promptText="重新组织回答，补充基线、个人行动、取舍和验证证据"
+                          minHeight="210" VBox.vgrow="ALWAYS"/>
+                <Label fx:id="progressLabel" text="提交后将比较逻辑链、证据、追问和缺口变化"
+                       wrapText="true" styleClass="secondary-text"/>
+            </VBox>
+            <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="content-card, report-document">
+                <MarkdownView fx:id="comparisonView" VBox.vgrow="ALWAYS"/>
+            </VBox>
+        </HBox>
+    </center>
+</BorderPane>

@@ -64,6 +64,9 @@
                     </content>
                 </ScrollPane>
                 <Separator/>
+                <Label text="分支复盘" styleClass="summary-label"/>
+                <VBox fx:id="branchNavigationContainer" spacing="6" fillWidth="true"/>
+                <Separator/>
                 <Label text="引用定位" styleClass="summary-label"/>
                 <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="130" maxHeight="160"
                             VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
