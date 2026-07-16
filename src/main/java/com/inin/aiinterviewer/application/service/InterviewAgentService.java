@@ -44,6 +44,7 @@ public class InterviewAgentService {
     private final ConsistencyIssueService consistencyIssueService;
     private final DeferredProbeService deferredProbeService;
     private final ScenarioEngine scenarioEngine;
+    private final ScenarioSchedulingService scenarioSchedulingService;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -56,6 +57,7 @@ public class InterviewAgentService {
             ConsistencyIssueService consistencyIssueService,
             DeferredProbeService deferredProbeService,
             ScenarioEngine scenarioEngine,
+            ScenarioSchedulingService scenarioSchedulingService,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -67,6 +69,7 @@ public class InterviewAgentService {
         this.consistencyIssueService = consistencyIssueService;
         this.deferredProbeService = deferredProbeService;
         this.scenarioEngine = scenarioEngine;
+        this.scenarioSchedulingService = scenarioSchedulingService;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -145,7 +148,6 @@ public class InterviewAgentService {
             turnInput = turnInput.withDeferredProbes(deferredProbes);
             turnInput = turnInput.withPressureState(answeredState.pressureState());
             var activeScenario = scenarioEngine.findActive(userId, sessionId).orElse(null);
-            turnInput = turnInput.withActiveScenario(activeScenario);
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 if (activeScenario != null) {
                     var aborted = scenarioEngine.abort(
@@ -155,6 +157,22 @@ public class InterviewAgentService {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
             }
+            if (activeScenario == null && !scenarioEngine.hasScenario(userId, sessionId)) {
+                var scheduled = sessionService.domainPackSnapshot(userId, sessionId)
+                        .flatMap(snapshot -> scenarioSchedulingService.select(
+                                sessionId, session.planSnapshot(), snapshot,
+                                session.stage(), askedQuestions));
+                if (scheduled.isPresent()) {
+                    try {
+                        activeScenario = scenarioEngine.start(userId, sessionId, scheduled.get());
+                        sessionService.updateScenarioState(userId, sessionId, activeScenario);
+                    } catch (RuntimeException exception) {
+                        log.warn("Cannot start scheduled scenario for session {}; continuing regular interview",
+                                sessionId, exception);
+                    }
+                }
+            }
+            turnInput = turnInput.withActiveScenario(activeScenario);
 
             InterviewTurnPlan turn = interviewGraph.plan(turnInput);
             sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
@@ -220,10 +238,12 @@ public class InterviewAgentService {
                         sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
                     }
                     if (scenarioId != null && scenarioDirection != null
-                            && scenarioDirection.handled()) {
+                            && scenarioDirection.requiresScenarioPrompt()) {
                         try {
-                            var scenario = scenarioEngine.advance(
-                                    userId, sessionId, scenarioId, scenarioDirection.toCommand());
+                            var scenario = scenarioDirection.kickoff()
+                                    ? scenarioEngine.markIntroduced(userId, sessionId, scenarioId)
+                                    : scenarioEngine.advance(
+                                            userId, sessionId, scenarioId, scenarioDirection.toCommand());
                             sessionService.updateScenarioState(userId, sessionId, scenario);
                         } catch (RuntimeException scenarioFailure) {
                             log.warn("Cannot advance scenario {} for session {}; returning to regular interview",
@@ -317,7 +337,18 @@ public class InterviewAgentService {
 
     private String domainPackContext(long userId, long sessionId) {
         return sessionService.domainPackSnapshot(userId, sessionId)
-                .map(Object::toString)
+                .map(snapshot -> {
+                    var pack = snapshot.content();
+                    return Map.of(
+                            "id", snapshot.id(),
+                            "version", snapshot.version(),
+                            "displayName", pack.displayName(),
+                            "competencies", pack.competencies(),
+                            "metrics", pack.metrics(),
+                            "failurePatterns", pack.failurePatterns(),
+                            "probePlaybooks", pack.probePlaybooks(),
+                            "rubrics", pack.rubrics()).toString();
+                })
                 .orElse("未关联领域知识包");
     }
 

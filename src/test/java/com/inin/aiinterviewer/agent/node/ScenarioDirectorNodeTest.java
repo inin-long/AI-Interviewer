@@ -108,6 +108,24 @@ class ScenarioDirectorNodeTest {
         assertThat(chat.calls).isZero();
     }
 
+    @Test
+    void rendersSafeKickoffBeforeTreatingAnswersAsScenarioDecisions() throws Exception {
+        QueueChatService chat = new QueueChatService();
+
+        Map<String, Object> output = node(chat).apply(
+                state(activeScenario(false), "这是上一道普通问题的回答。"));
+
+        ScenarioDirectionResult result = direction(output);
+        ProbePlan plan = (ProbePlan) output.get(InterviewGraphState.PROBE_PLAN);
+        assertThat(result.kickoff()).isTrue();
+        assertThat(result.handled()).isFalse();
+        assertThat(plan.shouldInjectScenario()).isTrue();
+        assertThat(plan.objective()).contains(
+                        "核心查询服务突发延迟", "当班技术负责人", "你首先会采取什么行动")
+                .doesNotContain("databasePrimaryLag", "rootCause");
+        assertThat(chat.calls).isZero();
+    }
+
     private ScenarioDirectorNode node(ChatService chatService) {
         return new ScenarioDirectorNode(chatService,
                 new StructuredAiResponseParser(JsonMapper.builder().findAndAddModules().build()));
@@ -124,6 +142,10 @@ class ScenarioDirectorNodeTest {
     }
 
     private ScenarioState activeScenario() {
+        return activeScenario(true);
+    }
+
+    private ScenarioState activeScenario(boolean introduced) {
         LocalDateTime now = LocalDateTime.of(2026, 7, 17, 0, 0);
         return new ScenarioState(
                 "scenario-1", 12, SimulationType.INCIDENT_RESPONSE,
@@ -133,7 +155,7 @@ class ScenarioDirectorNodeTest {
                 Map.of("cacheAvailable", true, "databaseCpu", 68),
                 Map.of("cacheAvailable", true, "databaseCpu", 68),
                 List.of(), List.of(), List.of(), List.of("故障处置", "权衡分析"),
-                List.of("核心查询恢复稳定"), 3, 0, ScenarioStatus.ACTIVE, "", now, now);
+                List.of("核心查询恢复稳定"), introduced, 3, 0, ScenarioStatus.ACTIVE, "", now, now);
     }
 
     private ScenarioDirectionResult direction(Map<String, Object> output) {

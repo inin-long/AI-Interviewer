@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.entity.InterviewPlanEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanDocumentMapper;
@@ -136,7 +137,12 @@ public class InterviewPlanService {
         entity.setResumeId(resumeId);
         entity.setProfileId(command.profileId());
         entity.setDomainPackId(domainPackService.resolveId(command.domainPackId(), command.jobTitle()));
-        entity.setRulesJson(writeJson(command.rules() == null ? Map.of() : command.rules()));
+        Map<String, Object> rules = command.rules() == null ? Map.of() : command.rules();
+        try {
+            entity.setRulesJson(writeJson(InterviewPlanSettings.fromRules(rules).mergeInto(rules)));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
         entity.setStagesJson(writeJson(command.stages() == null || command.stages().isEmpty()
                 ? DEFAULT_STAGES : command.stages()));
         entity.setDefaultPlan(false);

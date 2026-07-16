@@ -10,6 +10,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,7 +43,18 @@ class DomainPackServiceIntegrationTest {
         assertThat(snapshot.content().competencies()).isNotEmpty();
         assertThat(snapshot.content().failurePatterns()).isNotEmpty();
         assertThat(snapshot.content().probePlaybooks()).isNotEmpty();
-        assertThat(snapshot.content().scenarios()).isNotEmpty();
+        assertThat(snapshot.content().scenarios()).singleElement().satisfies(scenario -> {
+            assertThat(scenario.candidateRole()).isNotBlank();
+            assertThat(scenario.knownFacts()).isNotEmpty();
+            assertThat(scenario.assumptions()).isNotEmpty();
+            assertThat(scenario.hiddenInformation()).containsKey("rootCause");
+            assertThat(scenario.variables()).containsKeys("databaseConnections", "databaseCpu");
+            assertThat(scenario.events()).singleElement().satisfies(event -> {
+                assertThat(event.get("type")).isEqualTo("RESOURCE_SHOCK");
+                assertThat(((Map<?, ?>) event.get("changes")).containsKey("databaseConnections")).isTrue();
+            });
+            assertThat(scenario.maxRounds()).isEqualTo(3);
+        });
         assertThat(snapshot.content().rubrics()).isNotEmpty();
         assertThat(Files.isDirectory(applicationHome.resolve("domain-packs").resolve("index"))).isTrue();
 

@@ -22,7 +22,7 @@
     {"code":"VERIFY_DELIVERY","objective":"验证方案是否包含测试、发布和监控","expectedEvidence":["测试分层","灰度策略","业务监控"],"templates":["如何证明上线后没有破坏旧流程？"]}
   ],
   "scenarios": [
-    {"id":"checkout-regression","type":"INCIDENT_RESPONSE","objective":"处理结算页发布后的重复下单和白屏问题","background":"前端与订单 API 同时发布，5% 用户出现异常。","variables":{"affectedUsers":5,"rollbackAvailable":true,"oldClients":30},"constraints":["十分钟内止损","保留订单一致性"],"competencies":["FRONTEND_ENGINEERING","BACKEND_ENGINEERING","DELIVERY"],"events":[{"round":2,"type":"NEW_EVIDENCE","changes":{"duplicateOrders":120}}],"endConditions":["完成止损和根因验证"]}
+    {"id":"checkout-regression","type":"INCIDENT_RESPONSE","objective":"处理结算页发布后的重复下单和白屏问题","background":"前端与订单 API 同时发布，5% 用户出现异常。","candidateRole":"结算链路发布负责人","knownFacts":["异常用户比例为 5%","旧客户端占比为 30%","当前版本允许回滚"],"assumptions":["订单流水可用于核对重复提交","灰度平台可按客户端版本分流"],"hiddenInformation":{"rootCause":"前端重试与服务端幂等键变更共同导致重复下单"},"variables":{"affectedUsers":5,"rollbackAvailable":true,"oldClients":30,"duplicateOrders":0},"constraints":["十分钟内止损","保留订单一致性"],"competencies":["FRONTEND_ENGINEERING","BACKEND_ENGINEERING","DELIVERY"],"events":[{"round":1,"type":"REQUIREMENT_CHANGE","changes":{"duplicateOrders":120},"description":"核对发现已产生 120 笔重复订单"}],"endConditions":["完成止损和根因验证"],"maxRounds":3}
   ],
   "rubrics": [
     {"competencyCode":"FRONTEND_ENGINEERING","positiveSignals":["结合真实用户指标与浏览器证据"],"negativeSignals":["只建议重写页面"],"insufficientEvidenceSignals":["没有前端细节"]},

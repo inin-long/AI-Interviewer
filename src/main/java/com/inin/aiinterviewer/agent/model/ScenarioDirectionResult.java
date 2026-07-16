@@ -14,6 +14,7 @@ public record ScenarioDirectionResult(
         Map<String, Object> changes,
         String nextQuestion,
         boolean completeAfterEvent,
+        boolean kickoff,
         boolean skipped,
         boolean degraded,
         String failureReason
@@ -29,19 +30,29 @@ public record ScenarioDirectionResult(
 
     public static ScenarioDirectionResult skipped(String reason) {
         return new ScenarioDirectionResult(
-                "", "", null, "", Map.of(), "", false, true, false, reason);
+                "", "", null, "", Map.of(), "", false, false, true, false, reason);
     }
 
     public static ScenarioDirectionResult degraded(String reason) {
         return new ScenarioDirectionResult(
-                "", "", null, "", Map.of(), "", false, false, true, reason);
+                "", "", null, "", Map.of(), "", false, false, false, true, reason);
+    }
+
+    public static ScenarioDirectionResult kickoff(String question) {
+        return new ScenarioDirectionResult(
+                "", "", null, "", Map.of(), question, false, true, false, false, "");
     }
 
     public boolean handled() {
-        return !skipped && !degraded && eventType != null;
+        return !kickoff && !skipped && !degraded && eventType != null;
+    }
+
+    public boolean requiresScenarioPrompt() {
+        return kickoff || handled();
     }
 
     public ScenarioAdvanceCommand toCommand() {
+        if (!handled()) throw new IllegalStateException("Scenario direction has no event to advance");
         return new ScenarioAdvanceCommand(
                 decisionAction, decisionRationale, eventType, eventDescription,
                 changes, nextQuestion, completeAfterEvent);

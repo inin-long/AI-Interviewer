@@ -31,6 +31,13 @@ public interface ScenarioSessionMapper {
     Optional<ScenarioSessionEntity> findActive(long userId, long sessionId);
 
     @Select("""
+            SELECT COUNT(*)
+            FROM scenario_session
+            WHERE user_id = #{userId} AND interview_session_id = #{sessionId}
+            """)
+    int countBySession(long userId, long sessionId);
+
+    @Select("""
             SELECT id, user_id, interview_session_id, scenario_type, status,
                    state_json, current_round, create_time, update_time
             FROM scenario_session

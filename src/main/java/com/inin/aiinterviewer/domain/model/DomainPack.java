@@ -63,18 +63,32 @@ public record DomainPack(
             String type,
             String objective,
             String background,
+            String candidateRole,
+            List<String> knownFacts,
+            List<String> assumptions,
+            Map<String, Object> hiddenInformation,
             Map<String, Object> variables,
             List<String> constraints,
             List<String> competencies,
             List<Map<String, Object>> events,
-            List<String> endConditions
+            List<String> endConditions,
+            int maxRounds
     ) {
         public ScenarioTemplate {
+            id = id == null ? "" : id.strip();
+            type = type == null ? "" : type.strip();
+            objective = objective == null ? "" : objective.strip();
+            background = background == null ? "" : background.strip();
+            candidateRole = candidateRole == null ? "" : candidateRole.strip();
+            knownFacts = immutable(knownFacts);
+            assumptions = immutable(assumptions);
+            hiddenInformation = hiddenInformation == null ? Map.of() : Map.copyOf(hiddenInformation);
             variables = variables == null ? Map.of() : Map.copyOf(variables);
             constraints = immutable(constraints);
             competencies = immutable(competencies);
             events = immutable(events);
             endConditions = immutable(endConditions);
+            maxRounds = Math.max(1, maxRounds);
         }
     }
 

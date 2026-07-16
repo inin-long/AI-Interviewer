@@ -222,6 +222,30 @@ class JacksonStateSerializerTest {
     }
 
     @Test
+    void upgradesVersionTwoPointSevenScenarioAsAlreadyIntroduced() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        LocalDateTime now = LocalDateTime.of(2026, 7, 17, 0, 0);
+        ScenarioState legacyScenario = new ScenarioState(
+                "scenario-legacy", 12, SimulationType.INCIDENT_RESPONSE,
+                "验证故障处置", "查询服务延迟增加", "当班技术负责人",
+                List.of("流量翻倍"), List.of("允许扩容"), Map.of("rootCause", "primaryLag"),
+                Map.of("databaseCpu", 68), Map.of("databaseCpu", 68),
+                List.of(), List.of(), List.of(), List.of("故障处置"), List.of("恢复稳定"),
+                3, 0, ScenarioStatus.ACTIVE, "", now, now);
+        InterviewState previous = new InterviewState(
+                "2.7", 12, 34, InterviewStage.SYSTEM_DESIGN, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证故障处置"), List.of(), PressureState.initial(), legacyScenario);
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.activeScenario().introduced()).isTrue();
+    }
+
+    @Test
     void roundTripsActiveScenarioInCurrentVersion() {
         JacksonStateSerializer serializer = new JacksonStateSerializer(
                 JsonMapper.builder().findAndAddModules().build());
@@ -232,7 +256,7 @@ class JacksonStateSerializerTest {
                 List.of("流量翻倍"), List.of("允许扩容"), Map.of("rootCause", "primaryLag"),
                 Map.of("databaseCpu", 68), Map.of("databaseCpu", 86),
                 List.of(), List.of(), List.of(), List.of("故障处置"), List.of("恢复稳定"),
-                3, 1, ScenarioStatus.ACTIVE, "", now, now);
+                true, 3, 1, ScenarioStatus.ACTIVE, "", now, now);
         InterviewState current = new InterviewState(
                 InterviewState.CURRENT_VERSION, 12, 34, InterviewStage.SYSTEM_DESIGN,
                 List.of(), "问题", "回答", null, null, null, Map.of(), "",

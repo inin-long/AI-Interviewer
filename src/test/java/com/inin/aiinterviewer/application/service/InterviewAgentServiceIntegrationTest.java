@@ -17,6 +17,7 @@ import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
 import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.ScenarioConstraint;
 import com.inin.aiinterviewer.domain.model.ScenarioDefinition;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
@@ -278,7 +279,7 @@ class InterviewAgentServiceIntegrationTest {
 
         chatService.enqueueStream(Flux.just("核心查询服务出现延迟，你会先检查什么？"));
         agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
-        var started = scenarioEngine.start(user.id(), session.id(), new ScenarioDefinition(
+        var startedScenario = scenarioEngine.start(user.id(), session.id(), new ScenarioDefinition(
                 SimulationType.INCIDENT_RESPONSE, "验证故障处置和取舍",
                 "核心查询服务在流量上涨后延迟增加", "当班技术负责人",
                 List.of("流量达到平时两倍"), List.of("数据库允许增加只读实例"),
@@ -286,6 +287,8 @@ class InterviewAgentServiceIntegrationTest {
                 Map.of("cacheAvailable", true, "databaseCpu", 68),
                 List.of(new ScenarioConstraint("preserve_core_queries", "必须保障核心查询可用", true, true)),
                 List.of("故障处置", "权衡分析"), List.of("核心查询恢复稳定"), 3));
+        var started = scenarioEngine.markIntroduced(
+                user.id(), session.id(), startedScenario.id());
 
         chatService.enqueueChat("""
                 {"correctness":84,"depth":80,"missingPoints":["回源保护"],"feedback":"处置顺序清晰"}
@@ -328,7 +331,7 @@ class InterviewAgentServiceIntegrationTest {
         });
         assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
                 .satisfies(state -> {
-                    assertThat(state.stateVersion()).isEqualTo("2.7");
+                    assertThat(state.stateVersion()).isEqualTo(com.inin.aiinterviewer.agent.state.InterviewState.CURRENT_VERSION);
                     assertThat(state.activeScenario()).isEqualTo(advanced);
                     assertThat(state.probePlan().shouldInjectScenario()).isTrue();
                     assertThat(state.currentQuestion()).contains("数据库 CPU 已升至 86%");
@@ -363,6 +366,88 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.activeScenario().status()).isEqualTo(ScenarioStatus.FAILED);
                     assertThat(state.probePlan().shouldInjectScenario()).isFalse();
                     assertThat(state.currentQuestion()).contains("容量是否足够");
+                });
+    }
+
+    @Test
+    void startsBuiltInScenarioFromPlanRatioAndCompletesItsDecisionRound() {
+        var user = userService.register("scheduled-scenario", "Scheduled Scenario", "safe-password");
+        Map<String, Object> rules = new InterviewPlanSettings(
+                com.inin.aiinterviewer.domain.enums.InterviewMode.SCENARIO_SIMULATION,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.INCIDENT_COMMANDER,
+                com.inin.aiinterviewer.domain.enums.PressureLevel.CHALLENGING,
+                com.inin.aiinterviewer.domain.enums.VerificationStrictness.STRICT,
+                50).mergeInto(Map.of("focus", "故障处理"));
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "自动沙盘面试", "Java 后端工程师", "核心订单服务", InterviewDifficulty.SENIOR,
+                30, 3, null, rules, List.of("SYSTEM_DESIGN", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍你处理线上故障的基本顺序。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":80,"depth":74,"missingPoints":["容量指标"],"feedback":"处置顺序清晰"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"进入岗位故障沙盘"}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "秒杀开始后 Redis 集群出现故障，数据库 CPU 持续升高。",
+                "请说明你首先会采取什么行动，以及判断依据。"));
+
+        agentService.answer(user.id(), session.id(), "我会先确认影响范围并冻结高风险变更。")
+                .collectList().block();
+
+        var introduced = scenarioEngine.findActive(user.id(), session.id()).orElseThrow();
+        assertThat(introduced.introduced()).isTrue();
+        assertThat(introduced.currentRound()).isZero();
+        assertThat(introduced.hiddenInformation())
+                .containsEntry("templateId", "flash-sale-incident")
+                .containsKey("injectableEvents");
+        assertThat(introduced.maxRounds()).isEqualTo(1);
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.activeScenario()).isEqualTo(introduced);
+                    assertThat(state.probePlan().shouldInjectScenario()).isTrue();
+                    assertThat(state.currentQuestion()).contains("首先会采取什么行动");
+                });
+        assertThat(chatService.lastStreamPrompt())
+                .contains("秒杀订单系统当班技术负责人", "不能超卖")
+                .doesNotContain("热点库存键失效后重试风暴放大回源流量", "rootCause", "injectableEvents");
+
+        chatService.enqueueChat("""
+                {"correctness":86,"depth":82,"missingPoints":["恢复节奏"],"feedback":"止损思路明确"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"验证决策后果处理"}
+                """);
+        chatService.enqueueChat("""
+                {"decisionAction":"限制非核心流量并保护数据库",
+                "decisionRationale":"优先维持下单链路可用并避免连接池耗尽",
+                "eventType":"RESOURCE_SHOCK",
+                "eventDescription":"限流生效前数据库连接池使用率升至 95%",
+                "changes":{"databaseConnections":95,"databaseCpu":92},
+                "nextQuestion":"数据库连接池使用率达到 95% 时，你如何安排进一步止损和恢复？",
+                "completeAfterEvent":false}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "数据库连接池使用率达到 95% 时，",
+                "你如何安排进一步止损和恢复？"));
+
+        agentService.answer(user.id(), session.id(), "我先限制非核心流量，保护数据库和下单写路径。")
+                .collectList().block();
+
+        assertThat(scenarioEngine.findActive(user.id(), session.id())).isEmpty();
+        assertThat(scenarioEngine.require(user.id(), session.id(), introduced.id()))
+                .satisfies(completed -> {
+                    assertThat(completed.status()).isEqualTo(ScenarioStatus.COMPLETED);
+                    assertThat(completed.currentRound()).isEqualTo(1);
+                    assertThat(completed.variables())
+                            .containsEntry("databaseConnections", 95)
+                            .containsEntry("databaseCpu", 92);
+                    assertThat(completed.events()).singleElement()
+                            .satisfies(event -> assertThat(event.triggeredByDecisionId())
+                                    .isEqualTo(completed.decisions().getFirst().id()));
                 });
     }
 

@@ -26,7 +26,7 @@
     {"code":"TRACE_FAILURE","objective":"验证失败路径和恢复能力","expectedEvidence":["故障检测","降级动作","恢复与复盘"],"templates":["如果这个依赖不可用，系统会按什么顺序退化？"]}
   ],
   "scenarios": [
-    {"id":"flash-sale-incident","type":"INCIDENT_RESPONSE","objective":"在缓存和数据库双重压力下保护秒杀订单链路","background":"秒杀开始后 Redis 集群出现故障，数据库 CPU 持续升高。","variables":{"peakQps":20000,"inventory":5000,"redisAvailable":false,"databaseCpu":85},"constraints":["不能超卖","不能立即扩容","允许短时最终一致"],"competencies":["DISTRIBUTED_SYSTEMS","SYSTEM_DESIGN"],"events":[{"round":2,"type":"RESOURCE_SHOCK","changes":{"databaseConnections":95}}],"endConditions":["给出止损、恢复和复盘方案","连续三轮决策完成"]}
+    {"id":"flash-sale-incident","type":"INCIDENT_RESPONSE","objective":"在缓存和数据库双重压力下保护秒杀订单链路","background":"秒杀开始后 Redis 集群出现故障，数据库 CPU 持续升高。","candidateRole":"秒杀订单系统当班技术负责人","knownFacts":["峰值流量达到 20000 QPS","库存总量为 5000","Redis 当前不可用"],"assumptions":["监控指标可信","订单服务仍可发布配置"],"hiddenInformation":{"rootCause":"热点库存键失效后重试风暴放大回源流量"},"variables":{"peakQps":20000,"inventory":5000,"redisAvailable":false,"databaseCpu":85,"databaseConnections":70},"constraints":["不能超卖","不能立即扩容","允许短时最终一致"],"competencies":["DISTRIBUTED_SYSTEMS","SYSTEM_DESIGN"],"events":[{"round":1,"type":"RESOURCE_SHOCK","changes":{"databaseConnections":95},"description":"数据库连接池使用率快速升高"}],"endConditions":["给出止损、恢复和复盘方案","连续三轮决策完成"],"maxRounds":3}
   ],
   "rubrics": [
     {"competencyCode":"JAVA_FOUNDATION","positiveSignals":["能解释底层机制和适用边界"],"negativeSignals":["只罗列名词或 API"],"insufficientEvidenceSignals":["没有 JVM 或并发相关回答"]},

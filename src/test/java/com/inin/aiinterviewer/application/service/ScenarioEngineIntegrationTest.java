@@ -57,11 +57,14 @@ class ScenarioEngineIntegrationTest {
 
         assertThat(started.status()).isEqualTo(ScenarioStatus.ACTIVE);
         assertThat(started.currentRound()).isZero();
+        assertThat(started.introduced()).isFalse();
         assertThat(started.initialVariables()).isEqualTo(started.variables());
         assertThatThrownBy(() -> scenarioEngine.start(owner.id(), session.id(), definition(2)))
                 .isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> scenarioEngine.require(other.id(), session.id(), started.id()))
                 .isInstanceOf(BusinessException.class);
+        ScenarioState introduced = scenarioEngine.markIntroduced(owner.id(), session.id(), started.id());
+        assertThat(introduced.introduced()).isTrue();
 
         sessionService.appendUserAnswer(owner.id(), session.id(),
                 "我先熔断 Redis 依赖并把非核心请求降级，避免流量全部回源数据库。");
@@ -122,6 +125,13 @@ class ScenarioEngineIntegrationTest {
         var owner = userService.register("scenario-timeline", "Scenario Timeline", "safe-password");
         var session = session(owner.id(), "时间线校验");
         ScenarioState started = scenarioEngine.start(owner.id(), session.id(), definition(3));
+        var legacyTree = (com.fasterxml.jackson.databind.node.ObjectNode) objectMapper.valueToTree(started);
+        legacyTree.remove("introduced");
+        assertThat(scenarioMapper.updateState(
+                started.id(), owner.id(), session.id(), ScenarioStatus.ACTIVE,
+                objectMapper.writeValueAsString(legacyTree), 0, 0)).isEqualTo(1);
+        ScenarioState introduced = scenarioEngine.require(owner.id(), session.id(), started.id());
+        assertThat(introduced.introduced()).isTrue();
         sessionService.appendUserAnswer(owner.id(), session.id(), "我先确认影响范围。");
 
         assertThatThrownBy(() -> scenarioEngine.advance(owner.id(), session.id(), started.id(),
@@ -132,16 +142,16 @@ class ScenarioEngineIntegrationTest {
                 .satisfies(error -> assertThat(((BusinessException) error).getErrorCode())
                         .isEqualTo(ErrorCode.VALIDATION_FAILED));
 
-        Map<String, Object> tamperedVariables = new LinkedHashMap<>(started.variables());
+        Map<String, Object> tamperedVariables = new LinkedHashMap<>(introduced.variables());
         tamperedVariables.put("databaseCpu", 99);
         ScenarioState tampered = new ScenarioState(
-                started.id(), started.sessionId(), started.type(), started.objective(), started.background(),
-                started.candidateRole(), started.knownFacts(), started.assumptions(),
-                started.hiddenInformation(), started.initialVariables(), tamperedVariables,
-                started.constraints(), started.events(), started.decisions(),
-                started.evaluatedCompetencies(), started.endConditions(), started.maxRounds(),
-                started.currentRound(), started.status(), started.terminationReason(),
-                started.createTime(), started.updateTime());
+                introduced.id(), introduced.sessionId(), introduced.type(), introduced.objective(), introduced.background(),
+                introduced.candidateRole(), introduced.knownFacts(), introduced.assumptions(),
+                introduced.hiddenInformation(), introduced.initialVariables(), tamperedVariables,
+                introduced.constraints(), introduced.events(), introduced.decisions(),
+                introduced.evaluatedCompetencies(), introduced.endConditions(), introduced.introduced(), introduced.maxRounds(),
+                introduced.currentRound(), introduced.status(), introduced.terminationReason(),
+                introduced.createTime(), introduced.updateTime());
         assertThat(scenarioMapper.updateState(
                 started.id(), owner.id(), session.id(), ScenarioStatus.ACTIVE,
                 objectMapper.writeValueAsString(tampered), 0, 0)).isEqualTo(1);

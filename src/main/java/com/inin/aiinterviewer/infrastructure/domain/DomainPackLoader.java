@@ -1,6 +1,8 @@
 package com.inin.aiinterviewer.infrastructure.domain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.inin.aiinterviewer.domain.enums.ScenarioEventType;
+import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.DomainPack;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
@@ -11,6 +13,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -72,6 +75,45 @@ public class DomainPackLoader {
             if (rubric == null || !competencyCodes.contains(rubric.competencyCode())) {
                 throw new IllegalStateException("DomainPack rubric references an unknown competency in " + source);
             }
+        }
+        Set<String> scenarioIds = new HashSet<>();
+        for (DomainPack.ScenarioTemplate scenario : pack.scenarios()) {
+            if (scenario == null || !code(scenario.id()) || !enumValue(SimulationType.class, scenario.type())
+                    || scenario.objective().isBlank() || scenario.background().isBlank()
+                    || scenario.candidateRole().isBlank() || scenario.knownFacts().isEmpty()
+                    || scenario.assumptions().isEmpty() || scenario.hiddenInformation().isEmpty()
+                    || scenario.variables().isEmpty() || scenario.constraints().isEmpty()
+                    || scenario.competencies().isEmpty() || scenario.events().isEmpty()
+                    || scenario.endConditions().isEmpty() || scenario.maxRounds() > 10
+                    || !scenarioIds.add(scenario.id())
+                    || scenario.constraints().stream().anyMatch(value -> value == null || value.isBlank())
+                    || !competencyCodes.containsAll(scenario.competencies())
+                    || scenario.variables().keySet().stream().anyMatch(key -> key == null || key.isBlank())) {
+                throw new IllegalStateException("Invalid DomainPack scenario in " + source);
+            }
+            validateScenarioEvents(scenario, source);
+        }
+    }
+
+    private void validateScenarioEvents(DomainPack.ScenarioTemplate scenario, String source) {
+        for (Map<String, Object> event : scenario.events()) {
+            Object type = event == null ? null : event.get("type");
+            Object changes = event == null ? null : event.get("changes");
+            if (!enumValue(ScenarioEventType.class, String.valueOf(type))
+                    || !(changes instanceof Map<?, ?> changeMap) || changeMap.isEmpty()
+                    || changeMap.keySet().stream().anyMatch(key -> key == null
+                    || !scenario.variables().containsKey(String.valueOf(key)))) {
+                throw new IllegalStateException("Invalid DomainPack scenario event in " + source);
+            }
+        }
+    }
+
+    private <E extends Enum<E>> boolean enumValue(Class<E> type, String value) {
+        try {
+            Enum.valueOf(type, value);
+            return true;
+        } catch (IllegalArgumentException | NullPointerException exception) {
+            return false;
         }
     }
 

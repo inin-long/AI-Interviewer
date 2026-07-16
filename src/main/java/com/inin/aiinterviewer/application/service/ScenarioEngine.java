@@ -82,10 +82,30 @@ public class ScenarioEngine {
     }
 
     @Transactional(readOnly = true)
+    public boolean hasScenario(long userId, long sessionId) {
+        requireSession(userId, sessionId);
+        return scenarioMapper.countBySession(userId, sessionId) > 0;
+    }
+
+    @Transactional(readOnly = true)
     public ScenarioState require(long userId, long sessionId, String scenarioId) {
         requireSession(userId, sessionId);
         return readState(scenarioMapper.findById(scenarioId, userId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCENARIO_NOT_FOUND)));
+    }
+
+    @Transactional
+    public ScenarioState markIntroduced(long userId, long sessionId, String scenarioId) {
+        ScenarioSessionEntity entity = scenarioMapper.findById(scenarioId, userId, sessionId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.SCENARIO_NOT_FOUND));
+        ScenarioState current = readState(entity);
+        if (current.status() != ScenarioStatus.ACTIVE || current.introduced()
+                || current.currentRound() != 0) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        ScenarioState introduced = withIntroduced(current, LocalDateTime.now());
+        update(entity, userId, sessionId, introduced, current.currentRound());
+        return introduced;
     }
 
     @Transactional
@@ -99,7 +119,8 @@ public class ScenarioEngine {
         ScenarioSessionEntity entity = scenarioMapper.findById(scenarioId, userId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SCENARIO_NOT_FOUND));
         ScenarioState current = readState(entity);
-        if (current.status() != ScenarioStatus.ACTIVE || current.currentRound() >= current.maxRounds()) {
+        if (current.status() != ScenarioStatus.ACTIVE || !current.introduced()
+                || current.currentRound() >= current.maxRounds()) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
         var latestAnswer = messageMapper.findLatestUserMessage(userId, sessionId)
@@ -182,7 +203,8 @@ public class ScenarioEngine {
                 source.id(), source.sessionId(), source.type(), source.objective(), source.background(),
                 source.candidateRole(), source.knownFacts(), source.assumptions(), source.hiddenInformation(),
                 source.initialVariables(), variables, source.constraints(), events, decisions,
-                source.evaluatedCompetencies(), source.endConditions(), source.maxRounds(), currentRound,
+                source.evaluatedCompetencies(), source.endConditions(), source.introduced(),
+                source.maxRounds(), currentRound,
                 status, terminationReason, source.createTime(), updateTime);
     }
 
@@ -237,7 +259,12 @@ public class ScenarioEngine {
 
     private ScenarioState readState(ScenarioSessionEntity entity) {
         try {
-            ScenarioState state = objectMapper.readValue(entity.getStateJson(), ScenarioState.class);
+            var tree = objectMapper.readTree(entity.getStateJson());
+            boolean legacyWithoutIntroductionState = !tree.has("introduced");
+            ScenarioState state = objectMapper.treeToValue(tree, ScenarioState.class);
+            if (legacyWithoutIntroductionState) {
+                state = withIntroduced(state, state.updateTime());
+            }
             if (!entity.getId().equals(state.id())
                     || entity.getInterviewSessionId() != state.sessionId()
                     || entity.getScenarioType() != state.type()
@@ -250,6 +277,16 @@ public class ScenarioEngine {
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.DATA_ACCESS_FAILED, exception);
         }
+    }
+
+    private ScenarioState withIntroduced(ScenarioState source, LocalDateTime updateTime) {
+        return new ScenarioState(
+                source.id(), source.sessionId(), source.type(), source.objective(), source.background(),
+                source.candidateRole(), source.knownFacts(), source.assumptions(), source.hiddenInformation(),
+                source.initialVariables(), source.variables(), source.constraints(), source.events(),
+                source.decisions(), source.evaluatedCompetencies(), source.endConditions(), true,
+                source.maxRounds(), source.currentRound(), source.status(), source.terminationReason(),
+                source.createTime(), updateTime);
     }
 
     private void validateTimeline(ScenarioState state) {

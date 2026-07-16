@@ -35,9 +35,14 @@ public class ScenarioDirectorNode implements NodeAction<InterviewGraphState> {
 
     @Override
     public Map<String, Object> apply(InterviewGraphState state) {
-        if (state.activeScenario() == null || state.answer().isBlank()) {
-            return output(state, ScenarioDirectionResult.skipped(
-                    state.activeScenario() == null ? "no_active_scenario" : "no_candidate_decision"));
+        if (state.activeScenario() == null) {
+            return output(state, ScenarioDirectionResult.skipped("no_active_scenario"));
+        }
+        if (!state.activeScenario().introduced()) {
+            return output(state, ScenarioDirectionResult.kickoff(kickoffQuestion(state)));
+        }
+        if (state.answer().isBlank()) {
+            return output(state, ScenarioDirectionResult.skipped("no_candidate_decision"));
         }
         if (state.data().containsKey(InterviewGraphState.SCENARIO_DIRECTION_RESULT)) {
             return output(state, state.scenarioDirectionResult());
@@ -77,7 +82,7 @@ public class ScenarioDirectorNode implements NodeAction<InterviewGraphState> {
         return new ScenarioDirectionResult(
                 result.decisionAction(), result.decisionRationale(), result.eventType(),
                 result.eventDescription(), result.changes(), result.nextQuestion(),
-                result.completeAfterEvent(), false, false, "");
+                result.completeAfterEvent(), false, false, false, "");
     }
 
     private boolean containsUnsafeLanguage(ScenarioDirectionResult result) {
@@ -90,24 +95,40 @@ public class ScenarioDirectorNode implements NodeAction<InterviewGraphState> {
             InterviewGraphState state,
             ScenarioDirectionResult result
     ) {
-        if (!result.handled()) {
+        if (!result.requiresScenarioPrompt()) {
             return Map.of(InterviewGraphState.SCENARIO_DIRECTION_RESULT, result);
         }
-        ProbeStrategy strategy = switch (result.eventType()) {
-            case RESOURCE_SHOCK, DEPENDENCY_FAILURE, TRAFFIC_SPIKE -> ProbeStrategy.INTRODUCE_FAILURE;
-            case CONSTRAINT_CHANGE, REQUIREMENT_CHANGE, STAKEHOLDER_ESCALATION ->
-                    ProbeStrategy.INTRODUCE_CONSTRAINT;
-            case RECOVERY_SIGNAL -> ProbeStrategy.CHALLENGE_ASSUMPTION;
-        };
+        ProbeStrategy strategy = result.kickoff()
+                ? ProbeStrategy.INTRODUCE_CONSTRAINT
+                : switch (result.eventType()) {
+                    case RESOURCE_SHOCK, DEPENDENCY_FAILURE, TRAFFIC_SPIKE -> ProbeStrategy.INTRODUCE_FAILURE;
+                    case CONSTRAINT_CHANGE, REQUIREMENT_CHANGE, STAKEHOLDER_ESCALATION ->
+                            ProbeStrategy.INTRODUCE_CONSTRAINT;
+                    case RECOVERY_SIGNAL -> ProbeStrategy.CHALLENGE_ASSUMPTION;
+                };
         ProbePlan previous = state.probePlan();
         ProbePlan scenarioPlan = new ProbePlan(
                 previous.targetClaimId(), previous.targetLogicGap(),
                 previous.targetConsistencyIssueId(), previous.targetDeferredProbeId(),
                 result.nextQuestion(), strategy, PressureLevel.STANDARD,
-                "场景事件由候选人本轮决策触发：" + result.eventDescription(),
+                result.kickoff() ? "按方案场景比例进入结构化情境沙盘"
+                        : "场景事件由候选人本轮决策触发：" + result.eventDescription(),
                 state.activeScenario().evaluatedCompetencies(), true);
         return Map.of(
                 InterviewGraphState.SCENARIO_DIRECTION_RESULT, result,
                 InterviewGraphState.PROBE_PLAN, scenarioPlan);
+    }
+
+    private String kickoffQuestion(InterviewGraphState state) {
+        var scenario = state.activeScenario();
+        String facts = String.join("；", scenario.knownFacts());
+        String constraints = scenario.constraints().stream()
+                .filter(constraint -> constraint.active())
+                .map(constraint -> constraint.description())
+                .reduce((left, right) -> left + "；" + right)
+                .orElse("无额外约束");
+        return "%s 你将作为%s，目标是%s。已知事实：%s。当前约束：%s。请说明你首先会采取什么行动，以及判断依据。"
+                .formatted(scenario.background(), scenario.candidateRole(), scenario.objective(),
+                        facts, constraints);
     }
 }

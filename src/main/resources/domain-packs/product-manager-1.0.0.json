@@ -23,7 +23,7 @@
     {"code":"ASK_PRIORITIZATION","objective":"验证资源约束下的优先级判断","expectedEvidence":["目标函数","机会成本","风险和验证成本"],"templates":["资源减半时你保留什么，依据是什么？"]}
   ],
   "scenarios": [
-    {"id":"retention-drop","type":"PRODUCT_CASE","objective":"定位新用户次日留存下降并制定验证计划","background":"版本发布后一周次日留存从 32% 降到 25%。","variables":{"beforeRetention":32,"afterRetention":25,"days":7},"constraints":["研发资源仅两人周","不能立即回滚全部功能"],"competencies":["USER_INSIGHT","METRIC_ANALYSIS","PRIORITIZATION"],"events":[{"round":2,"type":"SEGMENT_UPDATE","changes":{"androidRetention":18,"iosRetention":31}}],"endConditions":["提出可证伪假设和实验顺序"]}
+    {"id":"retention-drop","type":"PRODUCT_CASE","objective":"定位新用户次日留存下降并制定验证计划","background":"版本发布后一周次日留存从 32% 降到 25%。","candidateRole":"新用户增长产品负责人","knownFacts":["发布前次日留存为 32%","发布后七天次日留存为 25%"],"assumptions":["指标口径在发布前后保持一致","实验平台能够按端和渠道分群"],"hiddenInformation":{"rootCause":"Android 首次授权流程变长造成关键步骤流失"},"variables":{"beforeRetention":32,"afterRetention":25,"days":7,"androidRetention":25,"iosRetention":25},"constraints":["研发资源仅两人周","不能立即回滚全部功能"],"competencies":["USER_INSIGHT","METRIC_ANALYSIS","PRIORITIZATION"],"events":[{"round":1,"type":"CONSTRAINT_CHANGE","changes":{"androidRetention":18,"iosRetention":31},"description":"分端数据表明下降主要集中在 Android"}],"endConditions":["提出可证伪假设和实验顺序"],"maxRounds":3}
   ],
   "rubrics": [
     {"competencyCode":"USER_INSIGHT","positiveSignals":["用多来源证据定义用户问题"],"negativeSignals":["以个人偏好代替用户证据"],"insufficientEvidenceSignals":["没有研究或用户证据"]},

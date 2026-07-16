@@ -37,7 +37,7 @@ public record InterviewState(
         PressureState pressureState,
         ScenarioState activeScenario
 ) {
-    public static final String CURRENT_VERSION = "2.7";
+    public static final String CURRENT_VERSION = "2.8";
 
     public InterviewState(
             String stateVersion,

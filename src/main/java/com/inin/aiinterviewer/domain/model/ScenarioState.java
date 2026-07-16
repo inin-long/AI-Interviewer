@@ -25,6 +25,7 @@ public record ScenarioState(
         List<CandidateDecision> decisions,
         List<String> evaluatedCompetencies,
         List<String> endConditions,
+        boolean introduced,
         int maxRounds,
         int currentRound,
         ScenarioStatus status,
@@ -52,5 +53,35 @@ public record ScenarioState(
         currentRound = Math.max(0, currentRound);
         status = status == null ? ScenarioStatus.ACTIVE : status;
         terminationReason = terminationReason == null ? "" : terminationReason.strip();
+    }
+
+    public ScenarioState(
+            String id,
+            long sessionId,
+            SimulationType type,
+            String objective,
+            String background,
+            String candidateRole,
+            List<String> knownFacts,
+            List<String> assumptions,
+            Map<String, Object> hiddenInformation,
+            Map<String, Object> initialVariables,
+            Map<String, Object> variables,
+            List<ScenarioConstraint> constraints,
+            List<ScenarioEvent> events,
+            List<CandidateDecision> decisions,
+            List<String> evaluatedCompetencies,
+            List<String> endConditions,
+            int maxRounds,
+            int currentRound,
+            ScenarioStatus status,
+            String terminationReason,
+            LocalDateTime createTime,
+            LocalDateTime updateTime
+    ) {
+        this(id, sessionId, type, objective, background, candidateRole, knownFacts, assumptions,
+                hiddenInformation, initialVariables, variables, constraints, events, decisions,
+                evaluatedCompetencies, endConditions, false, maxRounds, currentRound, status,
+                terminationReason, createTime, updateTime);
     }
 }
