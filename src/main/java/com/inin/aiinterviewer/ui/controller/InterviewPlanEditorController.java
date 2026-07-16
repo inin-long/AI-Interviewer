@@ -4,12 +4,14 @@ import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.dto.ResumeDto;
 import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
 import com.inin.aiinterviewer.application.dto.CandidateProfileListItemDto;
+import com.inin.aiinterviewer.application.dto.DomainPackDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
 import com.inin.aiinterviewer.application.service.ResumeService;
 import com.inin.aiinterviewer.application.service.CandidateProfileService;
+import com.inin.aiinterviewer.application.service.DomainPackService;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
@@ -40,6 +42,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     private final ResumeService resumeService;
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
+    private final DomainPackService domainPackService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -55,6 +58,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private ComboBox<CandidateProfileListItemDto> profileBox;
     @FXML private ListView<KnowledgeDocumentDto> knowledgeList;
     @FXML private TextField focusField;
+    @FXML private ComboBox<DomainPackDto> domainPackBox;
     @FXML private Label pageHeadingLabel;
     @FXML private Label summaryJobLabel;
     @FXML private Label summaryDifficultyLabel;
@@ -62,6 +66,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private Label summaryQuestionsLabel;
     @FXML private Label summaryProfileLabel;
     @FXML private Label summaryKnowledgeLabel;
+    @FXML private Label summaryDomainPackLabel;
 
     private Long editingPlanId;
 
@@ -70,6 +75,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             ResumeService resumeService,
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
+            DomainPackService domainPackService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -79,6 +85,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         this.resumeService = resumeService;
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
+        this.domainPackService = domainPackService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -108,6 +115,14 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             }
             @Override public CandidateProfileListItemDto fromString(String value) { return null; }
         });
+        domainPackBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(DomainPackDto value) {
+                return value == null ? "请选择岗位知识包" : value.displayName() + " · v" + value.version();
+            }
+            @Override public DomainPackDto fromString(String value) { return null; }
+        });
+        domainPackBox.getItems().setAll(domainPackService.list());
         resumeBox.getItems().setAll(resumeService.list(sessionState.requireCurrentUser().id()));
         profileBox.getItems().setAll(profileService.listConfirmed(sessionState.requireCurrentUser().id()));
         knowledgeList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -124,6 +139,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         difficultyBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         durationField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
         questionCountField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
+        domainPackBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         profileBox.valueProperty().addListener((observable, oldValue, profile) -> {
             if (profile != null) {
                 resumeBox.getItems().stream().filter(resume -> resume.id().equals(profile.resumeId()))
@@ -149,6 +165,9 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             difficultyBox.setValue(InterviewDifficulty.MEDIUM);
             durationField.setText("45");
             questionCountField.setText("15");
+            domainPackBox.getItems().stream()
+                    .filter(pack -> DomainPackService.DEFAULT_PACK_ID.equals(pack.id()))
+                    .findFirst().ifPresent(domainPackBox::setValue);
         } else {
             pageHeadingLabel.setText("编辑面试方案");
             populate(planService.require(planId, sessionState.requireCurrentUser().id()));
@@ -194,6 +213,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             }
         }
         focusField.setText(String.valueOf(plan.rules().getOrDefault("focus", "")));
+        domainPackBox.getItems().stream().filter(pack -> pack.id().equals(plan.domainPackId()))
+                .findFirst().ifPresent(domainPackBox::setValue);
     }
 
     private SaveInterviewPlanCommand commandFromForm() {
@@ -206,10 +227,11 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                     .map(KnowledgeDocumentDto::id).toList();
             Map<String, Object> rules = focusField.getText().isBlank()
                     ? Map.of() : Map.of("focus", focusField.getText().trim());
+            DomainPackDto domainPack = domainPackBox.getValue();
             return new SaveInterviewPlanCommand(nameField.getText(), jobTitleField.getText(),
                     jobDescriptionArea.getText(), difficultyBox.getValue(), duration, questions,
                     resume == null ? null : resume.id(), profile == null ? null : profile.id(),
-                    documentIds, rules, null);
+                    documentIds, rules, null, domainPack == null ? null : domainPack.id());
         } catch (NumberFormatException exception) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
@@ -228,6 +250,10 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         if (summaryKnowledgeLabel != null && knowledgeList != null) {
             int count = knowledgeList.getSelectionModel().getSelectedItems().size();
             summaryKnowledgeLabel.setText(count == 0 ? "未选择" : count + " 个文档");
+        }
+        if (summaryDomainPackLabel != null && domainPackBox != null) {
+            DomainPackDto pack = domainPackBox.getValue();
+            summaryDomainPackLabel.setText(pack == null ? "待选择" : pack.displayName() + " · v" + pack.version());
         }
     }
 

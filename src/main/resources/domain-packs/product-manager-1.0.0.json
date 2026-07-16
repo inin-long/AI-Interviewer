@@ -1,0 +1,33 @@
+{
+  "id": "product-manager-1.0.0",
+  "roleCode": "product-manager",
+  "industryCode": "internet",
+  "version": "1.0.0",
+  "displayName": "互联网产品经理",
+  "competencies": [
+    {"code":"USER_INSIGHT","name":"用户洞察","description":"研究方法、问题定义和证据质量","importance":0.9,"indicators":["区分用户表达和真实行为","能够验证样本偏差"]},
+    {"code":"METRIC_ANALYSIS","name":"指标分析","description":"指标体系、漏斗、实验与因果判断","importance":1.0,"indicators":["给出指标口径和基线","不把相关性直接当因果"]},
+    {"code":"PRIORITIZATION","name":"优先级与商业判断","description":"在资源约束下进行价值和风险取舍","importance":0.95,"indicators":["明确决策准则","能处理利益相关方冲突"]}
+  ],
+  "metrics": [
+    {"code":"RETENTION","name":"留存率","description":"明确 cohort、窗口和活跃定义"},
+    {"code":"CONVERSION","name":"漏斗转化率","description":"按渠道、人群和步骤拆解"},
+    {"code":"LTV_CAC","name":"LTV/CAC","description":"结合回收周期和边际成本判断增长质量"}
+  ],
+  "failurePatterns": [
+    {"code":"METRIC_VANITY","name":"虚荣指标","description":"指标增长但未带来用户或商业价值","symptoms":["DAU 增长但留存下降","活动结束后快速回落"],"probes":["北极星指标为何成立","如何设置护栏指标"]},
+    {"code":"SAMPLE_BIAS","name":"样本偏差","description":"研究样本不能代表目标用户","symptoms":["访谈结论与行为数据冲突"],"probes":["样本如何选择","如何交叉验证"]}
+  ],
+  "probePlaybooks": [
+    {"code":"VERIFY_CAUSALITY","objective":"验证指标变化的真实原因","expectedEvidence":["对照组","同期变量","分群结果"],"templates":["如何证明变化来自这个功能而不是渠道结构变化？"]},
+    {"code":"ASK_PRIORITIZATION","objective":"验证资源约束下的优先级判断","expectedEvidence":["目标函数","机会成本","风险和验证成本"],"templates":["资源减半时你保留什么，依据是什么？"]}
+  ],
+  "scenarios": [
+    {"id":"retention-drop","type":"PRODUCT_CASE","objective":"定位新用户次日留存下降并制定验证计划","background":"版本发布后一周次日留存从 32% 降到 25%。","variables":{"beforeRetention":32,"afterRetention":25,"days":7},"constraints":["研发资源仅两人周","不能立即回滚全部功能"],"competencies":["USER_INSIGHT","METRIC_ANALYSIS","PRIORITIZATION"],"events":[{"round":2,"type":"SEGMENT_UPDATE","changes":{"androidRetention":18,"iosRetention":31}}],"endConditions":["提出可证伪假设和实验顺序"]}
+  ],
+  "rubrics": [
+    {"competencyCode":"USER_INSIGHT","positiveSignals":["用多来源证据定义用户问题"],"negativeSignals":["以个人偏好代替用户证据"],"insufficientEvidenceSignals":["没有研究或用户证据"]},
+    {"competencyCode":"METRIC_ANALYSIS","positiveSignals":["说明口径、基线、分群和因果验证"],"negativeSignals":["把相关性直接解释为因果"],"insufficientEvidenceSignals":["没有有效指标分析"]},
+    {"competencyCode":"PRIORITIZATION","positiveSignals":["基于目标、成本和风险说明取舍"],"negativeSignals":["只按声音大小排序"],"insufficientEvidenceSignals":["未出现资源冲突场景"]}
+  ]
+}

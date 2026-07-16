@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeDocumentSnapshotDto;
+import com.inin.aiinterviewer.application.dto.DomainPackDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -22,6 +23,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
+import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
@@ -41,11 +43,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class InterviewSessionService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewSessionService.class);
-    private static final String PROMPT_VERSION = "v1.2";
+    private static final String PROMPT_VERSION = "v2.0-s1";
 
     private final InterviewPlanService planService;
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
+    private final DomainPackService domainPackService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final AgentCheckpointMapper checkpointMapper;
@@ -58,6 +61,7 @@ public class InterviewSessionService {
             InterviewPlanService planService,
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
+            DomainPackService domainPackService,
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
             AgentCheckpointMapper checkpointMapper,
@@ -69,6 +73,7 @@ public class InterviewSessionService {
         this.planService = planService;
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
+        this.domainPackService = domainPackService;
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
         this.checkpointMapper = checkpointMapper;
@@ -100,6 +105,7 @@ public class InterviewSessionService {
                 .requireReadyAll(userId, plan.knowledgeDocumentIds()).stream()
                 .map(KnowledgeDocumentSnapshotDto::from)
                 .toList();
+        DomainPackSnapshot domainPackSnapshot = domainPackService.snapshot(plan.domainPackId());
         InterviewStage initialStage = initialStage(plan.stages());
 
         InterviewSessionEntity entity = new InterviewSessionEntity();
@@ -112,6 +118,9 @@ public class InterviewSessionService {
         entity.setPlanSnapshotJson(writeJson(plan));
         entity.setProfileSnapshotJson(profileSnapshot == null ? "{}" : writeJson(profileSnapshot));
         entity.setKnowledgeSnapshotJson(writeJson(knowledgeSnapshot));
+        entity.setDomainPackId(domainPackSnapshot.id());
+        entity.setDomainPackVersion(domainPackSnapshot.version());
+        entity.setDomainPackSnapshotJson(writeJson(domainPackSnapshot));
         entity.setStage(initialStage);
         entity.setStatus(InterviewStatus.RUNNING);
         entity.setPromptVersion(PROMPT_VERSION);
@@ -156,6 +165,12 @@ public class InterviewSessionService {
         return knowledgeSnapshot(userId, sessionId).stream()
                 .map(KnowledgeDocumentSnapshotDto::id)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<DomainPackSnapshot> domainPackSnapshot(long userId, long sessionId) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        return Optional.ofNullable(readDomainPackSnapshot(session.getDomainPackSnapshotJson()));
     }
 
     @Transactional(readOnly = true)
@@ -356,7 +371,19 @@ public class InterviewSessionService {
                 readProfile(entity.getProfileSnapshotJson()),
                 readKnowledgeSnapshot(entity.getKnowledgeSnapshotJson()), entity.getStage(), entity.getStatus(),
                 entity.getPromptVersion(), entity.getStartedTime(), entity.getCompletedTime(),
-                entity.getCreateTime(), entity.getUpdateTime());
+                entity.getCreateTime(), entity.getUpdateTime(), domainPackDto(entity));
+    }
+
+    private DomainPackDto domainPackDto(InterviewSessionEntity entity) {
+        DomainPackSnapshot snapshot = readDomainPackSnapshot(entity.getDomainPackSnapshotJson());
+        if (snapshot != null && snapshot.content() != null) {
+            var pack = snapshot.content();
+            return new DomainPackDto(pack.id(), pack.roleCode(), pack.industryCode(),
+                    snapshot.version(), pack.displayName());
+        }
+        if (entity.getDomainPackId() == null || entity.getDomainPackId().isBlank()) return null;
+        return new DomainPackDto(entity.getDomainPackId(), "legacy", null,
+                entity.getDomainPackVersion(), entity.getDomainPackId());
     }
 
     private InterviewMessageDto toMessageDto(InterviewMessageEntity entity) {
@@ -470,6 +497,15 @@ public class InterviewSessionService {
         try {
             List<KnowledgeDocumentSnapshotDto> documents = objectMapper.readValue(json, new TypeReference<>() {});
             return documents == null ? List.of() : List.copyOf(documents);
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
+    private DomainPackSnapshot readDomainPackSnapshot(String json) {
+        if (json == null || json.isBlank() || "{}".equals(json.strip())) return null;
+        try {
+            return objectMapper.readValue(json, DomainPackSnapshot.class);
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }

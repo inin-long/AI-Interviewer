@@ -76,6 +76,10 @@
                         <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责与要求" prefRowCount="7" wrapText="true"/>
                         <Separator/>
                         <Label text="3  面试规则" styleClass="module-title"/>
+                        <Label text="岗位领域知识包" styleClass="field-label"/>
+                        <ComboBox fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
+                        <Label text="知识包提供岗位能力模型、常见指标、事故模式、追问框架与评价标准。"
+                               styleClass="secondary-text" wrapText="true"/>
                         <Label text="重点方向" styleClass="field-label"/>
                         <TextField fx:id="focusField" promptText="例如：Spring、数据库、项目深挖"/>
                         <Label text="阶段与权重将在 Agent 流程里程碑中提供完整配置。" styleClass="secondary-text"/>
@@ -96,6 +100,8 @@
                         <Label fx:id="summaryProfileLabel" text="未关联" styleClass="summary-value" wrapText="true"/>
                         <Label text="知识范围" styleClass="summary-label"/>
                         <Label fx:id="summaryKnowledgeLabel" text="未选择" styleClass="summary-value"/>
+                        <Label text="领域知识包" styleClass="summary-label"/>
+                        <Label fx:id="summaryDomainPackLabel" text="待选择" styleClass="summary-value" wrapText="true"/>
                         <Region prefHeight="8"/>
                         <Label text="保存方案后，可以从列表进入候选人画像和模拟面试准备流程。"
                                styleClass="local-data-note" wrapText="true"/>

@@ -50,6 +50,7 @@ class InterviewPlanServiceIntegrationTest {
         InterviewPlanDto created = planService.create(owner.id(), create);
         assertThat(created.name()).isEqualTo("Java 后端高级面试");
         assertThat(created.rules()).containsEntry("focus", "Spring, 数据库");
+        assertThat(created.domainPackId()).isEqualTo("java-backend-1.0.0");
         assertThat(planService.list(other.id())).isEmpty();
         assertThatThrownBy(() -> planService.require(created.id(), other.id()))
                 .isInstanceOf(BusinessException.class);
@@ -67,6 +68,12 @@ class InterviewPlanServiceIntegrationTest {
 
         planService.delete(owner.id(), created.id());
         assertThat(planService.list(owner.id())).extracting(InterviewPlanDto::id).containsExactly(copy.id());
+
+        SaveInterviewPlanCommand invalidPack = new SaveInterviewPlanCommand(
+                "无效知识包", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                45, 10, null, null, List.of(), Map.of(), null, "missing-pack");
+        assertThatThrownBy(() -> planService.create(owner.id(), invalidPack))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

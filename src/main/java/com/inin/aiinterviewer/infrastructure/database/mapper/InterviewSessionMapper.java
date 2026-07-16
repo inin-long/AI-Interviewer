@@ -16,6 +16,7 @@ public interface InterviewSessionMapper {
     @Select("""
             SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
                    profile_snapshot_json, knowledge_snapshot_json,
+                   domain_pack_id, domain_pack_version, domain_pack_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session
@@ -27,10 +28,12 @@ public interface InterviewSessionMapper {
     @Insert("""
             INSERT INTO interview_session(user_id, plan_id, resume_id, profile_id, title, job_title,
                                           plan_snapshot_json, profile_snapshot_json, knowledge_snapshot_json,
+                                          domain_pack_id, domain_pack_version, domain_pack_snapshot_json,
                                           stage, status, prompt_version,
                                           started_time, create_time, update_time, deleted)
             VALUES(#{userId}, #{planId}, #{resumeId}, #{profileId}, #{title}, #{jobTitle},
                    #{planSnapshotJson}, #{profileSnapshotJson}, #{knowledgeSnapshotJson},
+                   #{domainPackId}, #{domainPackVersion}, #{domainPackSnapshotJson},
                    #{stage}, #{status}, #{promptVersion},
                    CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
             """)
@@ -40,6 +43,7 @@ public interface InterviewSessionMapper {
     @Select("""
             SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
                    profile_snapshot_json, knowledge_snapshot_json,
+                   domain_pack_id, domain_pack_version, domain_pack_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session
@@ -51,6 +55,7 @@ public interface InterviewSessionMapper {
     @Select("""
             SELECT id, user_id, plan_id, resume_id, profile_id, title, job_title, plan_snapshot_json,
                    profile_snapshot_json, knowledge_snapshot_json,
+                   domain_pack_id, domain_pack_version, domain_pack_snapshot_json,
                    stage, status, prompt_version, started_time, completed_time,
                    create_time, update_time, deleted
             FROM interview_session

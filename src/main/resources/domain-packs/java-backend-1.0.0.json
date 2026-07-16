@@ -1,0 +1,37 @@
+{
+  "id": "java-backend-1.0.0",
+  "roleCode": "java-backend",
+  "industryCode": "internet",
+  "version": "1.0.0",
+  "displayName": "Java 后端工程师",
+  "competencies": [
+    {"code":"JAVA_FOUNDATION","name":"Java 与 JVM","description":"语言、并发、内存与运行时诊断","importance":0.8,"indicators":["能够解释机制而非只列 API","能结合监控与故障定位"]},
+    {"code":"DATA_SYSTEMS","name":"数据库与缓存","description":"事务、索引、缓存一致性与容量治理","importance":0.9,"indicators":["说明基线和验证指标","覆盖失败与降级路径"]},
+    {"code":"DISTRIBUTED_SYSTEMS","name":"分布式系统","description":"消息、幂等、一致性、可用性与可观测性","importance":1.0,"indicators":["给出清晰执行路径","能够讨论取舍和边界"]},
+    {"code":"SYSTEM_DESIGN","name":"系统设计","description":"需求澄清、容量估算、架构拆分和演进","importance":1.0,"indicators":["先澄清约束再设计","用数据验证方案"]}
+  ],
+  "metrics": [
+    {"code":"LATENCY","name":"P95/P99 延迟","description":"区分平均值与尾延迟，并说明采样周期"},
+    {"code":"THROUGHPUT","name":"QPS/吞吐量","description":"同时描述峰值、持续时间与资源水位"},
+    {"code":"ERROR_RATE","name":"错误率","description":"按错误类型和调用链分层观察"}
+  ],
+  "failurePatterns": [
+    {"code":"CACHE_BREAKDOWN","name":"缓存击穿","description":"热点键失效造成并发回源","symptoms":["数据库负载陡升","热点接口尾延迟上升"],"probes":["如何限制并发回源","缓存重建失败如何降级"]},
+    {"code":"RETRY_STORM","name":"重试风暴","description":"无边界重试放大下游故障","symptoms":["调用量倍增","线程池和连接池耗尽"],"probes":["重试预算如何设置","如何结合熔断和幂等"]},
+    {"code":"DUPLICATE_MESSAGE","name":"消息重复消费","description":"至少一次投递导致副作用重复","symptoms":["重复订单或记账","消费位点反复"],"probes":["业务幂等键来自哪里","去重记录如何过期"]}
+  ],
+  "probePlaybooks": [
+    {"code":"VERIFY_METRIC","objective":"验证量化结果的基线、来源和归因","expectedEvidence":["优化前后基线","测量周期","变量排除方法"],"templates":["这个结果的基线和统计周期是什么？","如何排除扩容或流量变化的影响？"]},
+    {"code":"VERIFY_OWNERSHIP","objective":"区分个人贡献与团队成果","expectedEvidence":["个人决策边界","亲自执行步骤","协作分工"],"templates":["其中哪些决策和实现由你直接负责？"]},
+    {"code":"TRACE_FAILURE","objective":"验证失败路径和恢复能力","expectedEvidence":["故障检测","降级动作","恢复与复盘"],"templates":["如果这个依赖不可用，系统会按什么顺序退化？"]}
+  ],
+  "scenarios": [
+    {"id":"flash-sale-incident","type":"INCIDENT_RESPONSE","objective":"在缓存和数据库双重压力下保护秒杀订单链路","background":"秒杀开始后 Redis 集群出现故障，数据库 CPU 持续升高。","variables":{"peakQps":20000,"inventory":5000,"redisAvailable":false,"databaseCpu":85},"constraints":["不能超卖","不能立即扩容","允许短时最终一致"],"competencies":["DISTRIBUTED_SYSTEMS","SYSTEM_DESIGN"],"events":[{"round":2,"type":"RESOURCE_SHOCK","changes":{"databaseConnections":95}}],"endConditions":["给出止损、恢复和复盘方案","连续三轮决策完成"]}
+  ],
+  "rubrics": [
+    {"competencyCode":"JAVA_FOUNDATION","positiveSignals":["能解释底层机制和适用边界"],"negativeSignals":["只罗列名词或 API"],"insufficientEvidenceSignals":["没有 JVM 或并发相关回答"]},
+    {"competencyCode":"DATA_SYSTEMS","positiveSignals":["用指标和事务边界验证一致性"],"negativeSignals":["忽略缓存失效和数据回滚"],"insufficientEvidenceSignals":["未获得数据库或缓存证据"]},
+    {"competencyCode":"DISTRIBUTED_SYSTEMS","positiveSignals":["覆盖幂等、重试、补偿和可观测性"],"negativeSignals":["把最终一致描述成自动保证"],"insufficientEvidenceSignals":["未完成分布式场景验证"]},
+    {"competencyCode":"SYSTEM_DESIGN","positiveSignals":["基于约束做容量估算和取舍"],"negativeSignals":["直接给架构结论且无验证方式"],"insufficientEvidenceSignals":["仅有一组浅层设计证据"]}
+  ]
+}

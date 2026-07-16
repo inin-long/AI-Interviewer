@@ -22,10 +22,33 @@ public record InterviewPlanDto(
         List<String> stages,
         boolean defaultPlan,
         LocalDateTime createTime,
-        LocalDateTime updateTime
+        LocalDateTime updateTime,
+        String domainPackId
 ) implements Serializable {
     public InterviewPlanDto {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
+    }
+
+    public InterviewPlanDto(
+            Long id,
+            String name,
+            String jobTitle,
+            String jobDescription,
+            InterviewDifficulty difficulty,
+            int durationMinutes,
+            int questionCount,
+            Long resumeId,
+            Long profileId,
+            List<Long> knowledgeDocumentIds,
+            Map<String, Object> rules,
+            List<String> stages,
+            boolean defaultPlan,
+            LocalDateTime createTime,
+            LocalDateTime updateTime
+    ) {
+        this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
+                resumeId, profileId, knowledgeDocumentIds, rules, stages, defaultPlan,
+                createTime, updateTime, null);
     }
 
     public InterviewPlanDto(
@@ -44,7 +67,7 @@ public record InterviewPlanDto(
             LocalDateTime updateTime
     ) {
         this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, null, List.of(), rules, stages, defaultPlan, createTime, updateTime);
+                resumeId, null, List.of(), rules, stages, defaultPlan, createTime, updateTime, null);
     }
 
     public InterviewPlanDto(
@@ -64,6 +87,6 @@ public record InterviewPlanDto(
             LocalDateTime updateTime
     ) {
         this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, profileId, List.of(), rules, stages, defaultPlan, createTime, updateTime);
+                resumeId, profileId, List.of(), rules, stages, defaultPlan, createTime, updateTime, null);
     }
 }

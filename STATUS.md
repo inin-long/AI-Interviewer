@@ -1,12 +1,33 @@
 # AI Interviewer 开发状态
 
-最后更新：2026-07-15
+最后更新：2026-07-16
 
 ## 当前结论
 
 MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画像确认 → 面试方案 → AI 面试与暂停恢复 → 后台评分 → 面试记录与报告。
 
 当前主线进入 Windows 发布验收阶段。局部体验优化不得阻塞发布链验证，除非问题会造成数据丢失、安全风险或主流程不可用。
+
+## S1 开发状态
+
+开发分支：`feature/inin-s1`
+
+### Phase S1-1：领域知识与主张验证
+
+- [x] DomainPack：内置 Java 后端、全栈工程师和产品经理岗位包；启动时完成结构校验、SQLite 版本化同步与 Lucene 索引重建。
+- [x] 面试方案绑定 DomainPack；创建会话时冻结知识包 ID、版本和完整快照，历史会话不受内置包升级影响。
+- [ ] ClaimExtractorNode、InterviewClaim 与 ClaimLedger
+- [ ] ProbePlannerNode 与 QuestionRendererNode
+
+### 后续阶段
+
+- [ ] Phase S1-2：逻辑链与证据评分
+- [ ] Phase S1-3：跨轮一致性验证
+- [ ] Phase S1-4：压力控制与动态场景
+- [ ] Phase S1-5：Persona 与问题质量审查
+- [ ] Phase S1-6：增强报告、分支复盘与训练闭环
+
+最近一次 S1 验证（2026-07-16）：DomainPack 加载、持久化、Lucene 检索、方案绑定、用户隔离、会话快照冻结及方案编辑 FXML 测试通过；数据库迁移基线升级至 V15。
 
 ## 主流程状态
 

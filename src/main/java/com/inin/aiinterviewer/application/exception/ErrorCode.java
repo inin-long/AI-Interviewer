@@ -8,6 +8,7 @@ public enum ErrorCode {
     FILE_TYPE_NOT_SUPPORTED("FILE_002", "不支持的文件类型"),
     FILE_STORAGE_FAILED("FILE_003", "文件保存失败"),
     PLAN_NOT_FOUND("PLAN_001", "面试方案不存在"),
+    DOMAIN_PACK_NOT_FOUND("DOMAIN_001", "岗位知识包不存在或已停用"),
     PROFILE_NOT_CONFIRMED("PROFILE_001", "请选择当前账户下已确认的候选人画像"),
     INTERVIEW_NOT_FOUND("INTERVIEW_001", "面试会话不存在"),
     CHECKPOINT_NOT_FOUND("INTERVIEW_002", "未找到可恢复的面试进度"),
