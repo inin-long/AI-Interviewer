@@ -7,7 +7,8 @@ import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
-import com.inin.aiinterviewer.agent.node.QuestionGeneratorNode;
+import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
+import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import org.bsc.langgraph4j.CompiledGraph;
@@ -28,37 +29,43 @@ public class InterviewGraph {
     private static final String EXTRACT_CLAIMS = "claim_extractor";
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
-    private static final String QUESTION = "question_generator";
+    private static final String PLAN_PROBE = "probe_planner";
+    private static final String RENDER_QUESTION = "question_renderer";
 
     private final CompiledGraph<InterviewGraphState> graph;
-    private final QuestionGeneratorNode questionGenerator;
+    private final QuestionRendererNode questionRenderer;
     private final ClaimExtractorNode claimExtractor;
+    private final ProbePlannerNode probePlanner;
 
     public InterviewGraph(
             ClaimExtractorNode claimExtractor,
             AnswerAnalyzerNode answerAnalyzer,
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
-            QuestionGeneratorNode questionGenerator
+            ProbePlannerNode probePlanner,
+            QuestionRendererNode questionRenderer
     ) {
-        this.questionGenerator = questionGenerator;
+        this.questionRenderer = questionRenderer;
         this.claimExtractor = claimExtractor;
+        this.probePlanner = probePlanner;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
                     .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
-                    .addNode(QUESTION, AsyncNodeAction.node_async(questionGenerator))
+                    .addNode(PLAN_PROBE, AsyncNodeAction.node_async(probePlanner))
+                    .addNode(RENDER_QUESTION, AsyncNodeAction.node_async(questionRenderer))
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
                     .addEdge(EXTRACT_CLAIMS, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
                             AsyncEdgeAction.edge_async(state -> state.decision().action() == AgentAction.NEXT_STAGE
-                                    ? "transition" : "question"),
-                            Map.of("transition", TRANSITION, "question", QUESTION))
-                    .addEdge(TRANSITION, QUESTION)
-                    .addEdge(QUESTION, GraphDefinition.END)
+                                    ? "transition" : "probe"),
+                            Map.of("transition", TRANSITION, "probe", PLAN_PROBE))
+                    .addEdge(TRANSITION, PLAN_PROBE)
+                    .addEdge(PLAN_PROBE, RENDER_QUESTION)
+                    .addEdge(RENDER_QUESTION, GraphDefinition.END)
                     .compile();
         } catch (GraphStateException exception) {
             throw new IllegalStateException("Cannot build interview graph", exception);
@@ -70,13 +77,16 @@ public class InterviewGraph {
                 .orElseThrow(() -> new IllegalStateException("Interview graph returned no state"));
         return new InterviewTurnPlan(
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
-                state.claimExtraction());
+                state.claimExtraction(), state.probePlan());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
         try {
-            InterviewGraphState state = new InterviewGraphState(input(input));
-            return (String) questionGenerator.apply(state).get(InterviewGraphState.QUESTION_PROMPT);
+            Map<String, Object> values = input(input);
+            InterviewGraphState state = new InterviewGraphState(values);
+            values.putAll(probePlanner.apply(state));
+            return (String) questionRenderer.apply(new InterviewGraphState(values))
+                    .get(InterviewGraphState.QUESTION_PROMPT);
         } catch (Exception exception) {
             throw new IllegalStateException("Cannot prepare initial interview question", exception);
         }
@@ -95,8 +105,8 @@ public class InterviewGraph {
         }
     }
 
-    public QuestionGeneratorNode questionGenerator() {
-        return questionGenerator;
+    public QuestionRendererNode questionRenderer() {
+        return questionRenderer;
     }
 
     private Map<String, Object> input(InterviewTurnInput input) {

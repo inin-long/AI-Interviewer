@@ -17,7 +17,7 @@ MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画
 - [x] DomainPack：内置 Java 后端、全栈工程师和产品经理岗位包；启动时完成结构校验、SQLite 版本化同步与 Lucene 索引重建。
 - [x] 面试方案绑定 DomainPack；创建会话时冻结知识包 ID、版本和完整快照，历史会话不受内置包升级影响。
 - [x] ClaimExtractorNode、InterviewClaim 与 ClaimLedger：每轮回答先提取原子主张，严格校验 JSON Schema，失败自动修复一次后安全降级；主张按用户/会话持久化并写入版本化 Checkpoint。
-- [ ] ProbePlannerNode 与 QuestionRendererNode
+- [x] ProbePlannerNode 与 QuestionRendererNode：先按主张重要度、可信度与证据缺口生成结构化追问目标和策略，再由独立 Renderer 渲染单个自然语言问题；阶段首题与主张追问分流，计划写入 V2.1 Checkpoint。
 
 ### 后续阶段
 
@@ -27,7 +27,7 @@ MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画
 - [ ] Phase S1-5：Persona 与问题质量审查
 - [ ] Phase S1-6：增强报告、分支复盘与训练闭环
 
-最近一次 S1 验证（2026-07-16）：DomainPack 加载/索引/冻结及 ClaimExtractor 修复降级、Claim Ledger 幂等持久化、用户隔离、最终回答提取、Checkpoint V1→V2 兼容升级和本地完整 TestFX 业务流程测试通过；数据库迁移基线升级至 V16。
+最近一次 S1 验证（2026-07-16）：S1-1 全部完成；DomainPack 加载/索引/冻结，ClaimExtractor 修复降级、Claim Ledger 幂等持久化与用户隔离，以及 Probe Planner 的具体主张优先级/策略映射、Question Renderer 约束、Checkpoint V1/V2.0→V2.1 升级和本地完整 TestFX 业务流程测试通过；数据库迁移基线为 V16。
 
 ## 主流程状态
 
@@ -101,7 +101,7 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 
 最近一次真实 Provider 验证（2026-07-15）：定位到 Spring AI OpenAI 适配器默认 3 次内部重试与后台任务 3 次重试叠加，旧版 60 秒超时会将一次画像操作放大为最多 12 次 HTTP 尝试；同时 `deepseek-ai/DeepSeek-V4-Pro` 默认思考模式在完整简历画像请求中超过 5 分钟。修复后 SDK 内部重试关闭，SiliconFlow DeepSeek V4 默认关闭思考，完整全栈简历专项测试通过；测试用例耗时 45.7 秒（Maven 总耗时约 65 秒），画像由单次 Provider 请求成功生成并落库。
 
-最近一次稳定覆盖率基线（2026-07-16）：使用 `D:\Libs\Java\jdk-21.0.2` 执行 `mvnw clean verify` 通过；Surefire 79 项（77 通过、2 个真实测试跳过），Failsafe 2 项（本地 TestFX 通过、真实 TestFX 跳过）。总体行覆盖率 78.6%、分支覆盖率 53.1%，均高于 70%/45% 门槛。真实 Provider 测试不计入稳定覆盖率基线。
+最近一次稳定覆盖率基线（2026-07-16）：使用 `D:\Libs\Java\jdk-21.0.2` 执行 `mvnw clean verify` 通过；Surefire 84 项（82 通过、2 个真实测试跳过），Failsafe 2 项（本地 TestFX 通过、真实 TestFX 跳过）。总体行覆盖率 78.7%、分支覆盖率 53.0%，均高于 70%/45% 门槛。真实 Provider 测试不计入稳定覆盖率基线。
 
 
 ## 自测问题记录

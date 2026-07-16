@@ -7,7 +7,8 @@ import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
-import com.inin.aiinterviewer.agent.node.QuestionGeneratorNode;
+import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
+import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
 import com.inin.aiinterviewer.agent.stage.StageManager;
 import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
@@ -47,7 +48,8 @@ class InterviewGraphTest {
                 new AnswerAnalyzerNode(chatService, parser),
                 new FollowUpDecisionNode(chatService, parser, stageManager, objectMapper),
                 new StageTransitionNode(stageManager),
-                new QuestionGeneratorNode(chatService, objectMapper));
+                new ProbePlannerNode(objectMapper),
+                new QuestionRendererNode(chatService, objectMapper));
     }
 
     @Test
@@ -66,7 +68,9 @@ class InterviewGraphTest {
         assertThat(result.stage()).isEqualTo(InterviewStage.INTRODUCTION);
         assertThat(result.claimExtraction().claims()).singleElement()
                 .satisfies(claim -> assertThat(claim.content()).contains("事务"));
-        assertThat(result.questionPrompt()).contains("一次只提出一个清晰问题", "Java 工程师");
+        assertThat(result.probePlan().targetClaimId()).isEqualTo("current-answer");
+        assertThat(result.questionPrompt()).contains("一次只提出一个清晰的中文问题", "Java 工程师",
+                "结构化追问计划", "使用事务保证数据库操作一致性");
     }
 
     @Test

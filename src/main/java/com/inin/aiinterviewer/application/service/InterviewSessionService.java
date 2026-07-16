@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.application.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.stage.StageManager;
+import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.agent.state.InterviewState;
 import com.inin.aiinterviewer.agent.state.StateSerializer;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -134,7 +135,7 @@ public class InterviewSessionService {
         InterviewState state = new InterviewState(
                 InterviewState.CURRENT_VERSION, entity.getId(), userId, initialStage,
                 List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "",
-                ClaimLedger.empty());
+                ClaimLedger.empty(), null);
         saveCheckpointInternal(userId, entity.getId(), "session_started", state);
         return require(userId, entity.getId());
     }
@@ -207,7 +208,8 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, previous.stage(), messages,
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -255,7 +257,7 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, session.getStage(),
                 allMessages, question.strip(), previous.latestAnswer(),
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
-                previous.profile(), previous.rules(), summary, previous.claimLedger());
+                previous.profile(), previous.rules(), summary, previous.claimLedger(), previous.probePlan());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -294,7 +296,8 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, stage, previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
         return updated;
     }
@@ -308,8 +311,24 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(),
-                claimLedger == null ? ClaimLedger.empty() : claimLedger);
+                claimLedger == null ? ClaimLedger.empty() : claimLedger, previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateProbePlan(long userId, long sessionId, ProbePlan probePlan) {
+        if (probePlan == null || probePlan.objective().isBlank() || probePlan.strategy() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(), probePlan);
+        saveCheckpointInternal(userId, sessionId, "probe_planned", updated);
         return updated;
     }
 
@@ -370,7 +389,7 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, session.getId(), session.getUserId(), session.getStage(),
                 domainMessages(session.getUserId(), session.getId()), "", "", null, null,
                 stateProfile(profileSnapshot),
-                snapshot.rules() == null ? Map.of() : snapshot.rules(), "", ClaimLedger.empty());
+                snapshot.rules() == null ? Map.of() : snapshot.rules(), "", ClaimLedger.empty(), null);
     }
 
     private void validateStateIdentity(long userId, long sessionId, InterviewState state) {

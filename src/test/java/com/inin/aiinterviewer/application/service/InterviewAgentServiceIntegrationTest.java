@@ -122,9 +122,12 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.analysis().correctness()).isEqualTo(82);
                     assertThat(state.currentQuestion()).contains("最难的技术决策");
                     assertThat(state.claimLedger().claims()).singleElement();
+                    assertThat(state.probePlan().targetsClaim()).isFalse();
                 });
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
                 .singleElement().satisfies(claim -> assertThat(claim.content()).contains("订单系统"));
+        assertThat(chatService.lastStreamPrompt()).contains(
+                "结构化追问计划", "负责订单系统核心链路", "\"targetClaimId\":\"\"");
 
         chatService.enqueueChat("invalid-json");
         assertThatThrownBy(() -> agentService.answer(
@@ -152,7 +155,12 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.messages(user.id(), session.id()).getLast().content())
                 .isEqualTo("这是已生成的半个问题");
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
-                .get().satisfies(state -> assertThat(state.currentQuestion()).isEqualTo("这是已生成的半个问题"));
+                .get().satisfies(state -> {
+                    assertThat(state.currentQuestion()).isEqualTo("这是已生成的半个问题");
+                    assertThat(state.probePlan().targetsClaim()).isTrue();
+                });
+        assertThat(chatService.lastStreamPrompt()).contains("结构化追问计划", "targetClaimId")
+                .doesNotContain("\"targetClaimId\":\"\"");
     }
 
     @Test

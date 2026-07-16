@@ -2,6 +2,7 @@ package com.inin.aiinterviewer.agent.state;
 
 import com.inin.aiinterviewer.agent.model.AgentDecision;
 import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
+import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
@@ -27,6 +28,7 @@ public class InterviewGraphState extends AgentState {
     public static final String DOMAIN_PACK_CONTEXT = "domainPackContext";
     public static final String CLAIM_LEDGER_CONTEXT = "claimLedgerContext";
     public static final String CLAIM_EXTRACTION = "claimExtraction";
+    public static final String PROBE_PLAN = "probePlan";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -87,5 +89,10 @@ public class InterviewGraphState extends AgentState {
     public ClaimExtractionResult claimExtraction() {
         return this.<ClaimExtractionResult>value(CLAIM_EXTRACTION)
                 .orElseGet(() -> new ClaimExtractionResult(List.of()));
+    }
+
+    public ProbePlan probePlan() {
+        return this.<ProbePlan>value(PROBE_PLAN)
+                .orElseGet(() -> ProbePlan.stageOpening("验证当前阶段的岗位核心能力"));
     }
 }

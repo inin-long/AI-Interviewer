@@ -107,7 +107,10 @@ public class InterviewAgentService {
                 return Flux.empty();
             }
 
-            InterviewTurnPlan turn = interviewGraph.plan(turnInput.withClaimExtraction(extraction));
+            turnInput = turnInput.withClaimContext(
+                    extraction, claimLedgerService.compactSummary(userId, sessionId));
+            InterviewTurnPlan turn = interviewGraph.plan(turnInput);
+            sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
@@ -127,7 +130,7 @@ public class InterviewAgentService {
     ) {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
-        return interviewGraph.questionGenerator().stream(prompt)
+        return interviewGraph.questionRenderer().stream(prompt)
                 .filter(chunk -> chunk != null && !chunk.isEmpty())
                 .switchIfEmpty(Flux.error(new AIException(
                         ErrorCode.AI_CALL_FAILED, new IllegalStateException("AI returned an empty stream"))))

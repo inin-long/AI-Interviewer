@@ -1,5 +1,6 @@
 package com.inin.aiinterviewer.agent.state;
 
+import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
@@ -23,9 +24,10 @@ public record InterviewState(
         CandidateProfile profile,
         Map<String, Object> rules,
         String summary,
-        ClaimLedger claimLedger
+        ClaimLedger claimLedger,
+        ProbePlan probePlan
 ) {
-    public static final String CURRENT_VERSION = "2.0";
+    public static final String CURRENT_VERSION = "2.1";
 
     public InterviewState(
             String stateVersion,
@@ -42,7 +44,26 @@ public record InterviewState(
             String summary
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
-                analysis, evaluation, profile, rules, summary, ClaimLedger.empty());
+                analysis, evaluation, profile, rules, summary, ClaimLedger.empty(), null);
+    }
+
+    public InterviewState(
+            String stateVersion,
+            long sessionId,
+            long userId,
+            InterviewStage stage,
+            List<Message> messages,
+            String currentQuestion,
+            String latestAnswer,
+            AnswerAnalysis analysis,
+            EvaluationResult evaluation,
+            CandidateProfile profile,
+            Map<String, Object> rules,
+            String summary,
+            ClaimLedger claimLedger
+    ) {
+        this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
+                analysis, evaluation, profile, rules, summary, claimLedger, null);
     }
 
     public InterviewState {

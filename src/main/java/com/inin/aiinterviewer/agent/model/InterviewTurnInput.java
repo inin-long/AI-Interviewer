@@ -76,4 +76,13 @@ public record InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, extraction);
     }
+
+    public InterviewTurnInput withClaimContext(
+            ClaimExtractionResult extraction,
+            String updatedClaimLedgerContext
+    ) {
+        return new InterviewTurnInput(
+                stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, updatedClaimLedgerContext, extraction);
+    }
 }

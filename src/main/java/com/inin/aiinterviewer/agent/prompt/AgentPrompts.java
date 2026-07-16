@@ -84,13 +84,16 @@ public final class AgentPrompts {
                 ? state.messages()
                 : state.messages().subList(state.messages().size() - 8, state.messages().size());
         String intent = state.data().containsKey(InterviewGraphState.ANALYSIS)
-                ? "结合上一轮分析继续追问或进入新阶段后提出首题。上一轮分析："
+                ? "严格按照结构化追问计划渲染下一题。上一轮分析："
                     + json(objectMapper, state.analysis())
                 : "这是本场面试的第一题。";
         return """
-                你是一名专业、克制的中文技术面试官。一次只提出一个清晰问题，不给答案，不输出 JSON。
+                你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
+                当追问计划含 targetClaimId 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
+                当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
                 %s
 
+                结构化追问计划：%s
                 当前阶段：%s
                 目标岗位：%s
                 岗位描述：%s
@@ -103,7 +106,8 @@ public final class AgentPrompts {
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
-                """.formatted(intent, state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
+                """.formatted(intent, json(objectMapper, state.probePlan()),
+                state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()),
                 state.candidateProfileContext(), state.domainPackContext(),
                 json(objectMapper, state.claimExtraction()), state.claimLedgerContext(), state.summary(),

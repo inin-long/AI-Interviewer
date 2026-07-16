@@ -50,4 +50,22 @@ class JacksonStateSerializerTest {
         assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
         assertThat(restored.claimLedger().claims()).isEmpty();
     }
+
+    @Test
+    void upgradesVersionTwoCheckpointBeforeProbePlanningWasAdded() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        String versionTwo = """
+                {"stateVersion":"2.0","sessionId":12,"userId":34,"stage":"INTRODUCTION",
+                "messages":[],"currentQuestion":"请介绍自己","latestAnswer":"回答",
+                "analysis":null,"evaluation":null,"profile":null,"rules":{},"summary":"",
+                "claimLedger":{"claims":[]}}
+                """;
+
+        InterviewState restored = serializer.deserialize(versionTwo);
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.claimLedger().claims()).isEmpty();
+        assertThat(restored.probePlan()).isNull();
+    }
 }

@@ -8,7 +8,8 @@ public record InterviewTurnPlan(
         AgentDecision decision,
         InterviewStage stage,
         String questionPrompt,
-        ClaimExtractionResult claimExtraction
+        ClaimExtractionResult claimExtraction,
+        ProbePlan probePlan
 ) {
     public InterviewTurnPlan(
             AnswerAnalysis analysis,
@@ -16,6 +17,7 @@ public record InterviewTurnPlan(
             InterviewStage stage,
             String questionPrompt
     ) {
-        this(analysis, decision, stage, questionPrompt, new ClaimExtractionResult(java.util.List.of()));
+        this(analysis, decision, stage, questionPrompt,
+                new ClaimExtractionResult(java.util.List.of()), null);
     }
 }

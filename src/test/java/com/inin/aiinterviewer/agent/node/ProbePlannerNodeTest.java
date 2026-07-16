@@ -1,0 +1,105 @@
+package com.inin.aiinterviewer.agent.node;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.inin.aiinterviewer.agent.model.AgentAction;
+import com.inin.aiinterviewer.agent.model.AgentDecision;
+import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
+import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.state.InterviewGraphState;
+import com.inin.aiinterviewer.domain.enums.ClaimStatus;
+import com.inin.aiinterviewer.domain.enums.ClaimType;
+import com.inin.aiinterviewer.domain.enums.InterviewStage;
+import com.inin.aiinterviewer.domain.enums.ProbeStrategy;
+import com.inin.aiinterviewer.domain.model.InterviewClaim;
+import org.junit.jupiter.api.Test;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+class ProbePlannerNodeTest {
+
+    private final ObjectMapper objectMapper = JsonMapper.builder().findAndAddModules().build();
+    private final ProbePlannerNode planner = new ProbePlannerNode(objectMapper);
+
+    @Test
+    void selectsTheHighestPriorityPendingClaimAndItsMissingEvidence() throws Exception {
+        InterviewClaim ownership = claim(
+                "claim-owner", ClaimType.OWNERSHIP, "负责订单核心链路", 0.7, 0.8, List.of("职责边界"));
+        InterviewClaim metric = claim(
+                "claim-metric", ClaimType.METRIC, "将 P99 延迟降低 40%", 1.0, 0.45,
+                List.of("监控数据", "统计区间"));
+        InterviewGraphState state = state(Map.of(
+                InterviewGraphState.CLAIM_LEDGER_CONTEXT,
+                objectMapper.writeValueAsString(List.of(ownership, metric)),
+                InterviewGraphState.DECISION,
+                new AgentDecision(AgentAction.FOLLOW_UP, null, "继续验证")));
+
+        ProbePlan plan = plan(state);
+
+        assertThat(plan.targetClaimId()).isEqualTo("claim-metric");
+        assertThat(plan.strategy()).isEqualTo(ProbeStrategy.VERIFY_DATA_SOURCE);
+        assertThat(plan.objective()).contains("P99 延迟降低 40%");
+        assertThat(plan.expectedEvidence()).containsExactly("监控数据", "统计区间");
+        assertThat(plan.reason()).contains("1.00", "0.45", "UNVERIFIED");
+    }
+
+    @Test
+    void createsAStageOpeningPlanAfterLegalTransition() throws Exception {
+        InterviewGraphState state = state(Map.of(
+                InterviewGraphState.STAGE, InterviewStage.RESUME_REVIEW,
+                InterviewGraphState.DECISION,
+                new AgentDecision(AgentAction.NEXT_STAGE, InterviewStage.RESUME_REVIEW, "进入下一阶段")));
+
+        ProbePlan plan = plan(state);
+
+        assertThat(plan.targetsClaim()).isFalse();
+        assertThat(plan.objective()).contains("RESUME_REVIEW");
+    }
+
+    @Test
+    void fallsBackToTheCurrentAtomicClaimWhenLedgerContextIsUnavailable() throws Exception {
+        ClaimExtractionResult extraction = new ClaimExtractionResult(List.of(
+                new ClaimExtractionResult.ClaimCandidate(
+                        ClaimType.DECISION, "选择 Outbox 而不是分布式事务", 0.95, 0.65,
+                        List.of("备选方案", "取舍依据"))));
+        InterviewGraphState state = state(Map.of(
+                InterviewGraphState.CLAIM_LEDGER_CONTEXT, "invalid-json",
+                InterviewGraphState.CLAIM_EXTRACTION, extraction,
+                InterviewGraphState.DECISION,
+                new AgentDecision(AgentAction.FOLLOW_UP, null, "继续验证")));
+
+        ProbePlan plan = plan(state);
+
+        assertThat(plan.targetClaimId()).isEqualTo("current-answer");
+        assertThat(plan.strategy()).isEqualTo(ProbeStrategy.ASK_TRADE_OFF);
+        assertThat(plan.objective()).contains("Outbox");
+    }
+
+    private ProbePlan plan(InterviewGraphState state) throws Exception {
+        return (ProbePlan) planner.apply(state).get(InterviewGraphState.PROBE_PLAN);
+    }
+
+    private InterviewGraphState state(Map<String, Object> overrides) {
+        java.util.HashMap<String, Object> values = new java.util.HashMap<>();
+        values.put(InterviewGraphState.STAGE, InterviewStage.PROJECT_EXPERIENCE);
+        values.putAll(overrides);
+        return new InterviewGraphState(values);
+    }
+
+    private InterviewClaim claim(
+            String id,
+            ClaimType type,
+            String content,
+            double importance,
+            double credibility,
+            List<String> missingEvidence
+    ) {
+        return new InterviewClaim(
+                id, 10, 20, type, content, importance, credibility, ClaimStatus.UNVERIFIED,
+                missingEvidence, List.of(), List.of(), LocalDateTime.now(), LocalDateTime.now());
+    }
+}
