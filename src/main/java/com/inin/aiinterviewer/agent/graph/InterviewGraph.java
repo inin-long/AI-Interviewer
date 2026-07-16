@@ -5,10 +5,12 @@ import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.model.LogicChainResult;
+import com.inin.aiinterviewer.agent.model.EvidenceCollectionResult;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
+import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -30,6 +32,7 @@ public class InterviewGraph {
     private static final String ANALYZE = "answer_analysis";
     private static final String EXTRACT_CLAIMS = "claim_extractor";
     private static final String EVALUATE_LOGIC = "logic_chain_evaluator";
+    private static final String COLLECT_EVIDENCE = "evidence_collector";
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
     private static final String PLAN_PROBE = "probe_planner";
@@ -40,10 +43,12 @@ public class InterviewGraph {
     private final ClaimExtractorNode claimExtractor;
     private final ProbePlannerNode probePlanner;
     private final LogicChainEvaluatorNode logicChainEvaluator;
+    private final EvidenceCollectorNode evidenceCollector;
 
     public InterviewGraph(
             ClaimExtractorNode claimExtractor,
             LogicChainEvaluatorNode logicChainEvaluator,
+            EvidenceCollectorNode evidenceCollector,
             AnswerAnalyzerNode answerAnalyzer,
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
@@ -54,10 +59,12 @@ public class InterviewGraph {
         this.claimExtractor = claimExtractor;
         this.probePlanner = probePlanner;
         this.logicChainEvaluator = logicChainEvaluator;
+        this.evidenceCollector = evidenceCollector;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
                     .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
                     .addNode(EVALUATE_LOGIC, AsyncNodeAction.node_async(logicChainEvaluator))
+                    .addNode(COLLECT_EVIDENCE, AsyncNodeAction.node_async(evidenceCollector))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
@@ -65,7 +72,8 @@ public class InterviewGraph {
                     .addNode(RENDER_QUESTION, AsyncNodeAction.node_async(questionRenderer))
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
                     .addEdge(EXTRACT_CLAIMS, EVALUATE_LOGIC)
-                    .addEdge(EVALUATE_LOGIC, ANALYZE)
+                    .addEdge(EVALUATE_LOGIC, COLLECT_EVIDENCE)
+                    .addEdge(COLLECT_EVIDENCE, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
                             AsyncEdgeAction.edge_async(state -> state.decision().action() == AgentAction.NEXT_STAGE
@@ -85,7 +93,8 @@ public class InterviewGraph {
                 .orElseThrow(() -> new IllegalStateException("Interview graph returned no state"));
         return new InterviewTurnPlan(
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
-                state.claimExtraction(), state.logicChainResult(), state.probePlan());
+                state.claimExtraction(), state.logicChainResult(), state.evidenceCollectionResult(),
+                state.probePlan());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -124,6 +133,18 @@ public class InterviewGraph {
         }
     }
 
+    public EvidenceCollectionResult collectEvidence(InterviewTurnInput input) {
+        try {
+            InterviewGraphState state = new InterviewGraphState(input(input));
+            Object result = evidenceCollector.apply(state)
+                    .get(InterviewGraphState.EVIDENCE_COLLECTION_RESULT);
+            return result instanceof EvidenceCollectionResult evidence
+                    ? evidence : EvidenceCollectionResult.degraded("evidence_collector_returned_no_result");
+        } catch (Exception exception) {
+            return EvidenceCollectionResult.degraded("evidence_collection_failed");
+        }
+    }
+
     public QuestionRendererNode questionRenderer() {
         return questionRenderer;
     }
@@ -141,11 +162,15 @@ public class InterviewGraph {
         values.put(InterviewGraphState.CANDIDATE_PROFILE_CONTEXT, input.candidateProfileContext());
         values.put(InterviewGraphState.DOMAIN_PACK_CONTEXT, input.domainPackContext());
         values.put(InterviewGraphState.CLAIM_LEDGER_CONTEXT, input.claimLedgerContext());
+        values.put(InterviewGraphState.EVIDENCE_LEDGER_CONTEXT, input.evidenceLedgerContext());
         if (input.claimExtraction() != null) {
             values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
         }
         if (input.logicChainResult() != null) {
             values.put(InterviewGraphState.LOGIC_CHAIN_RESULT, input.logicChainResult());
+        }
+        if (input.evidenceCollectionResult() != null) {
+            values.put(InterviewGraphState.EVIDENCE_COLLECTION_RESULT, input.evidenceCollectionResult());
         }
         return values;
     }

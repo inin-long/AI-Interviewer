@@ -482,6 +482,13 @@ class CompleteBusinessFlowE2ETest {
                                 "severity":0.72,"relatedClaimIds":[]}]}
                                 """;
                     }
+                    if (prompt.contains("逐轮面试证据收集器")) {
+                        return """
+                                {"evidence":[{"competencyCode":"SYSTEM_DESIGN","signal":"POSITIVE",
+                                "strength":0.9,"confidence":0.84,"reason":"能够比较方案并说明 Outbox 的一致性路径",
+                                "relatedClaimIds":[]}]}
+                                """;
+                    }
                     if (prompt.contains("技术面试评分器")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,

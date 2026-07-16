@@ -213,6 +213,13 @@ class KnowledgeDocumentServiceIntegrationTest {
                         "description":"未说明布隆过滤器失效时的处理","severity":0.7,"relatedClaimIds":[]}]}
                         """;
             }
+            if (prompt.contains("逐轮面试证据收集器")) {
+                return """
+                        {"evidence":[{"competencyCode":"CACHE_DESIGN","signal":"POSITIVE",
+                        "strength":0.82,"confidence":0.76,"reason":"能够提出缓存穿透的组合治理方案",
+                        "relatedClaimIds":[]}]}
+                        """;
+            }
             return chats.remove();
         }
 

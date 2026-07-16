@@ -19,19 +19,17 @@ MVP 业务主流程已经贯通：本地账户 → 简历解析 → 候选人画
 - [x] ClaimExtractorNode、InterviewClaim 与 ClaimLedger：每轮回答先提取原子主张，严格校验 JSON Schema，失败自动修复一次后安全降级；主张按用户/会话持久化并写入版本化 Checkpoint。
 - [x] ProbePlannerNode 与 QuestionRendererNode：先按主张重要度、可信度与证据缺口生成结构化追问目标和策略，再由独立 Renderer 渲染单个自然语言问题；阶段首题与主张追问分流，计划写入 V2.1 Checkpoint。
 
-### 后续阶段
-
 ### Phase S1-2：逻辑链与证据评分
 
 - [x] LogicChainEvaluatorNode 与 LogicGap：仅分析重要回答，拆解前提、诊断、方案、决策、行动、结果与验证；结构化输出修复失败时安全降级，严重逻辑缺口可直接成为下一轮追问目标。
-- [ ] EvidenceCollectorNode、EvaluationEvidence、EvidenceLedger 与评分置信度
+- [x] EvidenceCollectorNode、EvaluationEvidence、EvidenceLedger 与评分置信度：每轮从回答、主张和逻辑链生成带 `messageId`/`claimId` 的能力证据，严格区分信号强度与置信度；无充分证据使用 `INSUFFICIENT`，失败修复一次后降级且不阻断面试；报告按证据账本评分并展示可追溯来源。
 
 - [ ] Phase S1-3：跨轮一致性验证
 - [ ] Phase S1-4：压力控制与动态场景
 - [ ] Phase S1-5：Persona 与问题质量审查
 - [ ] Phase S1-6：增强报告、分支复盘与训练闭环
 
-最近一次 S1 验证（2026-07-16）：S1-1 全部完成，S1-2 逻辑链已完成；DomainPack、Claim Ledger、结构化追问，以及重要回答逻辑拆解、LogicGap 校验/修复/降级、严重缺口优先追问、Checkpoint V1/V2.0/V2.1→V2.2 升级和本地完整 TestFX 业务流程测试通过；数据库迁移基线为 V16。
+最近一次 S1 验证（2026-07-16）：S1-1 与 S1-2 全部完成；DomainPack、Claim/Evidence Ledger、结构化追问、重要回答逻辑拆解、逐轮能力证据、证据不足语义、评分置信度、报告证据来源、用户隔离、结构化输出修复/降级、Checkpoint V1/V2.0/V2.1/V2.2→V2.3 升级和本地完整 TestFX 业务流程测试通过；数据库迁移基线为 V17。
 
 ## 主流程状态
 
@@ -105,7 +103,7 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 
 最近一次真实 Provider 验证（2026-07-15）：定位到 Spring AI OpenAI 适配器默认 3 次内部重试与后台任务 3 次重试叠加，旧版 60 秒超时会将一次画像操作放大为最多 12 次 HTTP 尝试；同时 `deepseek-ai/DeepSeek-V4-Pro` 默认思考模式在完整简历画像请求中超过 5 分钟。修复后 SDK 内部重试关闭，SiliconFlow DeepSeek V4 默认关闭思考，完整全栈简历专项测试通过；测试用例耗时 45.7 秒（Maven 总耗时约 65 秒），画像由单次 Provider 请求成功生成并落库。
 
-最近一次稳定覆盖率基线（2026-07-16）：使用 `D:\Libs\Java\jdk-21.0.2` 执行 `mvnw clean verify` 通过；Surefire 89 项（87 通过、2 个真实测试跳过），Failsafe 2 项（本地 TestFX 通过、真实 TestFX 跳过）。总体行覆盖率 79.2%、分支覆盖率 53.4%，均高于 70%/45% 门槛。真实 Provider 测试不计入稳定覆盖率基线。
+最近一次稳定覆盖率基线（2026-07-16）：使用 `D:\Libs\Java\jdk-21.0.2` 执行 `mvnw clean verify` 通过；Surefire 93 项（91 通过、2 个真实测试跳过），Failsafe 2 项（本地 TestFX 通过、真实 TestFX 跳过）。总体行覆盖率 79.8%、分支覆盖率 53.9%，均高于 70%/45% 门槛。真实 Provider 测试不计入稳定覆盖率基线。
 
 
 ## 自测问题记录

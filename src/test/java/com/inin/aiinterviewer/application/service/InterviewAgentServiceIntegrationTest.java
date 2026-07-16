@@ -69,6 +69,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private ResumeService resumeService;
     @Autowired private CandidateProfileService profileService;
     @Autowired private ClaimLedgerService claimLedgerService;
+    @Autowired private EvidenceLedgerService evidenceLedgerService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -122,11 +123,15 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.analysis().correctness()).isEqualTo(82);
                     assertThat(state.currentQuestion()).contains("最难的技术决策");
                     assertThat(state.claimLedger().claims()).singleElement();
+                    assertThat(state.evidenceLedger().evidence()).singleElement();
                     assertThat(state.logicChainResult().gaps()).singleElement();
                     assertThat(state.probePlan().targetsClaim()).isFalse();
                 });
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
                 .singleElement().satisfies(claim -> assertThat(claim.content()).contains("订单系统"));
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence()).singleElement()
+                .satisfies(evidence -> assertThat(evidence.competencyCode())
+                        .isEqualTo("PROBLEM_SOLVING"));
         assertThat(chatService.lastStreamPrompt()).contains(
                 "结构化追问计划", "负责订单系统核心链路", "\"targetClaimId\":\"\"");
 
@@ -139,6 +144,7 @@ class InterviewAgentServiceIntegrationTest {
                 .extracting(message -> message.content())
                 .contains("这条回答必须先保存。周边再重试。");
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims()).hasSize(2);
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence()).hasSize(2);
         assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
                 .satisfies(state -> assertThat(state.logicChainResult().gaps()).singleElement());
 
@@ -203,10 +209,14 @@ class InterviewAgentServiceIntegrationTest {
                 .get().satisfies(report -> {
                     assertThat(report.overallScore()).isEqualTo(78);
                     assertThat(report.dimensions()).hasSize(6);
+                    assertThat(report.confidence()).containsKey("PROBLEM_SOLVING");
+                    assertThat(report.evidence()).singleElement();
                     assertThat(report.contentMarkdown()).contains(
-                            "技术基础", "综合评价", "问答摘要", "参考依据",
+                            "技术基础", "综合评价", "问答摘要", "证据与置信度", "证据明细", "参考依据",
                             "本次面试未使用知识库片段作为提问依据");
                 });
+        assertThat(chatService.lastChatPrompt()).contains(
+                "评分必须以证据账本为主要依据", "PROBLEM_SOLVING", "逐条证据");
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
                 .get().satisfies(state -> {
                     assertThat(state.stage()).isEqualTo(InterviewStage.COMPLETED);
@@ -378,6 +388,7 @@ class InterviewAgentServiceIntegrationTest {
         private final Queue<String> chats = new ArrayDeque<>();
         private final Queue<Flux<String>> streams = new ArrayDeque<>();
         private String lastStreamPrompt;
+        private String lastChatPrompt;
 
         synchronized void enqueueChat(String response) {
             chats.add(response);
@@ -389,6 +400,7 @@ class InterviewAgentServiceIntegrationTest {
 
         @Override
         public synchronized String chat(String prompt) {
+            lastChatPrompt = prompt;
             if (prompt.contains("候选人主张提取器")) {
                 return """
                         {"claims":[{"type":"OWNERSHIP","content":"负责订单系统核心链路",
@@ -404,6 +416,13 @@ class InterviewAgentServiceIntegrationTest {
                         "severity":0.85,"relatedClaimIds":[]}]}
                         """;
             }
+            if (prompt.contains("逐轮面试证据收集器")) {
+                return """
+                        {"evidence":[{"competencyCode":"PROBLEM_SOLVING","signal":"POSITIVE",
+                        "strength":0.8,"confidence":0.72,"reason":"回答给出了明确的技术决策",
+                        "relatedClaimIds":[]}]}
+                        """;
+            }
             return chats.remove();
         }
 
@@ -417,10 +436,15 @@ class InterviewAgentServiceIntegrationTest {
             return lastStreamPrompt;
         }
 
+        synchronized String lastChatPrompt() {
+            return lastChatPrompt;
+        }
+
         synchronized void clear() {
             chats.clear();
             streams.clear();
             lastStreamPrompt = null;
+            lastChatPrompt = null;
         }
     }
 }

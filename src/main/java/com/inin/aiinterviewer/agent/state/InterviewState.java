@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
 import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.EvaluationResult;
+import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.model.Message;
 
 import java.util.List;
@@ -26,10 +27,11 @@ public record InterviewState(
         Map<String, Object> rules,
         String summary,
         ClaimLedger claimLedger,
+        EvidenceLedger evidenceLedger,
         LogicChainResult logicChainResult,
         ProbePlan probePlan
 ) {
-    public static final String CURRENT_VERSION = "2.2";
+    public static final String CURRENT_VERSION = "2.3";
 
     public InterviewState(
             String stateVersion,
@@ -47,7 +49,7 @@ public record InterviewState(
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
                 analysis, evaluation, profile, rules, summary, ClaimLedger.empty(),
-                LogicChainResult.skippedResult(), null);
+                EvidenceLedger.empty(), LogicChainResult.skippedResult(), null);
     }
 
     public InterviewState(
@@ -67,7 +69,7 @@ public record InterviewState(
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
                 analysis, evaluation, profile, rules, summary, claimLedger,
-                LogicChainResult.skippedResult(), null);
+                EvidenceLedger.empty(), LogicChainResult.skippedResult(), null);
     }
 
     public InterviewState(
@@ -88,7 +90,7 @@ public record InterviewState(
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
                 analysis, evaluation, profile, rules, summary, claimLedger,
-                LogicChainResult.skippedResult(), probePlan);
+                EvidenceLedger.empty(), LogicChainResult.skippedResult(), probePlan);
     }
 
     public InterviewState {
@@ -97,6 +99,7 @@ public record InterviewState(
         rules = rules == null ? Map.of() : Map.copyOf(rules);
         summary = summary == null ? "" : summary;
         claimLedger = claimLedger == null ? ClaimLedger.empty() : claimLedger;
+        evidenceLedger = evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger;
         logicChainResult = logicChainResult == null ? LogicChainResult.skippedResult() : logicChainResult;
     }
 }

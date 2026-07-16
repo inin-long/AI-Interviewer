@@ -87,6 +87,44 @@ public final class AgentPrompts {
                 """.formatted(state.answer(), response);
     }
 
+    public static String evidenceCollection(InterviewGraphState state) {
+        return """
+                你是逐轮面试证据收集器。只基于候选人本轮回答、已提取主张和逻辑链，生成能力证据。
+                证据不足必须标为 INSUFFICIENT，不能直接标为 NEGATIVE；strength 表示证据方向强度，
+                confidence 表示该证据判断的可靠程度，两者必须分开。每轮至少返回一条证据。
+                competencyCode 优先使用已冻结领域包中的能力 code；若无法匹配，使用 COMMUNICATION 或 PROBLEM_SOLVING。
+                必须只返回严格 JSON，不要 Markdown 或解释：
+                {"evidence":[{"competencyCode":"大写下划线代码","signal":"POSITIVE|NEGATIVE|NEUTRAL|INSUFFICIENT",
+                "strength":0.0到1.0,"confidence":0.0到1.0,"reason":"本轮回答中的具体依据",
+                "relatedClaimIds":["账本中真实存在的主张ID"]}]}
+                最多 12 条。relatedClaimIds 不得编造；无法关联时返回空数组。
+
+                当前阶段：%s
+                当前问题：%s
+                候选人回答：%s
+                本轮主张：%s
+                逻辑链：%s
+                已冻结领域包：%s
+                当前证据账本摘要：%s
+                """.formatted(state.stage(), state.currentQuestion(), state.answer(),
+                state.claimExtraction(), state.logicChainResult(), state.domainPackContext(),
+                state.evidenceLedgerContext());
+    }
+
+    public static String repairEvidenceCollection(InterviewGraphState state, String invalidResponse) {
+        String response = invalidResponse == null ? "" : invalidResponse;
+        if (response.length() > 8_000) response = response.substring(0, 8_000);
+        return """
+                你是 JSON 格式修复器。根据候选人回答重新生成至少一条能力证据，只输出严格 JSON：
+                {"evidence":[{"competencyCode":"UPPER_SNAKE_CASE","signal":"POSITIVE|NEGATIVE|NEUTRAL|INSUFFICIENT",
+                "strength":0.0到1.0,"confidence":0.0到1.0,"reason":"非空具体依据","relatedClaimIds":[]}]}
+                没有充分证据时使用 INSUFFICIENT，禁止用 NEGATIVE 代替证据不足。
+
+                候选人回答：%s
+                无效结果：%s
+                """.formatted(state.answer(), response);
+    }
+
     public static String analysis(InterviewGraphState state) {
         return """
                 你是严谨的技术面试回答分析器。只基于问题和回答评分，不补充候选人没有表达的事实。

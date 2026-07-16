@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.agent.state;
 import com.inin.aiinterviewer.agent.model.AgentDecision;
 import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.agent.model.LogicChainResult;
+import com.inin.aiinterviewer.agent.model.EvidenceCollectionResult;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
@@ -31,6 +32,8 @@ public class InterviewGraphState extends AgentState {
     public static final String CLAIM_EXTRACTION = "claimExtraction";
     public static final String PROBE_PLAN = "probePlan";
     public static final String LOGIC_CHAIN_RESULT = "logicChainResult";
+    public static final String EVIDENCE_LEDGER_CONTEXT = "evidenceLedgerContext";
+    public static final String EVIDENCE_COLLECTION_RESULT = "evidenceCollectionResult";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -100,5 +103,14 @@ public class InterviewGraphState extends AgentState {
 
     public LogicChainResult logicChainResult() {
         return this.<LogicChainResult>value(LOGIC_CHAIN_RESULT).orElseGet(LogicChainResult::skippedResult);
+    }
+
+    public String evidenceLedgerContext() {
+        return this.<String>value(EVIDENCE_LEDGER_CONTEXT).orElse("");
+    }
+
+    public EvidenceCollectionResult evidenceCollectionResult() {
+        return this.<EvidenceCollectionResult>value(EVIDENCE_COLLECTION_RESULT)
+                .orElseGet(() -> EvidenceCollectionResult.degraded("not_collected"));
     }
 }

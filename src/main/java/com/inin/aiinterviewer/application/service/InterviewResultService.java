@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportStateDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
+import com.inin.aiinterviewer.application.dto.EvaluationEvidenceDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -37,19 +38,22 @@ public class InterviewResultService {
     private final AgentCheckpointMapper checkpointMapper;
     private final StateSerializer stateSerializer;
     private final ObjectMapper objectMapper;
+    private final EvidenceLedgerService evidenceLedgerService;
 
     public InterviewResultService(
             InterviewResultMapper resultMapper,
             InterviewSessionMapper sessionMapper,
             AgentCheckpointMapper checkpointMapper,
             StateSerializer stateSerializer,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            EvidenceLedgerService evidenceLedgerService
     ) {
         this.resultMapper = resultMapper;
         this.sessionMapper = sessionMapper;
         this.checkpointMapper = checkpointMapper;
         this.stateSerializer = stateSerializer;
         this.objectMapper = objectMapper;
+        this.evidenceLedgerService = evidenceLedgerService;
     }
 
     @Transactional
@@ -130,8 +134,8 @@ public class InterviewResultService {
                 previous.stateVersion(), session.id(), userId, InterviewStage.COMPLETED,
                 messages.stream().map(this::toMessage).toList(), previous.currentQuestion(),
                 previous.latestAnswer(), previous.analysis(), result, previous.profile(),
-                previous.rules(), summary, previous.claimLedger(), previous.logicChainResult(),
-                previous.probePlan());
+                previous.rules(), summary, previous.claimLedger(), previous.evidenceLedger(),
+                previous.logicChainResult(), previous.probePlan());
         AgentCheckpointEntity checkpoint = new AgentCheckpointEntity();
         checkpoint.setUserId(userId);
         checkpoint.setSessionId(session.id());
@@ -167,8 +171,13 @@ public class InterviewResultService {
     }
 
     private InterviewReportDto toDto(InterviewReportEntity report, EvaluationPayload payload) {
+        var ledger = evidenceLedgerService.ledger(report.getUserId(), report.getInterviewId());
+        Map<String, Double> confidence = ledger.summaries().entrySet().stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                        Map.Entry::getKey, entry -> entry.getValue().confidence()));
         return new InterviewReportDto(report.getId(), report.getInterviewId(), report.getTitle(),
-                payload.overallScore(), dimensions(payload), payload.summary(), report.getContentMarkdown());
+                payload.overallScore(), dimensions(payload), payload.summary(), report.getContentMarkdown(),
+                confidence, ledger.evidence().stream().map(EvaluationEvidenceDto::from).toList());
     }
 
     private Map<String, Integer> dimensions(EvaluationPayload payload) {

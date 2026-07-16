@@ -8,6 +8,7 @@ import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
+import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -47,6 +48,7 @@ class InterviewGraphTest {
         graph = new InterviewGraph(
                 new ClaimExtractorNode(chatService, parser),
                 new LogicChainEvaluatorNode(chatService, parser),
+                new EvidenceCollectorNode(chatService, parser),
                 new AnswerAnalyzerNode(chatService, parser),
                 new FollowUpDecisionNode(chatService, parser, stageManager, objectMapper),
                 new StageTransitionNode(stageManager),
@@ -150,6 +152,13 @@ class InterviewGraphTest {
                         "outcome":"保持一致性","validation":"","reflection":"",
                         "gaps":[{"type":"MISSING_EXECUTION_PATH","description":"未说明具体事务边界",
                         "severity":0.7,"relatedClaimIds":[]}]}
+                        """;
+            }
+            if (prompt.contains("逐轮面试证据收集器")) {
+                return """
+                        {"evidence":[{"competencyCode":"PROBLEM_SOLVING","signal":"POSITIVE",
+                        "strength":0.75,"confidence":0.7,"reason":"能够说明事务的一致性价值",
+                        "relatedClaimIds":[]}]}
                         """;
             }
             return responses.remove();

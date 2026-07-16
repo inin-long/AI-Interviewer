@@ -13,6 +13,9 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.enums.EvidenceSignal;
+import com.inin.aiinterviewer.domain.model.EvaluationEvidence;
+import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,7 @@ public class InterviewCompletionService {
     private final ChatService chatService;
     private final StructuredAiResponseParser parser;
     private final ObjectMapper objectMapper;
+    private final EvidenceLedgerService evidenceLedgerService;
     private final Set<String> generationsInProgress = ConcurrentHashMap.newKeySet();
 
     public InterviewCompletionService(
@@ -36,13 +40,15 @@ public class InterviewCompletionService {
             InterviewResultService resultService,
             ChatService chatService,
             StructuredAiResponseParser parser,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            EvidenceLedgerService evidenceLedgerService
     ) {
         this.sessionService = sessionService;
         this.resultService = resultService;
         this.chatService = chatService;
         this.parser = parser;
         this.objectMapper = objectMapper;
+        this.evidenceLedgerService = evidenceLedgerService;
     }
 
     public InterviewReportDto complete(long userId, long sessionId) {
@@ -77,14 +83,17 @@ public class InterviewCompletionService {
         }
         var previous = sessionService.loadLatestState(userId, sessionId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CHECKPOINT_NOT_FOUND));
+        EvidenceLedger evidenceLedger = evidenceLedgerService.ledger(userId, sessionId);
         String summary = compactSummary(messages);
         resultService.beginGeneration(userId, session);
         try {
             EvaluationPayload payload = parser.parse(
-                    chatService.chat(evaluationPrompt(session.jobTitle(), messages, summary)),
+                    chatService.chat(evaluationPrompt(
+                            session.jobTitle(), messages, summary, evidenceLedger)),
                     EvaluationPayload.class);
             validate(payload);
-            String markdown = markdown(session.title(), payload, summary, messages);
+            String markdown = markdown(
+                    session.title(), payload, summary, messages, evidenceLedger);
             return resultService.complete(userId, session, messages, previous, payload, summary, markdown);
         } catch (RuntimeException exception) {
             try {
@@ -115,9 +124,17 @@ public class InterviewCompletionService {
         return "报告生成失败，请重试";
     }
 
-    private String evaluationPrompt(String jobTitle, List<InterviewMessageDto> messages, String summary) {
+    private String evaluationPrompt(
+            String jobTitle,
+            List<InterviewMessageDto> messages,
+            String summary,
+            EvidenceLedger evidenceLedger
+    ) {
         return """
-                你是技术面试评分器。只依据给定问答评分，不推测未出现的能力。
+                你是技术面试评分器。评分必须以证据账本为主要依据，并用完整问答校验上下文。
+                不得把 INSUFFICIENT（证据不足）当作 NEGATIVE（负面能力证据）。
+                低置信度能力只能给出保守结论；没有证据的能力不得推测。
+                strength 表示信号强度，confidence 表示证据可靠程度，两者不得混用。
                 必须只返回 JSON，不要 Markdown：
                 {"overallScore":0到100整数,"technicalScore":0到100整数,
                 "problemSolvingScore":0到100整数,"projectScore":0到100整数,
@@ -126,8 +143,11 @@ public class InterviewCompletionService {
 
                 目标岗位：%s
                 对话摘要：%s
+                能力证据汇总：%s
+                逐条证据：%s
                 完整问答：%s
-                """.formatted(jobTitle, summary, json(messages.stream()
+                """.formatted(jobTitle, summary, json(evidenceLedger.summaries()),
+                json(evidenceLedger.evidence()), json(messages.stream()
                         .map(message -> java.util.Map.of(
                                 "role", message.role().name(),
                                 "content", message.content()))
@@ -166,7 +186,8 @@ public class InterviewCompletionService {
             String title,
             EvaluationPayload value,
             String contextSummary,
-            List<InterviewMessageDto> messages
+            List<InterviewMessageDto> messages,
+            EvidenceLedger evidenceLedger
     ) {
         return """
                 # %s · 面试报告
@@ -190,13 +211,64 @@ public class InterviewCompletionService {
 
                 %s
 
+                ## 证据与置信度
+
+                %s
+
                 ## 参考依据
 
                 %s
                 """.formatted(title, value.overallScore(), value.technicalScore(),
                 value.problemSolvingScore(), value.projectScore(), value.systemDesignScore(),
                 value.communicationScore(), value.comprehensiveScore(), value.summary(), contextSummary,
-                citationMarkdown(messages));
+                evidenceMarkdown(evidenceLedger), citationMarkdown(messages));
+    }
+
+    String evidenceMarkdown(EvidenceLedger ledger) {
+        if (ledger.evidence().isEmpty()) {
+            return "本次面试没有形成可用的能力证据，评分置信度不足。";
+        }
+        StringBuilder markdown = new StringBuilder("| 能力 | 证据数 | 正向强度 | 负向强度 | 置信度 |\n"
+                + "| --- | ---: | ---: | ---: | ---: |\n");
+        ledger.summaries().values().stream()
+                .sorted(java.util.Comparator.comparing(summary -> summary.competencyCode()))
+                .forEach(summary -> markdown.append("| ")
+                        .append(inline(summary.competencyCode(), 64)).append(" | ")
+                        .append(summary.evidenceCount()).append(" | ")
+                        .append(format(summary.positiveStrength())).append(" | ")
+                        .append(format(summary.negativeStrength())).append(" | ")
+                        .append(format(summary.confidence())).append(" |\n"));
+        markdown.append("\n### 证据明细\n\n");
+        for (EvaluationEvidence evidence : ledger.evidence()) {
+            markdown.append("- `").append(evidence.id()).append("` · **")
+                    .append(inline(evidence.competencyCode(), 64)).append("** · ")
+                    .append(signalLabel(evidence.signal()))
+                    .append(" · 强度 ").append(format(evidence.strength()))
+                    .append(" · 置信度 ").append(format(evidence.confidence()))
+                    .append(" · 消息 `").append(evidence.messageId()).append("`\n\n")
+                    .append("  ").append(inline(evidence.reason(), 320)).append("\n\n");
+            if (!evidence.relatedClaimIds().isEmpty()) {
+                markdown.append("  关联主张：")
+                        .append(evidence.relatedClaimIds().stream()
+                                .map(id -> "`" + id + "`")
+                                .collect(java.util.stream.Collectors.joining("、")))
+                        .append("\n\n");
+            }
+        }
+        return markdown.toString().stripTrailing();
+    }
+
+    private String signalLabel(EvidenceSignal signal) {
+        return switch (signal) {
+            case POSITIVE -> "正向证据";
+            case NEGATIVE -> "负向证据";
+            case NEUTRAL -> "中性证据";
+            case INSUFFICIENT -> "证据不足";
+        };
+    }
+
+    private String format(double value) {
+        return String.format(java.util.Locale.ROOT, "%.2f", value);
     }
 
     String citationMarkdown(List<InterviewMessageDto> messages) {

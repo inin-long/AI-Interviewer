@@ -38,6 +38,7 @@ public class InterviewAgentService {
     private final InterviewGraph interviewGraph;
     private final ReportGenerationTaskService reportTaskService;
     private final ClaimLedgerService claimLedgerService;
+    private final EvidenceLedgerService evidenceLedgerService;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -46,6 +47,7 @@ public class InterviewAgentService {
             InterviewGraph interviewGraph,
             ReportGenerationTaskService reportTaskService,
             ClaimLedgerService claimLedgerService,
+            EvidenceLedgerService evidenceLedgerService,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -53,6 +55,7 @@ public class InterviewAgentService {
         this.interviewGraph = interviewGraph;
         this.reportTaskService = reportTaskService;
         this.claimLedgerService = claimLedgerService;
+        this.evidenceLedgerService = evidenceLedgerService;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -67,7 +70,8 @@ public class InterviewAgentService {
             InterviewTurnInput input = new InterviewTurnInput(
                     session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
                     retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
-                    claimLedgerService.compactSummary(userId, sessionId));
+                    claimLedgerService.compactSummary(userId, sessionId),
+                    evidenceLedgerService.compactSummary(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(userId, sessionId, session.stage(), prompt, null, List.of());
         }).subscribeOn(Schedulers.boundedElastic());
@@ -97,7 +101,8 @@ public class InterviewAgentService {
                     session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
                     session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
                     retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
-                    claimLedgerService.compactSummary(userId, sessionId));
+                    claimLedgerService.compactSummary(userId, sessionId),
+                    evidenceLedgerService.compactSummary(userId, sessionId));
 
             var extraction = interviewGraph.extractClaims(turnInput);
             var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
@@ -107,6 +112,11 @@ public class InterviewAgentService {
             var logicChain = interviewGraph.evaluateLogic(turnInput);
             sessionService.updateLogicChain(userId, sessionId, logicChain);
             turnInput = turnInput.withLogicChainResult(logicChain);
+            var evidenceResult = interviewGraph.collectEvidence(turnInput);
+            var evidenceLedger = evidenceLedgerService.recordLatestAnswer(userId, sessionId, evidenceResult);
+            sessionService.updateEvidenceLedger(userId, sessionId, evidenceLedger);
+            turnInput = turnInput.withEvidenceContext(
+                    evidenceResult, evidenceLedgerService.compactSummary(userId, sessionId));
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
