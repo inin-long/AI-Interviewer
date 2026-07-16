@@ -1,5 +1,6 @@
 package com.inin.aiinterviewer.ui;
 
+import com.inin.aiinterviewer.application.dto.BackgroundTaskDto;
 import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.application.service.CandidateProfileService;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
@@ -15,11 +16,13 @@ import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
 import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import com.inin.aiinterviewer.infrastructure.ai.EmbeddingService;
+import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
 import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
+import javafx.css.PseudoClass;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
@@ -129,6 +132,7 @@ class CompleteBusinessFlowE2ETest {
         createInterviewPlan(robot, userId);
         long sessionId = conductInterview(robot, userId);
         verifyReport(robot, userId, sessionId);
+        deleteCompletedTask(robot, userId);
     }
 
     private void registerAndLogin(FxRobot robot) throws Exception {
@@ -202,7 +206,11 @@ class CompleteBusinessFlowE2ETest {
         assertThat(textInput(robot, "#skillsField").getText()).contains("Java 21", "Vue 3", "Redis");
         fire(robot, "#confirmButton");
         waitUntil(() -> profileService.find(userId, resumeId).orElseThrow().confirmed());
-        assertThat(label(robot, "#profileStatusLabel").getText()).isEqualTo("已确认");
+        waitForNode(robot, "#resumeTable");
+        assertThat(table(robot, "#resumeTable").getItems()).hasSize(1);
+        PseudoClass selected = PseudoClass.getPseudoClass("selected");
+        assertThat(button(robot, "#resumesNavButton").getPseudoClassStates()).contains(selected);
+        assertThat(button(robot, "#profilesNavButton").getPseudoClassStates()).doesNotContain(selected);
     }
 
     private void uploadIndexAndSearchKnowledge(FxRobot robot, long userId) throws Exception {
@@ -269,6 +277,9 @@ class CompleteBusinessFlowE2ETest {
         robot.interact(() -> plans.getSelectionModel().selectFirst());
         fire(robot, "#startButton");
         waitForNode(robot, "#workspaceRoot");
+        Stage interviewStage = (Stage) robot.lookup("#workspaceRoot").query().getScene().getWindow();
+        waitUntil(interviewStage::isMaximized);
+        assertThat(textInput(robot, "#answerArea").getMinHeight()).isGreaterThanOrEqualTo(132);
 
         waitUntil(() -> !sessionService.list(userId).isEmpty());
         long sessionId = sessionService.list(userId).getFirst().id();
@@ -285,6 +296,8 @@ class CompleteBusinessFlowE2ETest {
             fire(robot, "#submitButton");
         }
         waitUntil(() -> sessionService.messages(userId, sessionId).size() == QUESTIONS.size() * 2);
+        InterviewTranscriptView transcript = robot.lookup("#transcriptView").queryAs(InterviewTranscriptView.class);
+        waitUntil(() -> transcript.getVvalue() >= 0.999);
         waitUntil(() -> backgroundTaskService.list(userId).stream().anyMatch(task ->
                 task.getTaskType() == BackgroundTaskType.REPORT_GENERATE
                         && task.getStatus() == BackgroundTaskStatus.PENDING));
@@ -318,6 +331,29 @@ class CompleteBusinessFlowE2ETest {
         var report = resultService.find(userId, sessionId).orElseThrow();
         assertThat(report.overallScore()).isEqualTo(88);
         assertThat(report.dimensions()).containsEntry("technical", 91).containsEntry("systemDesign", 90);
+    }
+
+    private void deleteCompletedTask(FxRobot robot, long userId) throws Exception {
+        int taskCount = backgroundTaskService.list(userId).size();
+        fire(robot, "#tasksNavButton");
+        waitForNode(robot, "#taskTable");
+        @SuppressWarnings("unchecked")
+        TableView<BackgroundTaskDto> tasks = (TableView<BackgroundTaskDto>) (TableView<?>) table(robot, "#taskTable");
+        waitUntil(() -> tasks.getItems().size() == taskCount);
+        BackgroundTaskDto terminalTask = tasks.getItems().stream()
+                .filter(task -> task.status() == BackgroundTaskStatus.SUCCESS
+                        || task.status() == BackgroundTaskStatus.FAILED)
+                .findFirst()
+                .orElseThrow();
+        robot.interact(() -> tasks.getSelectionModel().select(terminalTask));
+        waitUntil(() -> !button(robot, "#deleteButton").isDisabled());
+        WaitForAsyncUtils.asyncFx(() -> button(robot, "#deleteButton").fire());
+
+        DialogPane confirmation = waitForDialog(robot);
+        Button ok = (Button) confirmation.lookupButton(ButtonType.OK);
+        robot.interact(ok::fire);
+        waitUntil(() -> backgroundTaskService.list(userId).size() == taskCount - 1);
+        assertThat(tasks.getItems()).hasSize(taskCount - 1);
     }
 
     private static Path resumeFixture() {

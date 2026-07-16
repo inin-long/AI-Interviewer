@@ -23,6 +23,8 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
             <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+            <Button fx:id="deleteButton" text="删除任务" onAction="#delete"
+                    styleClass="danger-button" disable="true"/>
             <Button fx:id="retryButton" text="重新排队" onAction="#retry" styleClass="primary-button" disable="true"/>
         </HBox>
     </top>

@@ -49,6 +49,7 @@ public class InterviewTranscriptView extends ScrollPane {
     public void setMessages(List<InterviewMessageDto> messages) {
         this.messages = messages == null ? List.of() : List.copyOf(messages);
         render();
+        scrollToBottom();
     }
 
     public List<InterviewMessageDto> getMessages() {

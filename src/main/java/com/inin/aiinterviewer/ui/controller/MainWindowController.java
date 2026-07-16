@@ -84,7 +84,7 @@ public class MainWindowController {
     private void initialize() {
         usernameLabel.setText(sessionState.requireCurrentUser().nickname());
         aiStatusLabel.setText(llmProperties.isConfigured() ? "AI 配置已检测" : "AI 尚未配置");
-        contentNavigator.attach(contentHost, contentTitleLabel);
+        contentNavigator.attach(contentHost, contentTitleLabel, this::selectNavigation);
         mainRoot.sceneProperty().addListener((observable, previous, current) -> {
             if (current == null) unsubscribeFromNotifications();
             else subscribeToNotifications();
@@ -111,6 +111,9 @@ public class MainWindowController {
 
     private void showSection(Route route) {
         contentNavigator.showRoute(route);
+    }
+
+    private void selectNavigation(Route route) {
         dashboardNavButton.pseudoClassStateChanged(SELECTED, route == Route.DASHBOARD);
         plansNavButton.pseudoClassStateChanged(SELECTED, route == Route.PLAN);
         historyNavButton.pseudoClassStateChanged(SELECTED, route == Route.HISTORY);
@@ -156,7 +159,8 @@ public class MainWindowController {
         if (mainRoot.getScene() == null) return;
         refreshTaskIndicator();
         if (notification.outcome() == TaskNotificationCenter.Outcome.QUEUED
-                || notification.outcome() == TaskNotificationCenter.Outcome.RUNNING) return;
+                || notification.outcome() == TaskNotificationCenter.Outcome.RUNNING
+                || notification.outcome() == TaskNotificationCenter.Outcome.DELETED) return;
         notificationTaskId = notification.taskId();
         boolean failed = notification.outcome() == TaskNotificationCenter.Outcome.FAILED;
         activityReceipt.pseudoClassStateChanged(FAILED, failed);

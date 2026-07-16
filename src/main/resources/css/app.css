@@ -417,6 +417,11 @@
     -fx-background-color: -app-background;
 }
 
+.answer-input {
+    -fx-font-size: 15px;
+    -fx-padding: 8 10;
+}
+
 .transcript-area {
     -fx-font-size: 15px;
     -fx-line-spacing: 4px;

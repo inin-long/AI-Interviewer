@@ -14,6 +14,7 @@ import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -121,7 +122,7 @@ public class ResumeDetailController implements ContextAwareController<Long> {
         try {
             currentProfile = saveManualProfile();
             currentProfile = profileService.confirm(sessionState.requireCurrentUser().id(), resumeId);
-            populate(currentProfile);
+            contentNavigator.showRoute(Route.RESUME);
         } catch (RuntimeException exception) {
             viewManager.showError(exceptionHandler.toUserMessage(exception));
         }
