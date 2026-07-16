@@ -17,7 +17,8 @@ public record InterviewTurnInput(
         String candidateProfileContext,
         String domainPackContext,
         String claimLedgerContext,
-        ClaimExtractionResult claimExtraction
+        ClaimExtractionResult claimExtraction,
+        LogicChainResult logicChainResult
 ) {
     public InterviewTurnInput(
             InterviewStage stage,
@@ -29,7 +30,7 @@ public record InterviewTurnInput(
             String retrievedContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                "", "", "", null);
+                "", "", "", null, null);
     }
 
     public InterviewTurnInput(
@@ -43,7 +44,7 @@ public record InterviewTurnInput(
             String candidateProfileContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, "", "", null);
+                candidateProfileContext, "", "", null, null);
     }
 
     public InterviewTurnInput(
@@ -59,7 +60,7 @@ public record InterviewTurnInput(
             String claimLedgerContext
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, domainPackContext, claimLedgerContext, null);
+                candidateProfileContext, domainPackContext, claimLedgerContext, null, null);
     }
 
     public InterviewTurnInput {
@@ -74,7 +75,7 @@ public record InterviewTurnInput(
     public InterviewTurnInput withClaimExtraction(ClaimExtractionResult extraction) {
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, domainPackContext, claimLedgerContext, extraction);
+                candidateProfileContext, domainPackContext, claimLedgerContext, extraction, logicChainResult);
     }
 
     public InterviewTurnInput withClaimContext(
@@ -83,6 +84,13 @@ public record InterviewTurnInput(
     ) {
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
-                candidateProfileContext, domainPackContext, updatedClaimLedgerContext, extraction);
+                candidateProfileContext, domainPackContext, updatedClaimLedgerContext, extraction,
+                logicChainResult);
+    }
+
+    public InterviewTurnInput withLogicChainResult(LogicChainResult result) {
+        return new InterviewTurnInput(
+                stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, claimLedgerContext, claimExtraction, result);
     }
 }

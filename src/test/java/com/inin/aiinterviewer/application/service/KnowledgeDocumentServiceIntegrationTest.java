@@ -204,6 +204,15 @@ class KnowledgeDocumentServiceIntegrationTest {
                         "importance":0.9,"credibility":0.75,"missingEvidence":["边界条件"]}]}
                         """;
             }
+            if (prompt.contains("逻辑链评估器")) {
+                return """
+                        {"premises":["缓存穿透会增加回源"],"problemDiagnosis":"不存在的键重复访问数据库",
+                        "alternatives":["空值缓存","布隆过滤器"],"decision":"组合使用两种方案",
+                        "reasoning":"先过滤不存在的键","actions":[],"outcome":"降低回源",
+                        "validation":"","reflection":"","gaps":[{"type":"MISSING_FAILURE_HANDLING",
+                        "description":"未说明布隆过滤器失效时的处理","severity":0.7,"relatedClaimIds":[]}]}
+                        """;
+            }
             return chats.remove();
         }
 

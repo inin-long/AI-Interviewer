@@ -50,6 +50,43 @@ public final class AgentPrompts {
                 """.formatted(state.answer(), response);
     }
 
+    public static String logicChainEvaluation(InterviewGraphState state) {
+        return """
+                你是技术面试回答的逻辑链评估器。只分析候选人本轮明确表达的内容，不得补写事实。
+                将重要回答拆成前提、问题判断、备选方案、决策、选择依据、执行动作、作用机制、结果、验证和反思。
+                必须只返回严格 JSON，不要 Markdown 或解释：
+                {"premises":["前提"],"problemDiagnosis":"问题判断或空字符串","alternatives":["备选方案"],
+                "decision":"最终决策或空字符串","reasoning":"选择依据和作用机制或空字符串",
+                "actions":["执行动作"],"outcome":"结果或空字符串","validation":"验证方式或空字符串",
+                "reflection":"反思改进或空字符串","gaps":[{"type":"MISSING_BASELINE|MISSING_MECHANISM|
+                MISSING_EXECUTION_PATH|MISSING_ALTERNATIVES|MISSING_TRADE_OFF|MISSING_VALIDATION|
+                MISSING_PERSONAL_CONTRIBUTION|MISSING_FAILURE_HANDLING|CAUSALITY_JUMP|RESULT_WITHOUT_EVIDENCE",
+                "description":"具体缺口","severity":0.0到1.0,"relatedClaimIds":["相关主张ID"]}]}
+                relatedClaimIds 只能使用下方账本中已存在的 ID；无法关联时返回空数组。最多 12 个缺口。
+
+                当前问题：%s
+                候选人回答：%s
+                本轮主张：%s
+                主张账本：%s
+                已冻结领域包：%s
+                """.formatted(state.currentQuestion(), state.answer(), state.claimExtraction(),
+                state.claimLedgerContext(), state.domainPackContext());
+    }
+
+    public static String repairLogicChainEvaluation(InterviewGraphState state, String invalidResponse) {
+        String response = invalidResponse == null ? "" : invalidResponse;
+        if (response.length() > 8_000) response = response.substring(0, 8_000);
+        return """
+                你是 JSON 格式修复器。重新分析回答并只输出严格 JSON；所有列表不可为 null，文本缺失时使用空字符串，
+                severity 必须在 0.0 到 1.0，gap type 必须来自指定枚举，禁止额外字段说明。
+                必需字段：premises, problemDiagnosis, alternatives, decision, reasoning, actions, outcome,
+                validation, reflection, gaps；每个 gap 必需 type, description, severity, relatedClaimIds。
+
+                候选人回答：%s
+                无效结果：%s
+                """.formatted(state.answer(), response);
+    }
+
     public static String analysis(InterviewGraphState state) {
         return """
                 你是严谨的技术面试回答分析器。只基于问题和回答评分，不补充候选人没有表达的事实。
@@ -89,7 +126,7 @@ public final class AgentPrompts {
                 : "这是本场面试的第一题。";
         return """
                 你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
-                当追问计划含 targetClaimId 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
+                当追问计划含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
                 %s
 

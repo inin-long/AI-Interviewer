@@ -102,13 +102,16 @@ public class InterviewAgentService {
             var extraction = interviewGraph.extractClaims(turnInput);
             var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
             sessionService.updateClaimLedger(userId, sessionId, claimLedger);
+            turnInput = turnInput.withClaimContext(
+                    extraction, claimLedgerService.compactSummary(userId, sessionId));
+            var logicChain = interviewGraph.evaluateLogic(turnInput);
+            sessionService.updateLogicChain(userId, sessionId, logicChain);
+            turnInput = turnInput.withLogicChainResult(logicChain);
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
             }
 
-            turnInput = turnInput.withClaimContext(
-                    extraction, claimLedgerService.compactSummary(userId, sessionId));
             InterviewTurnPlan turn = interviewGraph.plan(turnInput);
             sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
 

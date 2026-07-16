@@ -4,9 +4,11 @@ import com.inin.aiinterviewer.agent.model.AgentAction;
 import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
+import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -27,6 +29,7 @@ public class InterviewGraph {
 
     private static final String ANALYZE = "answer_analysis";
     private static final String EXTRACT_CLAIMS = "claim_extractor";
+    private static final String EVALUATE_LOGIC = "logic_chain_evaluator";
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
     private static final String PLAN_PROBE = "probe_planner";
@@ -36,9 +39,11 @@ public class InterviewGraph {
     private final QuestionRendererNode questionRenderer;
     private final ClaimExtractorNode claimExtractor;
     private final ProbePlannerNode probePlanner;
+    private final LogicChainEvaluatorNode logicChainEvaluator;
 
     public InterviewGraph(
             ClaimExtractorNode claimExtractor,
+            LogicChainEvaluatorNode logicChainEvaluator,
             AnswerAnalyzerNode answerAnalyzer,
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
@@ -48,16 +53,19 @@ public class InterviewGraph {
         this.questionRenderer = questionRenderer;
         this.claimExtractor = claimExtractor;
         this.probePlanner = probePlanner;
+        this.logicChainEvaluator = logicChainEvaluator;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
                     .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
+                    .addNode(EVALUATE_LOGIC, AsyncNodeAction.node_async(logicChainEvaluator))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
                     .addNode(PLAN_PROBE, AsyncNodeAction.node_async(probePlanner))
                     .addNode(RENDER_QUESTION, AsyncNodeAction.node_async(questionRenderer))
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
-                    .addEdge(EXTRACT_CLAIMS, ANALYZE)
+                    .addEdge(EXTRACT_CLAIMS, EVALUATE_LOGIC)
+                    .addEdge(EVALUATE_LOGIC, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
                             AsyncEdgeAction.edge_async(state -> state.decision().action() == AgentAction.NEXT_STAGE
@@ -77,7 +85,7 @@ public class InterviewGraph {
                 .orElseThrow(() -> new IllegalStateException("Interview graph returned no state"));
         return new InterviewTurnPlan(
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
-                state.claimExtraction(), state.probePlan());
+                state.claimExtraction(), state.logicChainResult(), state.probePlan());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -105,6 +113,17 @@ public class InterviewGraph {
         }
     }
 
+    public LogicChainResult evaluateLogic(InterviewTurnInput input) {
+        try {
+            InterviewGraphState state = new InterviewGraphState(input(input));
+            Object result = logicChainEvaluator.apply(state).get(InterviewGraphState.LOGIC_CHAIN_RESULT);
+            return result instanceof LogicChainResult logic
+                    ? logic : LogicChainResult.degraded("logic_chain_returned_no_result");
+        } catch (Exception exception) {
+            return LogicChainResult.degraded("logic_chain_evaluation_failed");
+        }
+    }
+
     public QuestionRendererNode questionRenderer() {
         return questionRenderer;
     }
@@ -124,6 +143,9 @@ public class InterviewGraph {
         values.put(InterviewGraphState.CLAIM_LEDGER_CONTEXT, input.claimLedgerContext());
         if (input.claimExtraction() != null) {
             values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
+        }
+        if (input.logicChainResult() != null) {
+            values.put(InterviewGraphState.LOGIC_CHAIN_RESULT, input.logicChainResult());
         }
         return values;
     }

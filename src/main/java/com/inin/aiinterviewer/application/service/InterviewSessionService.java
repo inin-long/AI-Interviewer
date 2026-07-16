@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.stage.StageManager;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.state.InterviewState;
 import com.inin.aiinterviewer.agent.state.StateSerializer;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -209,7 +210,7 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, previous.stage(), messages,
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.probePlan());
+                previous.logicChainResult(), previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -257,7 +258,8 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, session.getStage(),
                 allMessages, question.strip(), previous.latestAnswer(),
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
-                previous.profile(), previous.rules(), summary, previous.claimLedger(), previous.probePlan());
+                previous.profile(), previous.rules(), summary, previous.claimLedger(),
+                previous.logicChainResult(), previous.probePlan());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -297,7 +299,7 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, stage, previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
-                previous.probePlan());
+                previous.logicChainResult(), previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
         return updated;
     }
@@ -311,7 +313,8 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(),
-                claimLedger == null ? ClaimLedger.empty() : claimLedger, previous.probePlan());
+                claimLedger == null ? ClaimLedger.empty() : claimLedger,
+                previous.logicChainResult(), previous.probePlan());
         saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
         return updated;
     }
@@ -327,8 +330,24 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(), probePlan);
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.logicChainResult(), probePlan);
         saveCheckpointInternal(userId, sessionId, "probe_planned", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateLogicChain(long userId, long sessionId, LogicChainResult logicChainResult) {
+        if (logicChainResult == null) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                logicChainResult, previous.probePlan());
+        saveCheckpointInternal(userId, sessionId, "logic_chain_evaluated", updated);
         return updated;
     }
 

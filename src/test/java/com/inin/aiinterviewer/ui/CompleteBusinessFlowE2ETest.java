@@ -472,6 +472,16 @@ class CompleteBusinessFlowE2ETest {
                                 "importance":0.95,"credibility":0.8,"missingEvidence":["故障恢复数据"]}]}
                                 """;
                     }
+                    if (prompt.contains("逻辑链评估器")) {
+                        return """
+                                {"premises":["订单和事件需要最终一致"],"problemDiagnosis":"跨服务事务不可用",
+                                "alternatives":["分布式事务","Outbox"],"decision":"使用 Outbox",
+                                "reasoning":"业务提交与事件记录在同一事务","actions":["写入 Outbox","异步投递"],
+                                "outcome":"事件可恢复投递","validation":"通过 requestId 对账","reflection":"",
+                                "gaps":[{"type":"MISSING_FAILURE_HANDLING","description":"需要补充持续投递失败的处置",
+                                "severity":0.72,"relatedClaimIds":[]}]}
+                                """;
+                    }
                     if (prompt.contains("技术面试评分器")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,

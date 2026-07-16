@@ -122,6 +122,7 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.analysis().correctness()).isEqualTo(82);
                     assertThat(state.currentQuestion()).contains("最难的技术决策");
                     assertThat(state.claimLedger().claims()).singleElement();
+                    assertThat(state.logicChainResult().gaps()).singleElement();
                     assertThat(state.probePlan().targetsClaim()).isFalse();
                 });
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
@@ -138,6 +139,8 @@ class InterviewAgentServiceIntegrationTest {
                 .extracting(message -> message.content())
                 .contains("这条回答必须先保存。周边再重试。");
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims()).hasSize(2);
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> assertThat(state.logicChainResult().gaps()).singleElement());
 
         chatService.enqueueChat("""
                 {"correctness":60,"depth":55,"missingPoints":[],"feedback":"继续追问"}
@@ -158,6 +161,9 @@ class InterviewAgentServiceIntegrationTest {
                 .get().satisfies(state -> {
                     assertThat(state.currentQuestion()).isEqualTo("这是已生成的半个问题");
                     assertThat(state.probePlan().targetsClaim()).isTrue();
+                    assertThat(state.probePlan().targetsLogicGap()).isTrue();
+                    assertThat(state.probePlan().targetLogicGap())
+                            .isEqualTo("MISSING_PERSONAL_CONTRIBUTION");
                 });
         assertThat(chatService.lastStreamPrompt()).contains("结构化追问计划", "targetClaimId")
                 .doesNotContain("\"targetClaimId\":\"\"");
@@ -387,6 +393,15 @@ class InterviewAgentServiceIntegrationTest {
                 return """
                         {"claims":[{"type":"OWNERSHIP","content":"负责订单系统核心链路",
                         "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
+                        """;
+            }
+            if (prompt.contains("逻辑链评估器")) {
+                return """
+                        {"premises":["订单核心链路需要稳定交付"],"problemDiagnosis":"核心链路职责复杂",
+                        "alternatives":[],"decision":"负责核心链路","reasoning":"","actions":[],
+                        "outcome":"","validation":"","reflection":"",
+                        "gaps":[{"type":"MISSING_PERSONAL_CONTRIBUTION","description":"缺少个人行动和职责边界",
+                        "severity":0.85,"relatedClaimIds":[]}]}
                         """;
             }
             return chats.remove();

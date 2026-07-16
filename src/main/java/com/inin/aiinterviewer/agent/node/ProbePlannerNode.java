@@ -6,9 +6,11 @@ import com.inin.aiinterviewer.agent.model.AgentAction;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import com.inin.aiinterviewer.domain.enums.ClaimType;
+import com.inin.aiinterviewer.domain.enums.LogicGapType;
 import com.inin.aiinterviewer.domain.enums.PressureLevel;
 import com.inin.aiinterviewer.domain.enums.ProbeStrategy;
 import com.inin.aiinterviewer.domain.model.InterviewClaim;
+import com.inin.aiinterviewer.domain.model.LogicGap;
 import org.bsc.langgraph4j.action.NodeAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +38,13 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
                 || state.decision().action() == AgentAction.NEXT_STAGE) {
             plan = ProbePlan.stageOpening("验证 " + state.stage().name() + " 阶段的岗位核心能力");
         } else {
-            plan = pendingClaims(state).stream()
+            var importantGap = state.logicChainResult().gaps().stream()
+                    .filter(gap -> gap.severity() >= 0.65)
+                    .max(Comparator.comparingDouble(LogicGap::severity));
+            plan = importantGap.map(this::planForGap).orElseGet(() -> pendingClaims(state).stream()
                     .max(Comparator.comparingDouble(this::priority))
                     .map(this::planFor)
-                    .orElseGet(() -> fallback(state));
+                    .orElseGet(() -> fallback(state)));
         }
         return Map.of(InterviewGraphState.PROBE_PLAN, plan);
     }
@@ -73,6 +78,16 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
         return new ProbePlan(
                 claim.id(), objective, strategy, PressureLevel.STANDARD,
                 reason, expected, false);
+    }
+
+    private ProbePlan planForGap(LogicGap gap) {
+        ProbeStrategy strategy = strategy(gap.type());
+        String claimId = gap.relatedClaimIds().isEmpty() ? "current-answer" : gap.relatedClaimIds().getFirst();
+        return new ProbePlan(
+                claimId, gap.type().name(), "补全逻辑缺口：“" + abbreviate(gap.description()) + "”",
+                strategy, PressureLevel.STANDARD,
+                "该逻辑缺口严重度为 %.2f，需要在继续覆盖新主题前验证".formatted(gap.severity()),
+                defaultEvidence(strategy), false);
     }
 
     private ProbePlan fallback(InterviewGraphState state) {
@@ -110,6 +125,19 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
             case FAILURE -> ProbeStrategy.INTRODUCE_FAILURE;
             case OPINION -> ProbeStrategy.CHALLENGE_ASSUMPTION;
             case FACT -> ProbeStrategy.ASK_IMPLEMENTATION_DETAIL;
+        };
+    }
+
+    private ProbeStrategy strategy(LogicGapType type) {
+        return switch (type) {
+            case MISSING_BASELINE -> ProbeStrategy.REQUEST_BASELINE;
+            case MISSING_MECHANISM, CAUSALITY_JUMP -> ProbeStrategy.TRACE_CAUSAL_CHAIN;
+            case MISSING_EXECUTION_PATH -> ProbeStrategy.ASK_IMPLEMENTATION_DETAIL;
+            case MISSING_ALTERNATIVES -> ProbeStrategy.ASK_ALTERNATIVE;
+            case MISSING_TRADE_OFF -> ProbeStrategy.ASK_TRADE_OFF;
+            case MISSING_VALIDATION, RESULT_WITHOUT_EVIDENCE -> ProbeStrategy.VERIFY_DATA_SOURCE;
+            case MISSING_PERSONAL_CONTRIBUTION -> ProbeStrategy.VERIFY_PERSONAL_OWNERSHIP;
+            case MISSING_FAILURE_HANDLING -> ProbeStrategy.INTRODUCE_FAILURE;
         };
     }
 

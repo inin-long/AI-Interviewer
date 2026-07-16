@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.inin.aiinterviewer.agent.model.AgentAction;
 import com.inin.aiinterviewer.agent.model.AgentDecision;
 import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import com.inin.aiinterviewer.domain.enums.ClaimStatus;
@@ -12,6 +13,7 @@ import com.inin.aiinterviewer.domain.enums.ClaimType;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.ProbeStrategy;
 import com.inin.aiinterviewer.domain.model.InterviewClaim;
+import com.inin.aiinterviewer.domain.model.LogicGap;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
@@ -77,6 +79,31 @@ class ProbePlannerNodeTest {
         assertThat(plan.targetClaimId()).isEqualTo("current-answer");
         assertThat(plan.strategy()).isEqualTo(ProbeStrategy.ASK_TRADE_OFF);
         assertThat(plan.objective()).contains("Outbox");
+    }
+
+    @Test
+    void prioritizesASevereLogicGapOverARegularPendingClaim() throws Exception {
+        InterviewClaim claim = claim(
+                "claim-logic", ClaimType.RESULT, "吞吐量提升 30%", 0.8, 0.6, List.of());
+        LogicChainResult logic = new LogicChainResult(
+                List.of(), "", List.of(), "", "", List.of(), "吞吐量提升 30%", "", "",
+                List.of(new LogicGap(
+                        com.inin.aiinterviewer.domain.enums.LogicGapType.MISSING_BASELINE,
+                        "没有提供优化前吞吐量基线", 0.9, List.of("claim-logic"))),
+                false, false, "");
+        InterviewGraphState state = state(Map.of(
+                InterviewGraphState.CLAIM_LEDGER_CONTEXT,
+                objectMapper.writeValueAsString(List.of(claim)),
+                InterviewGraphState.LOGIC_CHAIN_RESULT, logic,
+                InterviewGraphState.DECISION,
+                new AgentDecision(AgentAction.FOLLOW_UP, null, "继续验证")));
+
+        ProbePlan plan = plan(state);
+
+        assertThat(plan.targetClaimId()).isEqualTo("claim-logic");
+        assertThat(plan.targetLogicGap()).isEqualTo("MISSING_BASELINE");
+        assertThat(plan.strategy()).isEqualTo(ProbeStrategy.REQUEST_BASELINE);
+        assertThat(plan.objective()).contains("吞吐量基线");
     }
 
     private ProbePlan plan(InterviewGraphState state) throws Exception {

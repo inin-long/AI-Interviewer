@@ -130,7 +130,8 @@ public class InterviewResultService {
                 previous.stateVersion(), session.id(), userId, InterviewStage.COMPLETED,
                 messages.stream().map(this::toMessage).toList(), previous.currentQuestion(),
                 previous.latestAnswer(), previous.analysis(), result, previous.profile(),
-                previous.rules(), summary, previous.claimLedger(), previous.probePlan());
+                previous.rules(), summary, previous.claimLedger(), previous.logicChainResult(),
+                previous.probePlan());
         AgentCheckpointEntity checkpoint = new AgentCheckpointEntity();
         checkpoint.setUserId(userId);
         checkpoint.setSessionId(session.id());

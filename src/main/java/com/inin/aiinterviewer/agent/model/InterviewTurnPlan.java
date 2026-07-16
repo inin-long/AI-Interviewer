@@ -9,6 +9,7 @@ public record InterviewTurnPlan(
         InterviewStage stage,
         String questionPrompt,
         ClaimExtractionResult claimExtraction,
+        LogicChainResult logicChainResult,
         ProbePlan probePlan
 ) {
     public InterviewTurnPlan(
@@ -18,6 +19,6 @@ public record InterviewTurnPlan(
             String questionPrompt
     ) {
         this(analysis, decision, stage, questionPrompt,
-                new ClaimExtractionResult(java.util.List.of()), null);
+                new ClaimExtractionResult(java.util.List.of()), LogicChainResult.skippedResult(), null);
     }
 }

@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.agent.state;
 
 import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
@@ -25,9 +26,10 @@ public record InterviewState(
         Map<String, Object> rules,
         String summary,
         ClaimLedger claimLedger,
+        LogicChainResult logicChainResult,
         ProbePlan probePlan
 ) {
-    public static final String CURRENT_VERSION = "2.1";
+    public static final String CURRENT_VERSION = "2.2";
 
     public InterviewState(
             String stateVersion,
@@ -44,7 +46,8 @@ public record InterviewState(
             String summary
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
-                analysis, evaluation, profile, rules, summary, ClaimLedger.empty(), null);
+                analysis, evaluation, profile, rules, summary, ClaimLedger.empty(),
+                LogicChainResult.skippedResult(), null);
     }
 
     public InterviewState(
@@ -63,7 +66,29 @@ public record InterviewState(
             ClaimLedger claimLedger
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
-                analysis, evaluation, profile, rules, summary, claimLedger, null);
+                analysis, evaluation, profile, rules, summary, claimLedger,
+                LogicChainResult.skippedResult(), null);
+    }
+
+    public InterviewState(
+            String stateVersion,
+            long sessionId,
+            long userId,
+            InterviewStage stage,
+            List<Message> messages,
+            String currentQuestion,
+            String latestAnswer,
+            AnswerAnalysis analysis,
+            EvaluationResult evaluation,
+            CandidateProfile profile,
+            Map<String, Object> rules,
+            String summary,
+            ClaimLedger claimLedger,
+            ProbePlan probePlan
+    ) {
+        this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
+                analysis, evaluation, profile, rules, summary, claimLedger,
+                LogicChainResult.skippedResult(), probePlan);
     }
 
     public InterviewState {
@@ -72,5 +97,6 @@ public record InterviewState(
         rules = rules == null ? Map.of() : Map.copyOf(rules);
         summary = summary == null ? "" : summary;
         claimLedger = claimLedger == null ? ClaimLedger.empty() : claimLedger;
+        logicChainResult = logicChainResult == null ? LogicChainResult.skippedResult() : logicChainResult;
     }
 }

@@ -1,5 +1,7 @@
 package com.inin.aiinterviewer.agent.state;
 
+import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -67,5 +69,21 @@ class JacksonStateSerializerTest {
         assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
         assertThat(restored.claimLedger().claims()).isEmpty();
         assertThat(restored.probePlan()).isNull();
+    }
+
+    @Test
+    void upgradesVersionTwoPointOneCheckpointAndPreservesProbePlan() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        InterviewState previous = new InterviewState(
+                "2.1", 12, 34, InterviewStage.RESUME_REVIEW, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", ClaimLedger.empty(),
+                ProbePlan.stageOpening("验证项目经验"));
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.probePlan().objective()).isEqualTo("验证项目经验");
+        assertThat(restored.logicChainResult().skipped()).isTrue();
     }
 }

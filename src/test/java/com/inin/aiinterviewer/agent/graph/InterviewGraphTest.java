@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
 import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
+import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -45,6 +46,7 @@ class InterviewGraphTest {
         chatService = new QueueChatService();
         graph = new InterviewGraph(
                 new ClaimExtractorNode(chatService, parser),
+                new LogicChainEvaluatorNode(chatService, parser),
                 new AnswerAnalyzerNode(chatService, parser),
                 new FollowUpDecisionNode(chatService, parser, stageManager, objectMapper),
                 new StageTransitionNode(stageManager),
@@ -69,6 +71,7 @@ class InterviewGraphTest {
         assertThat(result.claimExtraction().claims()).singleElement()
                 .satisfies(claim -> assertThat(claim.content()).contains("事务"));
         assertThat(result.probePlan().targetClaimId()).isEqualTo("current-answer");
+        assertThat(result.logicChainResult().gaps()).singleElement();
         assertThat(result.questionPrompt()).contains("一次只提出一个清晰的中文问题", "Java 工程师",
                 "结构化追问计划", "使用事务保证数据库操作一致性");
     }
@@ -138,6 +141,15 @@ class InterviewGraphTest {
                 return """
                         {"claims":[{"type":"FACT","content":"使用事务保证数据库操作一致性",
                         "importance":0.8,"credibility":0.7,"missingEvidence":["具体事务边界"]}]}
+                        """;
+            }
+            if (prompt.contains("逻辑链评估器")) {
+                return """
+                        {"premises":[],"problemDiagnosis":"需要保证数据库操作一致性","alternatives":[],
+                        "decision":"使用事务","reasoning":"将操作作为整体提交或回滚","actions":[],
+                        "outcome":"保持一致性","validation":"","reflection":"",
+                        "gaps":[{"type":"MISSING_EXECUTION_PATH","description":"未说明具体事务边界",
+                        "severity":0.7,"relatedClaimIds":[]}]}
                         """;
             }
             return responses.remove();
