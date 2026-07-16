@@ -12,6 +12,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
+import com.inin.aiinterviewer.domain.model.PressureState;
 import org.bsc.langgraph4j.state.AgentState;
 
 import java.util.List;
@@ -40,6 +41,7 @@ public class InterviewGraphState extends AgentState {
     public static final String CONSISTENCY_CONTEXT = "consistencyContext";
     public static final String CONSISTENCY_CHECK_RESULT = "consistencyCheckResult";
     public static final String DEFERRED_PROBES = "deferredProbes";
+    public static final String PRESSURE_STATE = "pressureState";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -132,5 +134,9 @@ public class InterviewGraphState extends AgentState {
 
     public List<DeferredProbe> deferredProbes() {
         return this.<List<DeferredProbe>>value(DEFERRED_PROBES).orElseGet(List::of);
+    }
+
+    public PressureState pressureState() {
+        return this.<PressureState>value(PRESSURE_STATE).orElseGet(PressureState::initial);
     }
 }

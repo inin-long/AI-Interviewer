@@ -209,11 +209,13 @@ public final class AgentPrompts {
                 你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
                 当追问计划含 targetConsistencyIssueId 时，必须忠实使用 objective 中的中性澄清问题；
                 当含 targetDeferredProbeId 时，必须围绕延迟验证的 targetClaimId 和 expectedEvidence 提问，
+                压力只能来自证据要求、假设挑战、资源约束或故障事件；无论压力等级如何，都禁止侮辱、嘲讽、人身攻击、敌意否定或故意制造不可回答的问题。
                 不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
                 %s
 
                 结构化追问计划：%s
+                压力控制状态：%s
                 当前阶段：%s
                 目标岗位：%s
                 岗位描述：%s
@@ -227,6 +229,7 @@ public final class AgentPrompts {
                 可参考的用户私有知识片段：%s
                 最近对话：%s
                 """.formatted(intent, json(objectMapper, state.probePlan()),
+                json(objectMapper, state.pressureState()),
                 state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()),
                 state.candidateProfileContext(), state.domainPackContext(),

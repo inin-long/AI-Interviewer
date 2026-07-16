@@ -128,6 +128,8 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.evidenceLedger().evidence()).singleElement();
                     assertThat(state.logicChainResult().gaps()).singleElement();
                     assertThat(state.probePlan().targetsClaim()).isFalse();
+                    assertThat(state.pressureState().level())
+                            .isEqualTo(com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED);
                 });
         assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
                 .singleElement().satisfies(claim -> assertThat(claim.content()).contains("订单系统"));
@@ -135,7 +137,8 @@ class InterviewAgentServiceIntegrationTest {
                 .satisfies(evidence -> assertThat(evidence.competencyCode())
                         .isEqualTo("PROBLEM_SOLVING"));
         assertThat(chatService.lastStreamPrompt()).contains(
-                "结构化追问计划", "负责订单系统核心链路", "\"targetClaimId\":\"\"");
+                "结构化追问计划", "压力控制状态", "负责订单系统核心链路",
+                "\"targetClaimId\":\"\"");
 
         chatService.enqueueChat("invalid-json");
         assertThatThrownBy(() -> agentService.answer(

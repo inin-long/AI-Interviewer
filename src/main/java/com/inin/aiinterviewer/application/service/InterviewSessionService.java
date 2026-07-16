@@ -29,6 +29,7 @@ import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
+import com.inin.aiinterviewer.domain.model.PressureState;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
@@ -225,7 +226,7 @@ public class InterviewSessionService {
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -275,7 +276,7 @@ public class InterviewSessionService {
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
                 previous.profile(), previous.rules(), summary, previous.claimLedger(),
                 previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -316,7 +317,7 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
         return updated;
     }
@@ -332,7 +333,7 @@ public class InterviewSessionService {
                 previous.profile(), previous.rules(), previous.summary(),
                 claimLedger == null ? ClaimLedger.empty() : claimLedger,
                 previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
         return updated;
     }
@@ -350,7 +351,7 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 previous.evidenceLedger(), previous.logicChainResult(), probePlan,
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "probe_planned", updated);
         return updated;
     }
@@ -366,7 +367,7 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 previous.evidenceLedger(), logicChainResult, previous.probePlan(),
-                previous.deferredProbes());
+                previous.deferredProbes(), previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "logic_chain_evaluated", updated);
         return updated;
     }
@@ -381,7 +382,8 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger,
-                previous.logicChainResult(), previous.probePlan(), previous.deferredProbes());
+                previous.logicChainResult(), previous.probePlan(), previous.deferredProbes(),
+                previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "evidence_ledger_updated", updated);
         return updated;
     }
@@ -400,8 +402,28 @@ public class InterviewSessionService {
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
                 previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
                 previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
-                deferredProbes == null ? List.of() : deferredProbes);
+                deferredProbes == null ? List.of() : deferredProbes, previous.pressureState());
         saveCheckpointInternal(userId, sessionId, "deferred_probes_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updatePressureState(
+            long userId,
+            long sessionId,
+            PressureState pressureState
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(),
+                pressureState == null ? PressureState.initial() : pressureState);
+        saveCheckpointInternal(userId, sessionId, "pressure_controlled", updated);
         return updated;
     }
 

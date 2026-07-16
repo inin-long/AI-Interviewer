@@ -138,6 +138,7 @@ public class InterviewAgentService {
                     appliedConsistency.result().degraded());
             sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
             turnInput = turnInput.withDeferredProbes(deferredProbes);
+            turnInput = turnInput.withPressureState(answeredState.pressureState());
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
@@ -145,6 +146,7 @@ public class InterviewAgentService {
 
             InterviewTurnPlan turn = interviewGraph.plan(turnInput);
             sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
+            sessionService.updatePressureState(userId, sessionId, turn.pressureState());
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());

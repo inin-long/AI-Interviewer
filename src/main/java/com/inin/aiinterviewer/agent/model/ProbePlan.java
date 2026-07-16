@@ -92,4 +92,17 @@ public record ProbePlan(
     public boolean targetsDeferredProbe() {
         return !targetDeferredProbeId.isBlank();
     }
+
+    public ProbePlan withPressureLevel(PressureLevel level) {
+        return new ProbePlan(
+                targetClaimId, targetLogicGap, targetConsistencyIssueId, targetDeferredProbeId,
+                objective, strategy, level, reason, expectedEvidence, shouldInjectScenario);
+    }
+
+    public ProbePlan withSafetyFallback(String safeObjective, String safeReason) {
+        return new ProbePlan(
+                targetClaimId, targetLogicGap, targetConsistencyIssueId, targetDeferredProbeId,
+                safeObjective, ProbeStrategy.CLARIFY_CONCEPT, PressureLevel.RELAXED,
+                safeReason, expectedEvidence, false);
+    }
 }

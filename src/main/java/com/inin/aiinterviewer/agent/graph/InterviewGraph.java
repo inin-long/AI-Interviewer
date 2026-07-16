@@ -14,6 +14,7 @@ import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
 import com.inin.aiinterviewer.agent.node.ConsistencyCheckNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
+import com.inin.aiinterviewer.agent.node.PressureControllerNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
@@ -39,12 +40,14 @@ public class InterviewGraph {
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
     private static final String PLAN_PROBE = "probe_planner";
+    private static final String CONTROL_PRESSURE = "pressure_controller";
     private static final String RENDER_QUESTION = "question_renderer";
 
     private final CompiledGraph<InterviewGraphState> graph;
     private final QuestionRendererNode questionRenderer;
     private final ClaimExtractorNode claimExtractor;
     private final ProbePlannerNode probePlanner;
+    private final PressureControllerNode pressureController;
     private final LogicChainEvaluatorNode logicChainEvaluator;
     private final EvidenceCollectorNode evidenceCollector;
     private final ConsistencyCheckNode consistencyCheck;
@@ -58,11 +61,13 @@ public class InterviewGraph {
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
             ProbePlannerNode probePlanner,
+            PressureControllerNode pressureController,
             QuestionRendererNode questionRenderer
     ) {
         this.questionRenderer = questionRenderer;
         this.claimExtractor = claimExtractor;
         this.probePlanner = probePlanner;
+        this.pressureController = pressureController;
         this.logicChainEvaluator = logicChainEvaluator;
         this.evidenceCollector = evidenceCollector;
         this.consistencyCheck = consistencyCheck;
@@ -76,6 +81,7 @@ public class InterviewGraph {
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
                     .addNode(PLAN_PROBE, AsyncNodeAction.node_async(probePlanner))
+                    .addNode(CONTROL_PRESSURE, AsyncNodeAction.node_async(pressureController))
                     .addNode(RENDER_QUESTION, AsyncNodeAction.node_async(questionRenderer))
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
                     .addEdge(EXTRACT_CLAIMS, EVALUATE_LOGIC)
@@ -90,7 +96,8 @@ public class InterviewGraph {
                                     ? "transition" : "probe"),
                             Map.of("transition", TRANSITION, "probe", PLAN_PROBE))
                     .addEdge(TRANSITION, PLAN_PROBE)
-                    .addEdge(PLAN_PROBE, RENDER_QUESTION)
+                    .addEdge(PLAN_PROBE, CONTROL_PRESSURE)
+                    .addEdge(CONTROL_PRESSURE, RENDER_QUESTION)
                     .addEdge(RENDER_QUESTION, GraphDefinition.END)
                     .compile();
         } catch (GraphStateException exception) {
@@ -104,7 +111,7 @@ public class InterviewGraph {
         return new InterviewTurnPlan(
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
                 state.claimExtraction(), state.logicChainResult(), state.evidenceCollectionResult(),
-                state.consistencyCheckResult(), state.probePlan());
+                state.consistencyCheckResult(), state.probePlan(), state.pressureState());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -112,6 +119,7 @@ public class InterviewGraph {
             Map<String, Object> values = input(input);
             InterviewGraphState state = new InterviewGraphState(values);
             values.putAll(probePlanner.apply(state));
+            values.putAll(pressureController.apply(new InterviewGraphState(values)));
             return (String) questionRenderer.apply(new InterviewGraphState(values))
                     .get(InterviewGraphState.QUESTION_PROMPT);
         } catch (Exception exception) {
@@ -187,6 +195,7 @@ public class InterviewGraph {
         values.put(InterviewGraphState.EVIDENCE_LEDGER_CONTEXT, input.evidenceLedgerContext());
         values.put(InterviewGraphState.CONSISTENCY_CONTEXT, input.consistencyContext());
         values.put(InterviewGraphState.DEFERRED_PROBES, input.deferredProbes());
+        values.put(InterviewGraphState.PRESSURE_STATE, input.pressureState());
         if (input.claimExtraction() != null) {
             values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
         }

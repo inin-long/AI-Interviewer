@@ -2,6 +2,7 @@ package com.inin.aiinterviewer.agent.model;
 
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
+import com.inin.aiinterviewer.domain.model.PressureState;
 
 public record InterviewTurnPlan(
         AnswerAnalysis analysis,
@@ -12,7 +13,8 @@ public record InterviewTurnPlan(
         LogicChainResult logicChainResult,
         EvidenceCollectionResult evidenceCollectionResult,
         ConsistencyCheckResult consistencyCheckResult,
-        ProbePlan probePlan
+        ProbePlan probePlan,
+        PressureState pressureState
 ) {
     public InterviewTurnPlan(
             AnswerAnalysis analysis,
@@ -23,6 +25,6 @@ public record InterviewTurnPlan(
         this(analysis, decision, stage, questionPrompt,
                 new ClaimExtractionResult(java.util.List.of()), LogicChainResult.skippedResult(),
                 EvidenceCollectionResult.degraded("not_collected"),
-                ConsistencyCheckResult.skipped("not_collected"), null);
+                ConsistencyCheckResult.skipped("not_collected"), null, PressureState.initial());
     }
 }

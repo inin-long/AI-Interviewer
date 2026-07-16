@@ -10,6 +10,7 @@ import com.inin.aiinterviewer.domain.model.EvaluationResult;
 import com.inin.aiinterviewer.domain.model.EvidenceLedger;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
+import com.inin.aiinterviewer.domain.model.PressureState;
 
 import java.util.List;
 import java.util.Map;
@@ -31,9 +32,34 @@ public record InterviewState(
         EvidenceLedger evidenceLedger,
         LogicChainResult logicChainResult,
         ProbePlan probePlan,
-        List<DeferredProbe> deferredProbes
+        List<DeferredProbe> deferredProbes,
+        PressureState pressureState
 ) {
-    public static final String CURRENT_VERSION = "2.5";
+    public static final String CURRENT_VERSION = "2.6";
+
+    public InterviewState(
+            String stateVersion,
+            long sessionId,
+            long userId,
+            InterviewStage stage,
+            List<Message> messages,
+            String currentQuestion,
+            String latestAnswer,
+            AnswerAnalysis analysis,
+            EvaluationResult evaluation,
+            CandidateProfile profile,
+            Map<String, Object> rules,
+            String summary,
+            ClaimLedger claimLedger,
+            EvidenceLedger evidenceLedger,
+            LogicChainResult logicChainResult,
+            ProbePlan probePlan,
+            List<DeferredProbe> deferredProbes
+    ) {
+        this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
+                analysis, evaluation, profile, rules, summary, claimLedger, evidenceLedger,
+                logicChainResult, probePlan, deferredProbes, PressureState.initial());
+    }
 
     public InterviewState(
             String stateVersion,
@@ -127,5 +153,6 @@ public record InterviewState(
         evidenceLedger = evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger;
         logicChainResult = logicChainResult == null ? LogicChainResult.skippedResult() : logicChainResult;
         deferredProbes = deferredProbes == null ? List.of() : List.copyOf(deferredProbes);
+        pressureState = pressureState == null ? PressureState.initial() : pressureState;
     }
 }

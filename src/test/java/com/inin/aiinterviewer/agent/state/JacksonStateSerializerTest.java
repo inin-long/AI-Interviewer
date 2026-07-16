@@ -10,6 +10,8 @@ import com.inin.aiinterviewer.domain.enums.ConsistencyIssueType;
 import com.inin.aiinterviewer.domain.model.ConsistencyIssue;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import com.inin.aiinterviewer.domain.enums.ProbeStrategy;
+import com.inin.aiinterviewer.domain.enums.PressureLevel;
+import com.inin.aiinterviewer.domain.model.PressureState;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -175,10 +177,28 @@ class JacksonStateSerializerTest {
                 List.of(), "问题", "回答", null, null, null, Map.of(), "",
                 ClaimLedger.empty(), EvidenceLedger.empty(),
                 com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
-                ProbePlan.stageOpening("验证项目经验"), List.of(deferred));
+                ProbePlan.stageOpening("验证项目经验"), List.of(deferred),
+                new PressureState(PressureLevel.CHALLENGING, 1, "claim:claim-1", 1,
+                        false, false, false, "挑战关键假设"));
 
         InterviewState restored = serializer.deserialize(serializer.serialize(current));
 
         assertThat(restored).isEqualTo(current);
+    }
+
+    @Test
+    void upgradesVersionTwoPointFiveWithInitialPressureState() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        InterviewState previous = new InterviewState(
+                "2.5", 12, 34, InterviewStage.SYSTEM_DESIGN, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证系统设计"), List.of());
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.pressureState()).isEqualTo(PressureState.initial());
     }
 }
