@@ -23,9 +23,11 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
+import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
@@ -51,6 +53,7 @@ public class InterviewSessionService {
     private final DomainPackService domainPackService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
+    private final InterviewClaimMapper claimMapper;
     private final AgentCheckpointMapper checkpointMapper;
     private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
@@ -64,6 +67,7 @@ public class InterviewSessionService {
             DomainPackService domainPackService,
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
+            InterviewClaimMapper claimMapper,
             AgentCheckpointMapper checkpointMapper,
             InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
@@ -76,6 +80,7 @@ public class InterviewSessionService {
         this.domainPackService = domainPackService;
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
+        this.claimMapper = claimMapper;
         this.checkpointMapper = checkpointMapper;
         this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
@@ -128,7 +133,8 @@ public class InterviewSessionService {
 
         InterviewState state = new InterviewState(
                 InterviewState.CURRENT_VERSION, entity.getId(), userId, initialStage,
-                List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "");
+                List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "",
+                ClaimLedger.empty());
         saveCheckpointInternal(userId, entity.getId(), "session_started", state);
         return require(userId, entity.getId());
     }
@@ -201,7 +207,7 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, previous.stage(), messages,
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -249,7 +255,7 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, session.getStage(),
                 allMessages, question.strip(), previous.latestAnswer(),
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
-                previous.profile(), previous.rules(), summary);
+                previous.profile(), previous.rules(), summary, previous.claimLedger());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -288,8 +294,22 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, stage, previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateClaimLedger(long userId, long sessionId, ClaimLedger claimLedger) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(),
+                claimLedger == null ? ClaimLedger.empty() : claimLedger);
+        saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
         return updated;
     }
 
@@ -350,7 +370,7 @@ public class InterviewSessionService {
                 InterviewState.CURRENT_VERSION, session.getId(), session.getUserId(), session.getStage(),
                 domainMessages(session.getUserId(), session.getId()), "", "", null, null,
                 stateProfile(profileSnapshot),
-                snapshot.rules() == null ? Map.of() : snapshot.rules(), "");
+                snapshot.rules() == null ? Map.of() : snapshot.rules(), "", ClaimLedger.empty());
     }
 
     private void validateStateIdentity(long userId, long sessionId, InterviewState state) {
@@ -537,6 +557,7 @@ public class InterviewSessionService {
         requireEntity(userId, sessionId);
         resultMapper.deleteReport(userId, sessionId);
         resultMapper.deleteEvaluation(userId, sessionId);
+        claimMapper.deleteBySession(userId, sessionId);
         messageMapper.deleteBySession(userId, sessionId);
         checkpointMapper.deleteBySession(userId, sessionId);
         sessionMapper.delete(sessionId, userId);

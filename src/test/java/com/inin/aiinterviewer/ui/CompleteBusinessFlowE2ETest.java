@@ -466,6 +466,12 @@ class CompleteBusinessFlowE2ETest {
             return new ChatService() {
                 @Override
                 public String chat(String prompt) {
+                    if (prompt.contains("候选人主张提取器")) {
+                        return """
+                                {"claims":[{"type":"DECISION","content":"使用 Outbox 保证事件最终一致性",
+                                "importance":0.95,"credibility":0.8,"missingEvidence":["故障恢复数据"]}]}
+                                """;
+                    }
                     if (prompt.contains("技术面试评分器")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,

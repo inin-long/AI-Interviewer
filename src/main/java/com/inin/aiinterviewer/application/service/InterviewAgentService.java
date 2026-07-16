@@ -37,6 +37,7 @@ public class InterviewAgentService {
     private final InterviewSessionService sessionService;
     private final InterviewGraph interviewGraph;
     private final ReportGenerationTaskService reportTaskService;
+    private final ClaimLedgerService claimLedgerService;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -44,12 +45,14 @@ public class InterviewAgentService {
             InterviewSessionService sessionService,
             InterviewGraph interviewGraph,
             ReportGenerationTaskService reportTaskService,
+            ClaimLedgerService claimLedgerService,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
         this.sessionService = sessionService;
         this.interviewGraph = interviewGraph;
         this.reportTaskService = reportTaskService;
+        this.claimLedgerService = claimLedgerService;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -63,7 +66,8 @@ public class InterviewAgentService {
             }
             InterviewTurnInput input = new InterviewTurnInput(
                     session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
-                    retrieveCandidateProfile(userId, sessionId));
+                    retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
+                    claimLedgerService.compactSummary(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(userId, sessionId, session.stage(), prompt, null, List.of());
         }).subscribeOn(Schedulers.boundedElastic());
@@ -86,17 +90,24 @@ public class InterviewAgentService {
             long askedQuestions = persistedMessages.stream()
                     .filter(message -> message.role() == Message.Role.ASSISTANT)
                     .count();
+            List<Message> messages = domainMessages(persistedMessages);
+            KnowledgeRetrieval retrieval = retrieveKnowledge(
+                    userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
+            InterviewTurnInput turnInput = new InterviewTurnInput(
+                    session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
+                    session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
+                    retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
+                    claimLedgerService.compactSummary(userId, sessionId));
+
+            var extraction = interviewGraph.extractClaims(turnInput);
+            var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
+            sessionService.updateClaimLedger(userId, sessionId, claimLedger);
             if (askedQuestions >= session.planSnapshot().questionCount()) {
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
             }
-            List<Message> messages = domainMessages(persistedMessages);
-            KnowledgeRetrieval retrieval = retrieveKnowledge(
-                    userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
-            InterviewTurnPlan turn = interviewGraph.plan(new InterviewTurnInput(
-                    session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
-                    session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
-                    retrieveCandidateProfile(userId, sessionId)));
+
+            InterviewTurnPlan turn = interviewGraph.plan(turnInput.withClaimExtraction(extraction));
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
@@ -204,6 +215,12 @@ public class InterviewAgentService {
                 .filter(result -> result.success())
                 .map(result -> result.data().toString())
                 .orElse("未关联已确认候选人画像");
+    }
+
+    private String domainPackContext(long userId, long sessionId) {
+        return sessionService.domainPackSnapshot(userId, sessionId)
+                .map(Object::toString)
+                .orElse("未关联领域知识包");
     }
 
     private record KnowledgeRetrieval(String context, List<KnowledgeCitationDto> citations) {

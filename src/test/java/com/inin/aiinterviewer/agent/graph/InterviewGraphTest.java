@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.inin.aiinterviewer.agent.model.AgentAction;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
+import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.QuestionGeneratorNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -42,6 +43,7 @@ class InterviewGraphTest {
         StructuredAiResponseParser parser = new StructuredAiResponseParser(objectMapper);
         chatService = new QueueChatService();
         graph = new InterviewGraph(
+                new ClaimExtractorNode(chatService, parser),
                 new AnswerAnalyzerNode(chatService, parser),
                 new FollowUpDecisionNode(chatService, parser, stageManager, objectMapper),
                 new StageTransitionNode(stageManager),
@@ -62,6 +64,8 @@ class InterviewGraphTest {
         assertThat(result.analysis().correctness()).isEqualTo(72);
         assertThat(result.decision().action()).isEqualTo(AgentAction.FOLLOW_UP);
         assertThat(result.stage()).isEqualTo(InterviewStage.INTRODUCTION);
+        assertThat(result.claimExtraction().claims()).singleElement()
+                .satisfies(claim -> assertThat(claim.content()).contains("事务"));
         assertThat(result.questionPrompt()).contains("一次只提出一个清晰问题", "Java 工程师");
     }
 
@@ -126,6 +130,12 @@ class InterviewGraphTest {
 
         @Override
         public String chat(String prompt) {
+            if (prompt.contains("候选人主张提取器")) {
+                return """
+                        {"claims":[{"type":"FACT","content":"使用事务保证数据库操作一致性",
+                        "importance":0.8,"credibility":0.7,"missingEvidence":["具体事务边界"]}]}
+                        """;
+            }
             return responses.remove();
         }
 

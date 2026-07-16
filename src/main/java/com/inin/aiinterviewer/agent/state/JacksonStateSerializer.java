@@ -28,13 +28,16 @@ public class JacksonStateSerializer implements StateSerializer {
     public InterviewState deserialize(String json) {
         try {
             InterviewState state = objectMapper.readValue(json, InterviewState.class);
-            if (!InterviewState.CURRENT_VERSION.equals(state.stateVersion())) {
-                throw new IllegalStateException("Unsupported interview state version: " + state.stateVersion());
+            if (InterviewState.CURRENT_VERSION.equals(state.stateVersion())) return state;
+            if ("1.0".equals(state.stateVersion())) {
+                return new InterviewState(
+                        InterviewState.CURRENT_VERSION, state.sessionId(), state.userId(), state.stage(),
+                        state.messages(), state.currentQuestion(), state.latestAnswer(), state.analysis(),
+                        state.evaluation(), state.profile(), state.rules(), state.summary(), state.claimLedger());
             }
-            return state;
+            throw new IllegalStateException("Unsupported interview state version: " + state.stateVersion());
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }
     }
 }
-

@@ -14,6 +14,42 @@ public final class AgentPrompts {
     private AgentPrompts() {
     }
 
+    public static String claimExtraction(InterviewGraphState state) {
+        return """
+                你是技术面试中的“候选人主张提取器”。仅从候选人本轮回答中提取可在后续追问中验证的原子主张，
+                不得补充候选人没有表达的事实。每条主张只能表达一个事实、指标、责任、因果、决策、结果、约束、失败或观点。
+                必须只返回一个 JSON 对象，不要 Markdown 代码块，不要额外说明：
+                {"claims":[{"type":"FACT|METRIC|OWNERSHIP|CAUSALITY|DECISION|RESULT|CONSTRAINT|FAILURE|OPINION",
+                "content":"可独立验证的简洁主张","importance":0.0到1.0,"credibility":0.0到1.0,
+                "missingEvidence":["仍需确认的证据"]}]}
+                最多返回 12 条；没有可验证主张时返回 {"claims":[]}。
+                importance 表示对岗位判断的重要程度，credibility 仅表示当前回答自身的可置信程度，不等于最终评分。
+
+                当前阶段：%s
+                当前问题：%s
+                候选人回答：%s
+                已冻结领域包：%s
+                当前待验证主张账本：%s
+                """.formatted(state.stage(), state.currentQuestion(), state.answer(),
+                state.domainPackContext(), state.claimLedgerContext());
+    }
+
+    public static String repairClaimExtraction(InterviewGraphState state, String invalidResponse) {
+        String response = invalidResponse == null ? "" : invalidResponse;
+        if (response.length() > 8_000) response = response.substring(0, 8_000);
+        return """
+                你是 JSON 格式修复器。下面是一次无效的“候选人主张提取”结果。
+                请根据候选人原回答重新生成，必须只返回严格 JSON 对象，不要解释，不要 Markdown：
+                {"claims":[{"type":"FACT|METRIC|OWNERSHIP|CAUSALITY|DECISION|RESULT|CONSTRAINT|FAILURE|OPINION",
+                "content":"非空字符串","importance":0.0到1.0,"credibility":0.0到1.0,
+                "missingEvidence":["字符串"]}]}
+                最多 12 条，没有主张则返回 {"claims":[]}。
+
+                候选人原回答：%s
+                无效结果：%s
+                """.formatted(state.answer(), response);
+    }
+
     public static String analysis(InterviewGraphState state) {
         return """
                 你是严谨的技术面试回答分析器。只基于问题和回答评分，不补充候选人没有表达的事实。
@@ -61,12 +97,16 @@ public final class AgentPrompts {
                 难度：%s
                 重点规则：%s
                 已确认候选人画像快照：%s
+                已冻结领域包：%s
+                本轮提取的候选人主张：%s
+                当前待验证主张账本：%s
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
                 """.formatted(intent, state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()),
-                state.candidateProfileContext(), state.summary(),
+                state.candidateProfileContext(), state.domainPackContext(),
+                json(objectMapper, state.claimExtraction()), state.claimLedgerContext(), state.summary(),
                 state.retrievedContext(), json(objectMapper, recent));
     }
 

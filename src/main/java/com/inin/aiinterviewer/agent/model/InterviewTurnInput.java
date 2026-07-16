@@ -14,7 +14,10 @@ public record InterviewTurnInput(
         List<Message> messages,
         String summary,
         String retrievedContext,
-        String candidateProfileContext
+        String candidateProfileContext,
+        String domainPackContext,
+        String claimLedgerContext,
+        ClaimExtractionResult claimExtraction
 ) {
     public InterviewTurnInput(
             InterviewStage stage,
@@ -25,7 +28,38 @@ public record InterviewTurnInput(
             String summary,
             String retrievedContext
     ) {
-        this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext, "");
+        this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                "", "", "", null);
+    }
+
+    public InterviewTurnInput(
+            InterviewStage stage,
+            String currentQuestion,
+            String answer,
+            InterviewPlanDto plan,
+            List<Message> messages,
+            String summary,
+            String retrievedContext,
+            String candidateProfileContext
+    ) {
+        this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, "", "", null);
+    }
+
+    public InterviewTurnInput(
+            InterviewStage stage,
+            String currentQuestion,
+            String answer,
+            InterviewPlanDto plan,
+            List<Message> messages,
+            String summary,
+            String retrievedContext,
+            String candidateProfileContext,
+            String domainPackContext,
+            String claimLedgerContext
+    ) {
+        this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, claimLedgerContext, null);
     }
 
     public InterviewTurnInput {
@@ -33,5 +67,13 @@ public record InterviewTurnInput(
         summary = summary == null ? "" : summary;
         retrievedContext = retrievedContext == null ? "" : retrievedContext;
         candidateProfileContext = candidateProfileContext == null ? "" : candidateProfileContext;
+        domainPackContext = domainPackContext == null ? "" : domainPackContext;
+        claimLedgerContext = claimLedgerContext == null ? "" : claimLedgerContext;
+    }
+
+    public InterviewTurnInput withClaimExtraction(ClaimExtractionResult extraction) {
+        return new InterviewTurnInput(
+                stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, claimLedgerContext, extraction);
     }
 }

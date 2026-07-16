@@ -197,7 +197,15 @@ class KnowledgeDocumentServiceIntegrationTest {
         synchronized void enqueueStream(Flux<String> response) { streams.add(response); }
 
         @Override
-        public synchronized String chat(String prompt) { return chats.remove(); }
+        public synchronized String chat(String prompt) {
+            if (prompt.contains("候选人主张提取器")) {
+                return """
+                        {"claims":[{"type":"DECISION","content":"使用空值缓存和布隆过滤器防止缓存穿透",
+                        "importance":0.9,"credibility":0.75,"missingEvidence":["边界条件"]}]}
+                        """;
+            }
+            return chats.remove();
+        }
 
         @Override
         public synchronized Flux<String> stream(String prompt) { return streams.remove(); }

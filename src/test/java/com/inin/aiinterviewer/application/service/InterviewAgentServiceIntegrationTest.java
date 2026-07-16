@@ -68,6 +68,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private FakeChatService chatService;
     @Autowired private ResumeService resumeService;
     @Autowired private CandidateProfileService profileService;
+    @Autowired private ClaimLedgerService claimLedgerService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -120,7 +121,10 @@ class InterviewAgentServiceIntegrationTest {
                 .get().satisfies(state -> {
                     assertThat(state.analysis().correctness()).isEqualTo(82);
                     assertThat(state.currentQuestion()).contains("最难的技术决策");
+                    assertThat(state.claimLedger().claims()).singleElement();
                 });
+        assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
+                .singleElement().satisfies(claim -> assertThat(claim.content()).contains("订单系统"));
 
         chatService.enqueueChat("invalid-json");
         assertThatThrownBy(() -> agentService.answer(
@@ -130,6 +134,7 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.messages(user.id(), session.id()))
                 .extracting(message -> message.content())
                 .contains("这条回答必须先保存。周边再重试。");
+        assertThat(claimLedgerService.ledger(user.id(), session.id()).claims()).hasSize(2);
 
         chatService.enqueueChat("""
                 {"correctness":60,"depth":55,"missingPoints":[],"feedback":"继续追问"}
@@ -370,6 +375,12 @@ class InterviewAgentServiceIntegrationTest {
 
         @Override
         public synchronized String chat(String prompt) {
+            if (prompt.contains("候选人主张提取器")) {
+                return """
+                        {"claims":[{"type":"OWNERSHIP","content":"负责订单系统核心链路",
+                        "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
+                        """;
+            }
             return chats.remove();
         }
 

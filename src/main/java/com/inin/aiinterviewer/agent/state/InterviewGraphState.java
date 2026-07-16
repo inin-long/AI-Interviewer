@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.agent.state;
 
 import com.inin.aiinterviewer.agent.model.AgentDecision;
+import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
@@ -23,6 +24,9 @@ public class InterviewGraphState extends AgentState {
     public static final String SUMMARY = "summary";
     public static final String RETRIEVED_CONTEXT = "retrievedContext";
     public static final String CANDIDATE_PROFILE_CONTEXT = "candidateProfileContext";
+    public static final String DOMAIN_PACK_CONTEXT = "domainPackContext";
+    public static final String CLAIM_LEDGER_CONTEXT = "claimLedgerContext";
+    public static final String CLAIM_EXTRACTION = "claimExtraction";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -70,5 +74,18 @@ public class InterviewGraphState extends AgentState {
 
     public String candidateProfileContext() {
         return this.<String>value(CANDIDATE_PROFILE_CONTEXT).orElse("");
+    }
+
+    public String domainPackContext() {
+        return this.<String>value(DOMAIN_PACK_CONTEXT).orElse("");
+    }
+
+    public String claimLedgerContext() {
+        return this.<String>value(CLAIM_LEDGER_CONTEXT).orElse("");
+    }
+
+    public ClaimExtractionResult claimExtraction() {
+        return this.<ClaimExtractionResult>value(CLAIM_EXTRACTION)
+                .orElseGet(() -> new ClaimExtractionResult(List.of()));
     }
 }

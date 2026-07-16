@@ -1,9 +1,11 @@
 package com.inin.aiinterviewer.agent.graph;
 
 import com.inin.aiinterviewer.agent.model.AgentAction;
+import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.node.AnswerAnalyzerNode;
+import com.inin.aiinterviewer.agent.node.ClaimExtractorNode;
 import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.QuestionGeneratorNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
@@ -23,27 +25,33 @@ import java.util.Map;
 public class InterviewGraph {
 
     private static final String ANALYZE = "answer_analysis";
+    private static final String EXTRACT_CLAIMS = "claim_extractor";
     private static final String DECIDE = "follow_up_decision";
     private static final String TRANSITION = "stage_transition";
     private static final String QUESTION = "question_generator";
 
     private final CompiledGraph<InterviewGraphState> graph;
     private final QuestionGeneratorNode questionGenerator;
+    private final ClaimExtractorNode claimExtractor;
 
     public InterviewGraph(
+            ClaimExtractorNode claimExtractor,
             AnswerAnalyzerNode answerAnalyzer,
             FollowUpDecisionNode decisionNode,
             StageTransitionNode transitionNode,
             QuestionGeneratorNode questionGenerator
     ) {
         this.questionGenerator = questionGenerator;
+        this.claimExtractor = claimExtractor;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
+                    .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
                     .addNode(QUESTION, AsyncNodeAction.node_async(questionGenerator))
-                    .addEdge(GraphDefinition.START, ANALYZE)
+                    .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
+                    .addEdge(EXTRACT_CLAIMS, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
                             AsyncEdgeAction.edge_async(state -> state.decision().action() == AgentAction.NEXT_STAGE
@@ -61,7 +69,8 @@ public class InterviewGraph {
         InterviewGraphState state = graph.invoke(input(input))
                 .orElseThrow(() -> new IllegalStateException("Interview graph returned no state"));
         return new InterviewTurnPlan(
-                state.analysis(), state.decision(), state.stage(), state.questionPrompt());
+                state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
+                state.claimExtraction());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -70,6 +79,19 @@ public class InterviewGraph {
             return (String) questionGenerator.apply(state).get(InterviewGraphState.QUESTION_PROMPT);
         } catch (Exception exception) {
             throw new IllegalStateException("Cannot prepare initial interview question", exception);
+        }
+    }
+
+    public ClaimExtractionResult extractClaims(InterviewTurnInput input) {
+        try {
+            InterviewGraphState state = new InterviewGraphState(input(input));
+            Object extraction = claimExtractor.apply(state).get(InterviewGraphState.CLAIM_EXTRACTION);
+            if (extraction instanceof ClaimExtractionResult result) {
+                return result;
+            }
+            return ClaimExtractionResult.degraded("claim_extraction_returned_no_result");
+        } catch (Exception exception) {
+            return ClaimExtractionResult.degraded("claim_extraction_failed");
         }
     }
 
@@ -88,6 +110,11 @@ public class InterviewGraph {
         values.put(InterviewGraphState.SUMMARY, input.summary());
         values.put(InterviewGraphState.RETRIEVED_CONTEXT, input.retrievedContext());
         values.put(InterviewGraphState.CANDIDATE_PROFILE_CONTEXT, input.candidateProfileContext());
+        values.put(InterviewGraphState.DOMAIN_PACK_CONTEXT, input.domainPackContext());
+        values.put(InterviewGraphState.CLAIM_LEDGER_CONTEXT, input.claimLedgerContext());
+        if (input.claimExtraction() != null) {
+            values.put(InterviewGraphState.CLAIM_EXTRACTION, input.claimExtraction());
+        }
         return values;
     }
 }
