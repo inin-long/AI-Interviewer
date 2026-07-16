@@ -13,6 +13,8 @@ public enum ErrorCode {
     INTERVIEW_NOT_FOUND("INTERVIEW_001", "面试会话不存在"),
     CHECKPOINT_NOT_FOUND("INTERVIEW_002", "未找到可恢复的面试进度"),
     REPORT_RETRY_REQUIRED("INTERVIEW_003", "最终回答已保存，请重新生成报告"),
+    SCENARIO_NOT_FOUND("SCENARIO_001", "场景会话不存在"),
+    SCENARIO_STATE_INVALID("SCENARIO_002", "场景状态不一致，已停止场景"),
     DATA_ACCESS_FAILED("DATA_001", "本地数据访问失败"),
     AI_NOT_CONFIGURED("AI_001", "AI 服务尚未配置"),
     AI_CALL_FAILED("AI_002", "AI 服务调用失败"),

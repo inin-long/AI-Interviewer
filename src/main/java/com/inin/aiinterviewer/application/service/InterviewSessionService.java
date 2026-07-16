@@ -36,6 +36,7 @@ import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMappe
 import com.inin.aiinterviewer.infrastructure.database.mapper.EvaluationEvidenceMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ConsistencyIssueMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.DeferredProbeMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ScenarioSessionMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
@@ -65,6 +66,7 @@ public class InterviewSessionService {
     private final EvaluationEvidenceMapper evidenceMapper;
     private final ConsistencyIssueMapper consistencyIssueMapper;
     private final DeferredProbeMapper deferredProbeMapper;
+    private final ScenarioSessionMapper scenarioSessionMapper;
     private final AgentCheckpointMapper checkpointMapper;
     private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
@@ -82,6 +84,7 @@ public class InterviewSessionService {
             EvaluationEvidenceMapper evidenceMapper,
             ConsistencyIssueMapper consistencyIssueMapper,
             DeferredProbeMapper deferredProbeMapper,
+            ScenarioSessionMapper scenarioSessionMapper,
             AgentCheckpointMapper checkpointMapper,
             InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
@@ -98,6 +101,7 @@ public class InterviewSessionService {
         this.evidenceMapper = evidenceMapper;
         this.consistencyIssueMapper = consistencyIssueMapper;
         this.deferredProbeMapper = deferredProbeMapper;
+        this.scenarioSessionMapper = scenarioSessionMapper;
         this.checkpointMapper = checkpointMapper;
         this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
@@ -674,6 +678,7 @@ public class InterviewSessionService {
         evidenceMapper.deleteBySession(userId, sessionId);
         consistencyIssueMapper.deleteBySession(userId, sessionId);
         deferredProbeMapper.deleteBySession(userId, sessionId);
+        scenarioSessionMapper.deleteBySession(userId, sessionId);
         claimMapper.deleteBySession(userId, sessionId);
         messageMapper.deleteBySession(userId, sessionId);
         checkpointMapper.deleteBySession(userId, sessionId);
