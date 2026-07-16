@@ -88,19 +88,19 @@
                                 </columnConstraints>
                                 <VBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="0">
                                     <Label text="API Base URL" styleClass="field-label"/>
-                                    <TextField fx:id="baseUrlField" editable="false" promptText="未配置"/>
+                                    <TextField fx:id="baseUrlField" promptText="https://api.example.com"/>
                                 </VBox>
                                 <VBox spacing="6" GridPane.rowIndex="0" GridPane.columnIndex="1">
                                     <Label text="API Key" styleClass="field-label"/>
-                                    <PasswordField fx:id="apiKeyField" editable="false"/>
+                                    <PasswordField fx:id="apiKeyField"/>
                                 </VBox>
                                 <VBox spacing="6" GridPane.rowIndex="1" GridPane.columnIndex="0">
                                     <Label text="Chat Model" styleClass="field-label"/>
-                                    <TextField fx:id="chatModelField" editable="false" promptText="未配置"/>
+                                    <TextField fx:id="chatModelField" promptText="例如：deepseek-chat"/>
                                 </VBox>
                                 <VBox spacing="6" GridPane.rowIndex="1" GridPane.columnIndex="1">
                                     <Label text="Embedding Model" styleClass="field-label"/>
-                                    <TextField fx:id="embeddingModelField" editable="false" promptText="未配置"/>
+                                    <TextField fx:id="embeddingModelField" promptText="例如：bge-m3"/>
                                 </VBox>
                             </GridPane>
                             <GridPane hgap="24" vgap="12" styleClass="settings-grid">
@@ -122,6 +122,8 @@
                                     <Label text="按需调用真实 Provider，不会在应用启动时自动产生 API 请求。" styleClass="secondary-text"/>
                                 </VBox>
                                 <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="saveConfigButton" text="保存配置" onAction="#saveConfig"
+                                        styleClass="secondary-button"/>
                                 <Button fx:id="testConnectionButton" text="测试连接" onAction="#testConnection"
                                         styleClass="primary-button"/>
                             </HBox>
