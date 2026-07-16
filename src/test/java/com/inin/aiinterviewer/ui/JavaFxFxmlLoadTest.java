@@ -172,13 +172,17 @@ class JavaFxFxmlLoadTest {
 
             Parent report = load("/fxml/report-detail-view.fxml");
             Button sourceDirectory = (Button) report.lookup("#sourceDirectoryButton");
+            Button trainingPlan = (Button) report.lookup("#trainingPlanButton");
+            VBox trainingRecommendations = (VBox) report.lookup("#trainingRecommendationContainer");
             return new boolean[]{
                     rail != null && rail.getStyleClass().contains("citation-rail"),
                     rail != null && rail.getWidth() >= 270 && rail.getWidth() <= 330,
                     citations != null,
                     workspaceRoot == workspace,
                     retryReport != null && "重新生成报告".equals(retryReport.getText()),
-                    sourceDirectory != null && "参考依据".equals(sourceDirectory.getText())
+                    sourceDirectory != null && "参考依据".equals(sourceDirectory.getText()),
+                    trainingPlan != null && "创建专项训练方案".equals(trainingPlan.getText()),
+                    trainingRecommendations != null
             };
         });
         Platform.runLater(task);

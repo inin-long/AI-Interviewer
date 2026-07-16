@@ -6,6 +6,8 @@ import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.application.service.SessionBranchService;
+import com.inin.aiinterviewer.application.service.TrainingRecommendationService;
+import com.inin.aiinterviewer.application.dto.TrainingRecommendationDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
@@ -40,6 +42,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private final InterviewResultService resultService;
     private final InterviewSessionService sessionService;
     private final SessionBranchService branchService;
+    private final TrainingRecommendationService trainingService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -58,12 +61,15 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private MarkdownView reportView;
     @FXML private VBox evidenceNavigationContainer;
     @FXML private VBox branchNavigationContainer;
+    @FXML private VBox trainingRecommendationContainer;
+    @FXML private Button trainingPlanButton;
     @FXML private VBox citationNavigationContainer;
 
     public InterviewReportController(
             InterviewResultService resultService,
             InterviewSessionService sessionService,
             SessionBranchService branchService,
+            TrainingRecommendationService trainingService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -72,6 +78,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         this.resultService = resultService;
         this.sessionService = sessionService;
         this.branchService = branchService;
+        this.trainingService = trainingService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -97,6 +104,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         reportView.setMarkdown(markdown);
         renderEvidenceNavigation(report.evidence());
         renderBranchNavigation(branchService.list(userId, interviewId));
+        renderTrainingRecommendation(trainingService.recommend(userId, interviewId));
         renderCitationNavigation(sessionService.messages(userId, interviewId));
     }
 
@@ -202,6 +210,39 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private void openBranch(String branchId) {
         contentNavigator.showSubPage(
                 "/fxml/session-branch-view.fxml", "分支复盘", branchId);
+    }
+
+    private void renderTrainingRecommendation(TrainingRecommendationDto recommendation) {
+        trainingRecommendationContainer.getChildren().clear();
+        recommendation.topics().stream().limit(3).forEach(topic -> {
+            String questions = topic.sourceQuestionNumbers().isEmpty() ? ""
+                    : " · Q" + topic.sourceQuestionNumbers().stream()
+                    .map(String::valueOf).collect(Collectors.joining("/"));
+            Label label = new Label("• " + topic.title() + questions);
+            label.setWrapText(true);
+            label.setTooltip(new Tooltip(topic.rationale()));
+            label.getStyleClass().add("secondary-text");
+            trainingRecommendationContainer.getChildren().add(label);
+        });
+        if (!recommendation.knowledgeResources().isEmpty()) {
+            Label knowledge = new Label("已关联 " + recommendation.knowledgeResources().size() + " 份知识资料");
+            knowledge.getStyleClass().add("secondary-text");
+            trainingRecommendationContainer.getChildren().add(knowledge);
+        }
+    }
+
+    @FXML
+    private void createTrainingPlan() {
+        trainingPlanButton.setDisable(true);
+        try {
+            long userId = sessionState.requireCurrentUser().id();
+            var plan = trainingService.createTrainingPlan(userId, interviewId);
+            contentNavigator.showSubPage(
+                    "/fxml/plan-editor-view.fxml", "专项训练方案", plan.id());
+        } catch (RuntimeException exception) {
+            trainingPlanButton.setDisable(false);
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     private String branchStatusText(com.inin.aiinterviewer.domain.enums.SessionBranchStatus status) {
