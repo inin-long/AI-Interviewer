@@ -14,7 +14,8 @@ public record InterviewTurnPlan(
         EvidenceCollectionResult evidenceCollectionResult,
         ConsistencyCheckResult consistencyCheckResult,
         ProbePlan probePlan,
-        PressureState pressureState
+        PressureState pressureState,
+        ScenarioDirectionResult scenarioDirectionResult
 ) {
     public InterviewTurnPlan(
             AnswerAnalysis analysis,
@@ -25,6 +26,7 @@ public record InterviewTurnPlan(
         this(analysis, decision, stage, questionPrompt,
                 new ClaimExtractionResult(java.util.List.of()), LogicChainResult.skippedResult(),
                 EvidenceCollectionResult.degraded("not_collected"),
-                ConsistencyCheckResult.skipped("not_collected"), null, PressureState.initial());
+                ConsistencyCheckResult.skipped("not_collected"), null, PressureState.initial(),
+                ScenarioDirectionResult.skipped("not_directed"));
     }
 }

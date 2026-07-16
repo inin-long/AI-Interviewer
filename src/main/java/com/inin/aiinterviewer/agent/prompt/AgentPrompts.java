@@ -8,6 +8,7 @@ import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.model.Message;
 
 import java.util.List;
+import java.util.Map;
 
 public final class AgentPrompts {
 
@@ -180,6 +181,39 @@ public final class AgentPrompts {
                 """.formatted(state.stage(), state.currentQuestion(), state.answer());
     }
 
+    public static String scenarioDirection(InterviewGraphState state) {
+        return """
+                你是纯文本技术情境沙盘的 Scenario Director。候选人刚做出一项决策；你必须让该决策产生可解释的后果，
+                再注入一个与目标能力直接相关的事件。不得随机刁难，不得改写已知事实，不得创建未声明的变量，
+                不得在下一问题中泄露隐藏信息。压力只能来自真实资源、依赖、需求或协作约束，禁止侮辱、嘲讽或人格判断。
+                必须只返回一个 JSON 对象，不要 Markdown 代码块：
+                {"decisionAction":"对候选人实际行动的原子摘要",
+                "decisionRationale":"该行动的决策依据",
+                "eventType":"CONSTRAINT_CHANGE|RESOURCE_SHOCK|DEPENDENCY_FAILURE|TRAFFIC_SPIKE|REQUIREMENT_CHANGE|STAKEHOLDER_ESCALATION|RECOVERY_SIGNAL",
+                "eventDescription":"由本轮决策触发或暴露的后果",
+                "changes":{"仅使用当前 variables 已存在的键":"更新值"},
+                "nextQuestion":"要求候选人处理后果的单个中性中文问题",
+                "completeAfterEvent":false}
+
+                场景完整内部状态（hiddenInformation 仅供导演推演，严禁向候选人泄露）：%s
+                候选人本轮原始回答：%s
+                当前结构化追问目标：%s
+                当前压力状态：%s
+                """.formatted(state.activeScenario(), state.answer(), state.probePlan(), state.pressureState());
+    }
+
+    public static String repairScenarioDirection(InterviewGraphState state, String response) {
+        return """
+                修复下面的 Scenario Director 输出。只返回一个符合指定字段的 JSON 对象。
+                changes 必须非空且只能使用当前 variables 中已有键；事件必须由候选人本轮决策引起，
+                nextQuestion 必须是一个中性、可回答且不泄露 hiddenInformation 的中文问题。
+
+                当前场景：%s
+                候选人回答：%s
+                待修复输出：%s
+                """.formatted(state.activeScenario(), state.answer(), response);
+    }
+
     public static String decision(InterviewGraphState state, ObjectMapper objectMapper) {
         return """
                 你是受规则约束的技术面试流程决策器。根据回答分析选择追问或请求进入下一阶段。
@@ -209,6 +243,7 @@ public final class AgentPrompts {
                 你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
                 当追问计划含 targetConsistencyIssueId 时，必须忠实使用 objective 中的中性澄清问题；
                 当含 targetDeferredProbeId 时，必须围绕延迟验证的 targetClaimId 和 expectedEvidence 提问，
+                当 shouldInjectScenario 为 true 时，必须忠实表达 objective 中的场景后果问题，不得另造事件或改变变量；
                 压力只能来自证据要求、假设挑战、资源约束或故障事件；无论压力等级如何，都禁止侮辱、嘲讽、人身攻击、敌意否定或故意制造不可回答的问题。
                 不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
@@ -216,6 +251,7 @@ public final class AgentPrompts {
 
                 结构化追问计划：%s
                 压力控制状态：%s
+                当前场景公开状态：%s
                 当前阶段：%s
                 目标岗位：%s
                 岗位描述：%s
@@ -230,11 +266,28 @@ public final class AgentPrompts {
                 最近对话：%s
                 """.formatted(intent, json(objectMapper, state.probePlan()),
                 json(objectMapper, state.pressureState()),
+                json(objectMapper, publicScenario(state)),
                 state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()),
                 state.candidateProfileContext(), state.domainPackContext(),
                 json(objectMapper, state.claimExtraction()), state.claimLedgerContext(), state.summary(),
                 state.retrievedContext(), json(objectMapper, recent));
+    }
+
+    private static Object publicScenario(InterviewGraphState state) {
+        if (state.activeScenario() == null) return Map.of();
+        var scenario = state.activeScenario();
+        return Map.of(
+                "id", scenario.id(),
+                "type", scenario.type(),
+                "objective", scenario.objective(),
+                "candidateRole", scenario.candidateRole(),
+                "knownFacts", scenario.knownFacts(),
+                "assumptions", scenario.assumptions(),
+                "variables", scenario.variables(),
+                "constraints", scenario.constraints(),
+                "currentRound", scenario.currentRound(),
+                "maxRounds", scenario.maxRounds());
     }
 
     private static String json(ObjectMapper objectMapper, Object value) {

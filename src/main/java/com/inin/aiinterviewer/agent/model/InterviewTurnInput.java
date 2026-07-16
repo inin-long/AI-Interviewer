@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import com.inin.aiinterviewer.domain.model.PressureState;
+import com.inin.aiinterviewer.domain.model.ScenarioState;
 
 import java.util.List;
 
@@ -23,6 +24,7 @@ public record InterviewTurnInput(
         ConsistencyContext consistencyContext,
         List<DeferredProbe> deferredProbes,
         PressureState pressureState,
+        ScenarioState activeScenario,
         ClaimExtractionResult claimExtraction,
         LogicChainResult logicChainResult,
         EvidenceCollectionResult evidenceCollectionResult,
@@ -39,7 +41,7 @@ public record InterviewTurnInput(
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 "", "", "", "", ConsistencyContext.skipped("not_prepared"), List.of(),
-                PressureState.initial(), null, null, null, null);
+                PressureState.initial(), null, null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -54,7 +56,7 @@ public record InterviewTurnInput(
     ) {
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, "", "", "", ConsistencyContext.skipped("not_prepared"), List.of(),
-                PressureState.initial(), null, null, null, null);
+                PressureState.initial(), null, null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -72,7 +74,7 @@ public record InterviewTurnInput(
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, "",
                 ConsistencyContext.skipped("not_prepared"), List.of(), PressureState.initial(),
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     public InterviewTurnInput(
@@ -91,7 +93,7 @@ public record InterviewTurnInput(
         this(stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
                 evidenceLedgerContext, ConsistencyContext.skipped("not_prepared"),
-                List.of(), PressureState.initial(), null, null, null, null);
+                List.of(), PressureState.initial(), null, null, null, null, null);
     }
 
     public InterviewTurnInput {
@@ -112,7 +114,8 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, evidenceLedgerContext,
-                consistencyContext, deferredProbes, pressureState, extraction, logicChainResult,
+                consistencyContext, deferredProbes, pressureState, activeScenario,
+                extraction, logicChainResult,
                 evidenceCollectionResult,
                 consistencyCheckResult);
     }
@@ -124,7 +127,8 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, updatedClaimLedgerContext, evidenceLedgerContext,
-                consistencyContext, deferredProbes, pressureState, extraction, logicChainResult,
+                consistencyContext, deferredProbes, pressureState, activeScenario,
+                extraction, logicChainResult,
                 evidenceCollectionResult,
                 consistencyCheckResult);
     }
@@ -133,7 +137,8 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext, evidenceLedgerContext,
-                consistencyContext, deferredProbes, pressureState, claimExtraction, result,
+                consistencyContext, deferredProbes, pressureState, activeScenario,
+                claimExtraction, result,
                 evidenceCollectionResult,
                 consistencyCheckResult);
     }
@@ -146,6 +151,7 @@ public record InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
                 updatedEvidenceLedgerContext, consistencyContext, deferredProbes, pressureState,
+                activeScenario,
                 claimExtraction, logicChainResult,
                 result, consistencyCheckResult);
     }
@@ -158,7 +164,8 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, updatedClaimLedgerContext,
-                evidenceLedgerContext, context, deferredProbes, pressureState, claimExtraction,
+                evidenceLedgerContext, context, deferredProbes, pressureState, activeScenario,
+                claimExtraction,
                 logicChainResult,
                 evidenceCollectionResult, result);
     }
@@ -167,7 +174,7 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
-                evidenceLedgerContext, consistencyContext, probes, pressureState,
+                evidenceLedgerContext, consistencyContext, probes, pressureState, activeScenario,
                 claimExtraction, logicChainResult,
                 evidenceCollectionResult, consistencyCheckResult);
     }
@@ -176,7 +183,15 @@ public record InterviewTurnInput(
         return new InterviewTurnInput(
                 stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
                 candidateProfileContext, domainPackContext, claimLedgerContext,
-                evidenceLedgerContext, consistencyContext, deferredProbes, state,
+                evidenceLedgerContext, consistencyContext, deferredProbes, state, activeScenario,
+                claimExtraction, logicChainResult, evidenceCollectionResult, consistencyCheckResult);
+    }
+
+    public InterviewTurnInput withActiveScenario(ScenarioState scenario) {
+        return new InterviewTurnInput(
+                stage, currentQuestion, answer, plan, messages, summary, retrievedContext,
+                candidateProfileContext, domainPackContext, claimLedgerContext,
+                evidenceLedgerContext, consistencyContext, deferredProbes, pressureState, scenario,
                 claimExtraction, logicChainResult, evidenceCollectionResult, consistencyCheckResult);
     }
 }

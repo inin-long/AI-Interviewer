@@ -12,8 +12,13 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import com.inin.aiinterviewer.domain.enums.ConsistencyIssueStatus;
+import com.inin.aiinterviewer.domain.enums.ScenarioEventType;
+import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
+import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
+import com.inin.aiinterviewer.domain.model.ScenarioConstraint;
+import com.inin.aiinterviewer.domain.model.ScenarioDefinition;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,6 +77,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private ClaimLedgerService claimLedgerService;
     @Autowired private EvidenceLedgerService evidenceLedgerService;
     @Autowired private ConsistencyIssueService consistencyIssueService;
+    @Autowired private ScenarioEngine scenarioEngine;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -258,6 +264,105 @@ class InterviewAgentServiceIntegrationTest {
                 .singleElement().satisfies(issue -> {
                     assertThat(issue.status()).isEqualTo(ConsistencyIssueStatus.RESOLVED);
                     assertThat(issue.resolution()).contains("职责边界不冲突");
+                });
+    }
+
+    @Test
+    void directsAndPersistsScenarioOnlyAfterQuestionStreamCompletes() {
+        var user = userService.register("agent-scenario", "Agent Scenario", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "故障沙盘面试", "Java 工程师", "核心查询服务稳定性", InterviewDifficulty.SENIOR,
+                30, 4, null, Map.of("pressureLevel", "CHALLENGING"),
+                List.of("SYSTEM_DESIGN", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("核心查询服务出现延迟，你会先检查什么？"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        var started = scenarioEngine.start(user.id(), session.id(), new ScenarioDefinition(
+                SimulationType.INCIDENT_RESPONSE, "验证故障处置和取舍",
+                "核心查询服务在流量上涨后延迟增加", "当班技术负责人",
+                List.of("流量达到平时两倍"), List.of("数据库允许增加只读实例"),
+                Map.of("rootCause", "databasePrimaryLag"),
+                Map.of("cacheAvailable", true, "databaseCpu", 68),
+                List.of(new ScenarioConstraint("preserve_core_queries", "必须保障核心查询可用", true, true)),
+                List.of("故障处置", "权衡分析"), List.of("核心查询恢复稳定"), 3));
+
+        chatService.enqueueChat("""
+                {"correctness":84,"depth":80,"missingPoints":["回源保护"],"feedback":"处置顺序清晰"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证故障处置"}
+                """);
+        chatService.enqueueChat("""
+                {"decisionAction":"启用熔断并将读流量切到降级缓存",
+                "decisionRationale":"先保护主数据库并维持核心查询可用",
+                "eventType":"DEPENDENCY_FAILURE",
+                "eventDescription":"缓存依赖完全不可用，降级读流量回源导致数据库 CPU 上升",
+                "changes":{"cacheAvailable":false,"databaseCpu":86},
+                "nextQuestion":"缓存完全不可用且数据库 CPU 已升至 86%，你接下来如何保障核心查询？",
+                "completeAfterEvent":false}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "缓存完全不可用且数据库 CPU 已升至 86%，",
+                "你接下来如何保障核心查询？"));
+
+        assertThat(agentService.answer(
+                user.id(), session.id(), "我会先启用熔断，把读流量切到降级缓存。")
+                .collectList().block()).containsExactly(
+                        "缓存完全不可用且数据库 CPU 已升至 86%，",
+                        "你接下来如何保障核心查询？");
+
+        var advanced = scenarioEngine.findActive(user.id(), session.id()).orElseThrow();
+        assertThat(advanced.id()).isEqualTo(started.id());
+        assertThat(advanced.currentRound()).isEqualTo(1);
+        assertThat(advanced.status()).isEqualTo(ScenarioStatus.ACTIVE);
+        assertThat(advanced.variables()).containsEntry("cacheAvailable", false)
+                .containsEntry("databaseCpu", 86);
+        assertThat(advanced.decisions()).singleElement().satisfies(decision -> {
+            assertThat(decision.action()).contains("熔断");
+            assertThat(decision.sourceMessageId()).isPositive();
+        });
+        assertThat(advanced.events()).singleElement().satisfies(event -> {
+            assertThat(event.type()).isEqualTo(ScenarioEventType.DEPENDENCY_FAILURE);
+            assertThat(event.triggeredByDecisionId()).isEqualTo(advanced.decisions().getFirst().id());
+        });
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.stateVersion()).isEqualTo("2.7");
+                    assertThat(state.activeScenario()).isEqualTo(advanced);
+                    assertThat(state.probePlan().shouldInjectScenario()).isTrue();
+                    assertThat(state.currentQuestion()).contains("数据库 CPU 已升至 86%");
+                });
+        assertThat(chatService.lastStreamPrompt())
+                .contains("当前场景公开状态", "databaseCpu", "场景后果问题")
+                .doesNotContain("databasePrimaryLag", "hiddenInformation", "rootCause");
+
+        chatService.enqueueChat("""
+                {"correctness":70,"depth":62,"missingPoints":["容量依据"],"feedback":"继续验证"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"补充容量判断依据"}
+                """);
+        chatService.enqueueChat("not-json");
+        chatService.enqueueChat("still-not-json");
+        chatService.enqueueStream(Flux.just("请说明你判断数据库容量是否足够的指标依据。"));
+
+        assertThat(agentService.answer(
+                user.id(), session.id(), "我会限制非核心查询并继续观察数据库容量。")
+                .collectList().block())
+                .containsExactly("请说明你判断数据库容量是否足够的指标依据。");
+
+        assertThat(scenarioEngine.findActive(user.id(), session.id())).isEmpty();
+        assertThat(scenarioEngine.require(user.id(), session.id(), started.id())).satisfies(failed -> {
+            assertThat(failed.status()).isEqualTo(ScenarioStatus.FAILED);
+            assertThat(failed.terminationReason()).contains("场景导演失败");
+            assertThat(failed.currentRound()).isEqualTo(1);
+        });
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.activeScenario().status()).isEqualTo(ScenarioStatus.FAILED);
+                    assertThat(state.probePlan().shouldInjectScenario()).isFalse();
+                    assertThat(state.currentQuestion()).contains("容量是否足够");
                 });
     }
 

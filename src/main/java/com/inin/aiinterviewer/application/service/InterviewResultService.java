@@ -136,7 +136,7 @@ public class InterviewResultService {
                 previous.latestAnswer(), previous.analysis(), result, previous.profile(),
                 previous.rules(), summary, previous.claimLedger(), previous.evidenceLedger(),
                 previous.logicChainResult(), previous.probePlan(), previous.deferredProbes(),
-                previous.pressureState());
+                previous.pressureState(), previous.activeScenario());
         AgentCheckpointEntity checkpoint = new AgentCheckpointEntity();
         checkpoint.setUserId(userId);
         checkpoint.setSessionId(session.id());

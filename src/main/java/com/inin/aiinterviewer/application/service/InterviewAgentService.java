@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.agent.graph.InterviewGraph;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.ScenarioDirectionResult;
 import com.inin.aiinterviewer.agent.tool.ToolInput;
 import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -42,6 +43,7 @@ public class InterviewAgentService {
     private final EvidenceLedgerService evidenceLedgerService;
     private final ConsistencyIssueService consistencyIssueService;
     private final DeferredProbeService deferredProbeService;
+    private final ScenarioEngine scenarioEngine;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -53,6 +55,7 @@ public class InterviewAgentService {
             EvidenceLedgerService evidenceLedgerService,
             ConsistencyIssueService consistencyIssueService,
             DeferredProbeService deferredProbeService,
+            ScenarioEngine scenarioEngine,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
@@ -63,6 +66,7 @@ public class InterviewAgentService {
         this.evidenceLedgerService = evidenceLedgerService;
         this.consistencyIssueService = consistencyIssueService;
         this.deferredProbeService = deferredProbeService;
+        this.scenarioEngine = scenarioEngine;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -80,7 +84,8 @@ public class InterviewAgentService {
                     claimLedgerService.compactSummary(userId, sessionId),
                     evidenceLedgerService.compactSummary(userId, sessionId));
             String prompt = interviewGraph.initialQuestionPrompt(input);
-            return streamAndPersist(userId, sessionId, session.stage(), prompt, null, List.of(), null);
+            return streamAndPersist(
+                    userId, sessionId, session.stage(), prompt, null, List.of(), null, null, null);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -139,7 +144,14 @@ public class InterviewAgentService {
             sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
             turnInput = turnInput.withDeferredProbes(deferredProbes);
             turnInput = turnInput.withPressureState(answeredState.pressureState());
+            var activeScenario = scenarioEngine.findActive(userId, sessionId).orElse(null);
+            turnInput = turnInput.withActiveScenario(activeScenario);
             if (askedQuestions >= session.planSnapshot().questionCount()) {
+                if (activeScenario != null) {
+                    var aborted = scenarioEngine.abort(
+                            userId, sessionId, activeScenario.id(), "面试达到题目上限");
+                    sessionService.updateScenarioState(userId, sessionId, aborted);
+                }
                 reportTaskService.enqueue(userId, sessionId);
                 return Flux.empty();
             }
@@ -148,12 +160,26 @@ public class InterviewAgentService {
             sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
             sessionService.updatePressureState(userId, sessionId, turn.pressureState());
 
+            ScenarioDirectionResult scenarioDirection = turn.scenarioDirectionResult();
+            if (activeScenario != null && scenarioDirection.degraded()) {
+                try {
+                    var failed = scenarioEngine.failActive(
+                            userId, sessionId, "场景导演失败，已返回普通面试流程");
+                    sessionService.updateScenarioState(userId, sessionId, failed);
+                } catch (RuntimeException exception) {
+                    log.warn("Cannot close degraded scenario {} for session {}",
+                            activeScenario.id(), sessionId, exception);
+                }
+                scenarioDirection = null;
+            }
+
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
             }
             return streamAndPersist(
                     userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(),
-                    retrieval.citations(), turn.probePlan());
+                    retrieval.citations(), turn.probePlan(),
+                    activeScenario == null ? null : activeScenario.id(), scenarioDirection);
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -164,7 +190,9 @@ public class InterviewAgentService {
             String prompt,
             AnswerAnalysis analysis,
             List<KnowledgeCitationDto> citations,
-            ProbePlan probePlan
+            ProbePlan probePlan,
+            String scenarioId,
+            ScenarioDirectionResult scenarioDirection
     ) {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
@@ -190,6 +218,25 @@ public class InterviewAgentService {
                         var deferredProbes = deferredProbeService.markCompleted(
                                 userId, sessionId, probePlan.targetDeferredProbeId());
                         sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
+                    }
+                    if (scenarioId != null && scenarioDirection != null
+                            && scenarioDirection.handled()) {
+                        try {
+                            var scenario = scenarioEngine.advance(
+                                    userId, sessionId, scenarioId, scenarioDirection.toCommand());
+                            sessionService.updateScenarioState(userId, sessionId, scenario);
+                        } catch (RuntimeException scenarioFailure) {
+                            log.warn("Cannot advance scenario {} for session {}; returning to regular interview",
+                                    scenarioId, sessionId, scenarioFailure);
+                            try {
+                                var failed = scenarioEngine.failActive(
+                                        userId, sessionId, "场景状态保存失败，已返回普通面试流程");
+                                sessionService.updateScenarioState(userId, sessionId, failed);
+                            } catch (RuntimeException closeFailure) {
+                                log.error("Cannot close failed scenario {} for session {}",
+                                        scenarioId, sessionId, closeFailure);
+                            }
+                        }
                     }
                     eventPublisher.publishEvent(
                             new InterviewTurnCompletedEvent(userId, sessionId, stage, false));
