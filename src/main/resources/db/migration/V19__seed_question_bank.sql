@@ -1,5 +1,10 @@
 -- 岗位库与面试题库种子数据（绑定单机默认用户 user_id = 1）
 -- 提供开箱即用的岗位、面试题与标签，避免新装应用题库为空。
+-- 全新安装时自动创建默认开发用户（INSERT OR IGNORE 保证幂等）。
+
+-- ============ 默认开发用户 ============
+INSERT OR IGNORE INTO user(id, username, password_hash, nickname) VALUES
+(1, 'dev', '', '开发者');
 
 -- ============ 岗位 ============
 INSERT INTO job_position(user_id, title, department, description) VALUES
