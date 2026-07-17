@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.MarkdownView?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.CareerReportController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回测评">
+                <tooltip><Tooltip text="返回测评"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label text="测评报告" styleClass="page-title"/>
+                <Label fx:id="codeLabel" text="类型代码" styleClass="secondary-text"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="返回" onAction="#back" styleClass="secondary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
+            <content>
+                <VBox styleClass="editor-page">
+                    <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+                    <MarkdownView fx:id="reportView" VBox.vgrow="ALWAYS"/>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inin.aiinterviewer.ui.controller.CareerPlanningController"
+      spacing="16" styleClass="container">
+
+    <padding>
+        <Insets topRightBottomLeft="20"/>
+    </padding>
+
+    <Label text="AI 职业规划 &amp; 简历优化" styleClass="heading-2"/>
+
+    <!-- Tabs for two functions -->
+    <TabPane fx:id="tabPane" VBox.vgrow="ALWAYS">
+        <tabs>
+            <!-- Career Planning Tab -->
+            <Tab text="  职业路径规划  " closable="false">
+                <content>
+                    <VBox spacing="12">
+                        <padding>
+                            <Insets topRightBottomLeft="10"/>
+                        </padding>
+                        <GridPane hgap="12" vgap="10" styleClass="card">
+                            <padding>
+                                <Insets topRightBottomLeft="14"/>
+                            </padding>
+                            <columnConstraints>
+                                <ColumnConstraints prefWidth="90" minWidth="90"/>
+                                <ColumnConstraints hgrow="ALWAYS" minWidth="280"/>
+                            </columnConstraints>
+
+                            <Label text="目标岗位" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="targetPositionField" promptText="例如：高级Java开发工程师"
+                                      GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="当前状态" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="currentStatusArea" promptText="描述当前技能水平、工作经验、项目经历等..."
+                                      prefRowCount="3" wrapText="true"
+                                      GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <Label text="职业目标" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="careerGoalArea" promptText="描述3-5年内的职业发展目标..."
+                                      prefRowCount="3" wrapText="true"
+                                      GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        </GridPane>
+
+                        <HBox spacing="12" alignment="CENTER_RIGHT">
+                            <Button text="生成职业规划" onAction="#handleGeneratePlan"
+                                    styleClass="btn-primary" prefWidth="160"/>
+                        </HBox>
+
+                        <Label text="规划结果" style="-fx-font-size: 15px; -fx-font-weight: bold;"/>
+                        <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS" styleClass="card">
+                            <content>
+                                <VBox fx:id="planContentArea" spacing="8">
+                                    <padding>
+                                        <Insets topRightBottomLeft="10"/>
+                                    </padding>
+                                    <Label text="填写上方信息后点击「生成职业规划」获取AI建议"
+                                           style="-fx-text-fill: #999; -fx-font-style: italic;"/>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Button text="历史记录" onAction="#showPlanHistory" styleClass="btn-secondary"/>
+                        </HBox>
+                    </VBox>
+                </content>
+            </Tab>
+
+            <!-- Resume Optimization Tab -->
+            <Tab text="  AI 简历优化  " closable="false">
+                <content>
+                    <VBox spacing="12">
+                        <padding>
+                            <Insets topRightBottomLeft="10"/>
+                        </padding>
+                        <GridPane hgap="12" vgap="10" styleClass="card">
+                            <padding>
+                                <Insets topRightBottomLeft="14"/>
+                            </padding>
+                            <columnConstraints>
+                                <ColumnConstraints prefWidth="90" minWidth="90"/>
+                                <ColumnConstraints hgrow="ALWAYS" minWidth="280"/>
+                            </columnConstraints>
+
+                            <Label text="目标岗位" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                            <TextField fx:id="resumeTargetField" promptText="应聘的目标岗位名称"
+                                      GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+                            <Label text="原始内容" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="originalResumeArea" promptText="粘贴需要优化的简历段落或完整简历内容..."
+                                      prefRowCount="8" wrapText="true"
+                                      GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+                            <Label text="优化方向" style="" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                            <TextArea fx:id="optimizeDirectionArea"
+                                      promptText="可选：说明优化重点，如「突出项目成果」「增强技术深度」「精简表述」等..."
+                                      prefRowCount="2" wrapText="true"
+                                      GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        </GridPane>
+
+                        <HBox spacing="12" alignment="CENTER_RIGHT">
+                            <Button text="优化简历" onAction="#handleOptimizeResume"
+                                    styleClass="btn-primary" prefWidth="140"/>
+                        </HBox>
+
+                        <Label text="优化结果" style="-fx-font-size: 15px; -fx-font-weight: bold;"/>
+                        <ScrollPane fitToWidth="true" fitToHeight="true" VBox.vgrow="ALWAYS" styleClass="card">
+                            <content>
+                                <VBox fx:id="optimizationResultArea" spacing="8">
+                                    <padding>
+                                        <Insets topRightBottomLeft="10"/>
+                                    </padding>
+                                    <Label text="粘贴原始简历内容后点击「优化简历」获取AI建议"
+                                           style="-fx-text-fill: #999; -fx-font-style: italic;"/>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+
+                        <HBox spacing="8" alignment="CENTER_LEFT">
+                            <Button text="优化历史" onAction="#showOptimizationHistory" styleClass="btn-secondary"/>
+                        </HBox>
+                    </VBox>
+                </content>
+            </Tab>
+        </tabs>
+    </TabPane>
+
+</VBox>

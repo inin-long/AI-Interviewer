@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.QuestionEditorController"
+            styleClass="page-content">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
+            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回题库">
+                <tooltip><Tooltip text="返回题库"/></tooltip>
+            </Button>
+            <VBox spacing="4">
+                <Label text="面试题" styleClass="page-title"/>
+                <Label fx:id="hintLabel" text="新建面试题" styleClass="secondary-text"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="取消" onAction="#back" styleClass="secondary-button"/>
+            <Button fx:id="saveButton" text="保存" onAction="#save" styleClass="primary-button"/>
+        </HBox>
+    </top>
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
+            <content>
+                <VBox spacing="16" styleClass="editor-page">
+                    <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+                    <VBox spacing="12" styleClass="content-card">
+                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+                        <Label text="题目属性" styleClass="module-title"/>
+                        <GridPane hgap="14" vgap="12">
+                            <columnConstraints>
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                            </columnConstraints>
+                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                <Label text="归属岗位" styleClass="field-label"/>
+                                <ComboBox fx:id="jobCombo" promptText="可选：不归类到具体岗位"/>
+                            </VBox>
+                            <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                <Label text="题目类别" styleClass="field-label"/>
+                                <ComboBox fx:id="categoryCombo"/>
+                            </VBox>
+                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                                <Label text="难度" styleClass="field-label"/>
+                                <ComboBox fx:id="difficultyCombo"/>
+                            </VBox>
+                        </GridPane>
+                        <Label text="题目标题" styleClass="field-label"/>
+                        <TextField fx:id="titleField" promptText="一句话概括题目意图"/>
+                        <Label text="题干内容" styleClass="field-label"/>
+                        <TextArea fx:id="contentArea" prefRowCount="4" wrapText="true" promptText="完整题目描述"/>
+                        <Label text="参考回答（可选）" styleClass="field-label"/>
+                        <TextArea fx:id="answerArea" prefRowCount="5" wrapText="true" promptText="给面试官的评分要点或参考答案"/>
+                        <Label text="标签（逗号分隔）" styleClass="field-label"/>
+                        <TextField fx:id="tagsField" promptText="如 并发、系统设计、沟通"/>
+                    </VBox>
+                </VBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inin.aiinterviewer.ui.controller.SkillArticleEditorController"
+      spacing="12" styleClass="container">
+
+    <padding>
+        <Insets topRightBottomLeft="20"/>
+    </padding>
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
+        <Label text="编辑文章" styleClass="heading-2"/>
+    </HBox>
+
+    <GridPane hgap="12" vgap="12" styleClass="card">
+        <padding>
+            <Insets topRightBottomLeft="16"/>
+        </padding>
+        <columnConstraints>
+            <ColumnConstraints prefWidth="80" minWidth="80"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="300"/>
+        </columnConstraints>
+
+        <Label text="标题" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="titleField" promptText="文章标题" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+
+        <Label text="分类" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <ComboBox fx:id="categoryCombo" promptText="选择分类" editable="true" prefWidth="250"
+                  GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+
+        <Label text="摘要" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <TextArea fx:id="summaryField" promptText="简短摘要（可选）" prefRowCount="2" wrapText="true"
+                  GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+
+        <Label text="内容" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        <TextArea fx:id="contentArea" promptText="Markdown 格式内容..." prefRowCount="15" wrapText="true"
+                  GridPane.rowIndex="4" GridPane.columnIndex="1" GridPane.columnSpan="2"/>
+    </GridPane>
+
+    <HBox spacing="12" alignment="CENTER_RIGHT">
+        <Button text="保存" onAction="#handleSave" styleClass="btn-primary"/>
+        <Button text="取消" onAction="#handleBack" styleClass="btn-secondary"/>
+    </HBox>
+
+</VBox>

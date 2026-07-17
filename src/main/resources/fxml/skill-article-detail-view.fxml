@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inin.aiinterviewer.ui.controller.SkillArticleDetailController"
+      spacing="12" styleClass="container">
+
+    <padding>
+        <Insets topRightBottomLeft="20"/>
+    </padding>
+
+    <HBox spacing="12" alignment="CENTER_LEFT">
+        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
+        <Label fx:id="titleLabel" text="" styleClass="heading-2"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label fx:id="categoryLabel" style="-fx-text-fill: #666;"/>
+        <Button text="编辑" onAction="#handleEdit" styleClass="btn-primary"/>
+    </HBox>
+
+    <Label fx:id="summaryLabel" style="-fx-font-size: 14px; -fx-wrap-text: true;" wrapText="true"/>
+
+    <Separator/>
+
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="card">
+        <content>
+            <VBox fx:id="contentArea" spacing="8">
+                <padding>
+                    <Insets topRightBottomLeft="10"/>
+                </padding>
+            </VBox>
+        </content>
+    </ScrollPane>
+
+</VBox>

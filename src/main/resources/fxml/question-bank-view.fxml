@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.inin.aiinterviewer.ui.controller.QuestionBankController"
+      spacing="18" styleClass="page-content">
+    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="5">
+            <Label text="岗位库与面试题库" styleClass="page-title"/>
+            <Label text="按岗位维护题库，技术 / 行为 / 场景题分别归类，并用标签检索" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="refreshButton" text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+    </HBox>
+    <HBox spacing="18" VBox.vgrow="ALWAYS">
+        <VBox spacing="10" prefWidth="276" minWidth="240" styleClass="content-card">
+            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+            <Label text="岗位" styleClass="module-title"/>
+            <ListView fx:id="jobListView" VBox.vgrow="ALWAYS" styleClass="data-table"/>
+            <HBox spacing="6">
+                <TextField fx:id="newJobTitleField" promptText="岗位名称，如 Java 后端" HBox.hgrow="ALWAYS"/>
+            </HBox>
+            <HBox spacing="6">
+                <TextField fx:id="newJobDeptField" promptText="方向 / 部门（可选）" HBox.hgrow="ALWAYS"/>
+                <Button fx:id="addJobButton" text="添加" onAction="#addJob" styleClass="primary-button"/>
+            </HBox>
+            <Button fx:id="deleteJobButton" text="删除所选岗位" onAction="#deleteSelectedJob" styleClass="danger-button"/>
+        </VBox>
+        <VBox spacing="10" HBox.hgrow="ALWAYS">
+            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="section-summary">
+                <Label text="面试题" styleClass="module-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <ComboBox fx:id="categoryFilterCombo" prefWidth="120"/>
+                <ComboBox fx:id="tagFilterCombo" prefWidth="150"/>
+                <Button fx:id="newQuestionButton" text="新建题目" onAction="#newQuestion" styleClass="primary-button"/>
+                <Button fx:id="deleteQuestionButton" text="删除所选" onAction="#deleteSelectedQuestion" styleClass="danger-button"/>
+            </HBox>
+            <TableView fx:id="questionTable" VBox.vgrow="ALWAYS" styleClass="data-table">
+                <placeholder>
+                    <VBox styleClass="empty-state">
+                        <Label text="🗂" styleClass="empty-icon"/>
+                        <Label text="还没有面试题" styleClass="empty-title"/>
+                        <Label text="选择岗位后点击「新建题目」，按技术 / 行为 / 场景归类并打标签。" styleClass="empty-hint"/>
+                    </VBox>
+                </placeholder>
+                <columns>
+                    <TableColumn fx:id="jobColumn" text="岗位" prefWidth="130"/>
+                    <TableColumn fx:id="categoryColumn" text="类别" prefWidth="80"/>
+                    <TableColumn fx:id="difficultyColumn" text="难度" prefWidth="100"/>
+                    <TableColumn fx:id="titleColumn" text="题干" prefWidth="300"/>
+                    <TableColumn fx:id="tagsColumn" text="标签" prefWidth="160"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </HBox>
+</VBox>

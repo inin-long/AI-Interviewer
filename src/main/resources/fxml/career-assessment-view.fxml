@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.inin.aiinterviewer.ui.controller.CareerAssessmentController"
+      spacing="18" styleClass="page-content">
+    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
+    <HBox alignment="CENTER_LEFT" spacing="12">
+        <VBox spacing="5">
+            <Label text="职业测评" styleClass="page-title"/>
+            <Label text="完成霍兰德或 MBTI 问卷，生成你的职业倾向报告" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <HBox spacing="18" VBox.vgrow="ALWAYS">
+        <VBox spacing="10" prefWidth="240" minWidth="220" styleClass="content-card">
+            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+            <Label text="选择测评" styleClass="module-title"/>
+            <ListView fx:id="templateListView" VBox.vgrow="ALWAYS" styleClass="data-table"/>
+            <Button text="我的测评记录" onAction="#openHistory" styleClass="secondary-button"/>
+        </VBox>
+        <VBox spacing="10" HBox.hgrow="ALWAYS">
+            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="section-summary">
+                <Label text="答题" styleClass="module-title"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button fx:id="submitButton" text="提交测评" onAction="#submit" styleClass="primary-button"/>
+            </HBox>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="content-scroll">
+                <content>
+                    <VBox fx:id="questionHost" spacing="12" styleClass="editor-page">
+                        <padding><Insets top="18" right="8" bottom="18" left="0"/></padding>
+                        <Label text="从左侧选择一份问卷开始作答" styleClass="empty-hint"/>
+                    </VBox>
+                </content>
+            </ScrollPane>
+            <Label fx:id="hintLabel" text="" styleClass="local-data-note" wrapText="true"/>
+        </VBox>
+    </HBox>
+</VBox>
