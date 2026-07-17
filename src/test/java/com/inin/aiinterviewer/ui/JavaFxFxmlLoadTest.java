@@ -109,6 +109,56 @@ class JavaFxFxmlLoadTest {
     }
 
     @Test
+    void dashboardStartActionContinuesIntoPlanCreationWhenNoPlanExists() throws Exception {
+        sessionState.logIn(new UserDto(1L, "dashboard-flow-user", "Mahoo", LocalDateTime.now()));
+        FutureTask<Boolean> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/main-window.fxml");
+            Scene scene = new Scene(root, 1672, 901);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            Button start = (Button) root.lookup("#dashboardStartButton");
+            start.fire();
+            root.applyCss();
+            root.layout();
+            return root.lookup("#nameField") != null
+                    && root.lookup("#savePlanButton") != null;
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void dashboardUsesTheSimplifiedTopbarAndFullHeightRecentPlanPanel() throws Exception {
+        sessionState.logIn(new UserDto(1L, "dashboard-layout-user", "inin", LocalDateTime.now()));
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/main-window.fxml");
+            Scene scene = new Scene(root, 1672, 901);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+
+            HBox topbar = (HBox) root.lookup(".topbar");
+            VBox recentInterviewPanel = (VBox) root.lookup("#recentInterviewList").getParent();
+            VBox recentPlanPanel = (VBox) root.lookup("#recentPlanList").getParent();
+            long topbarButtonCount = topbar.getChildren().stream()
+                    .filter(Button.class::isInstance)
+                    .count();
+
+            return new boolean[]{
+                    root.lookup("#taskStatusButton") == null,
+                    topbarButtonCount == 1 && root.lookup("#userMenuButton") != null,
+                    root.lookup("#uploadResumeButton") == null,
+                    root.lookup("#aiSettingsButton") == null,
+                    Math.abs(recentInterviewPanel.getBoundsInParent().getHeight()
+                            - recentPlanPanel.getBoundsInParent().getHeight()) < 0.5
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
     void selectAndTextInputHaveMatchingRenderedHeight() throws Exception {
         if (sessionState.currentUser().isEmpty()) {
             sessionState.logIn(new UserDto(1L, "style-test-user", "样式测试用户", LocalDateTime.now()));
@@ -259,10 +309,7 @@ class JavaFxFxmlLoadTest {
             root.layout();
             Button dashboard = (Button) root.lookup("#dashboardNavButton");
             Button plans = (Button) root.lookup("#plansNavButton");
-            Button profiles = (Button) root.lookup("#profilesNavButton");
-            Button tasks = (Button) root.lookup("#tasksNavButton");
             Button settings = (Button) root.lookup("#settingsNavButton");
-            Button taskStatus = (Button) root.lookup("#taskStatusButton");
             HBox activityReceipt = (HBox) root.lookup("#activityReceipt");
             VBox sidebar = (VBox) root.lookup("#sidebar");
             var navigationOrder = sidebar.getChildren().stream()
@@ -279,28 +326,17 @@ class JavaFxFxmlLoadTest {
                     && Math.abs(root.getLeft().getBoundsInParent().getHeight() - root.getHeight()) < 0.5;
             boolean topbarInsideContent = root.getCenter() instanceof BorderPane content
                     && content.getTop() != null;
-            profiles.fire();
-            boolean profilesLoaded = profiles.getPseudoClassStates().contains(selected)
-                    && !plans.getPseudoClassStates().contains(selected)
-                    && root.lookup("#profileTable") != null;
-            tasks.fire();
-            boolean tasksLoaded = tasks.getPseudoClassStates().contains(selected)
-                    && !profiles.getPseudoClassStates().contains(selected)
-                    && root.lookup("#taskTable") != null;
             settings.fire();
             boolean settingsLoaded = settings.getPseudoClassStates().contains(selected)
                     && !plans.getPseudoClassStates().contains(selected)
                     && root.lookup("#generalNavButton") != null;
-            boolean taskFeedbackReady = taskStatus != null
-                    && "后台任务".equals(taskStatus.getText())
-                    && activityReceipt != null
+            boolean taskFeedbackReady = activityReceipt != null
                     && !activityReceipt.isVisible()
                     && !activityReceipt.isManaged();
             boolean expectedNavigationOrder = navigationOrder.equals(List.of(
-                    "首页", "简历", "候选人画像", "面试方案",
-                    "面试记录", "知识库", "任务中心", "设置"));
+                    "首页", "面试方案", "面试记录", "简历", "知识库", "设置"));
             return new boolean[]{initialSelection, switchedSelection, fullHeight,
-                    topbarInsideContent, profilesLoaded, tasksLoaded, settingsLoaded,
+                    topbarInsideContent, settingsLoaded,
                     taskFeedbackReady, expectedNavigationOrder};
         });
         Platform.runLater(task);

@@ -1,8 +1,6 @@
 package com.inin.aiinterviewer.ui.controller;
 
-import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.config.properties.LlmProperties;
-import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -15,47 +13,47 @@ import javafx.application.Platform;
 import javafx.css.PseudoClass;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
+import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
+import javafx.geometry.Side;
 import javafx.util.Duration;
+import org.kordamp.ikonli.javafx.FontIcon;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+
+import java.util.Locale;
 
 @Component
 @Scope("prototype")
 public class MainWindowController {
 
     private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
-    private static final PseudoClass ACTIVE = PseudoClass.getPseudoClass("active");
     private static final PseudoClass FAILED = PseudoClass.getPseudoClass("failed");
 
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
     private final LlmProperties llmProperties;
     private final ContentNavigator contentNavigator;
-    private final BackgroundTaskService taskService;
     private final TaskNotificationCenter notificationCenter;
 
     @FXML private BorderPane mainRoot;
-    @FXML
-    private Label usernameLabel;
-    @FXML
-    private Label aiStatusLabel;
-    @FXML
-    private Label contentTitleLabel;
-    @FXML
-    private StackPane contentHost;
+    @FXML private Label usernameLabel;
+    @FXML private Label avatarLabel;
+    @FXML private Label aiStatusLabel;
+    @FXML private FontIcon aiStatusIcon;
+    @FXML private Label contentTitleLabel;
+    @FXML private StackPane contentHost;
     @FXML private Button dashboardNavButton;
     @FXML private Button plansNavButton;
     @FXML private Button historyNavButton;
     @FXML private Button resumesNavButton;
-    @FXML private Button profilesNavButton;
     @FXML private Button knowledgeNavButton;
-    @FXML private Button tasksNavButton;
     @FXML private Button settingsNavButton;
-    @FXML private Button taskStatusButton;
+    @FXML private Button userMenuButton;
     @FXML private HBox activityReceipt;
     @FXML private Label activityTitleLabel;
     @FXML private Label activityDetailLabel;
@@ -63,33 +61,35 @@ public class MainWindowController {
     private TaskNotificationCenter.Registration notificationRegistration;
     private PauseTransition receiptTimeout;
     private long notificationTaskId;
+    private ContextMenu userMenu;
 
     public MainWindowController(
             UserSessionState sessionState,
             JavaFxViewManager viewManager,
             LlmProperties llmProperties,
             ContentNavigator contentNavigator,
-            BackgroundTaskService taskService,
             TaskNotificationCenter notificationCenter
     ) {
         this.sessionState = sessionState;
         this.viewManager = viewManager;
         this.llmProperties = llmProperties;
         this.contentNavigator = contentNavigator;
-        this.taskService = taskService;
         this.notificationCenter = notificationCenter;
     }
 
     @FXML
     private void initialize() {
-        usernameLabel.setText(sessionState.requireCurrentUser().nickname());
-        aiStatusLabel.setText(llmProperties.isConfigured() ? "AI 配置已检测" : "AI 尚未配置");
+        String nickname = sessionState.requireCurrentUser().nickname();
+        usernameLabel.setText(nickname);
+        avatarLabel.setText(avatarInitial(nickname));
+        boolean aiConfigured = llmProperties.isConfigured();
+        aiStatusLabel.setText(aiConfigured ? "AI 服务状态：正常" : "AI 服务状态：待配置");
+        aiStatusIcon.pseudoClassStateChanged(FAILED, !aiConfigured);
         contentNavigator.attach(contentHost, contentTitleLabel, this::selectNavigation);
         mainRoot.sceneProperty().addListener((observable, previous, current) -> {
             if (current == null) unsubscribeFromNotifications();
             else subscribeToNotifications();
         });
-        refreshTaskIndicator();
         showSection(Route.DASHBOARD);
     }
 
@@ -101,6 +101,22 @@ public class MainWindowController {
     @FXML private void showKnowledge() { showSection(Route.KNOWLEDGE); }
     @FXML private void showTasks() { showSection(Route.TASK); }
     @FXML private void showSettings() { showSection(Route.SETTING); }
+
+    @FXML
+    private void showUserMenu() {
+        if (userMenu == null) {
+            MenuItem settings = new MenuItem("设置", new FontIcon("mdi2c-cog-outline"));
+            settings.setOnAction(event -> showSettings());
+            MenuItem logout = new MenuItem("退出登录", new FontIcon("mdi2l-logout-variant"));
+            logout.setOnAction(event -> logout());
+            userMenu = new ContextMenu(settings, logout);
+        }
+        if (userMenu.isShowing()) {
+            userMenu.hide();
+        } else {
+            userMenu.show(userMenuButton, Side.BOTTOM, 0, 6);
+        }
+    }
 
     @FXML
     private void logout() {
@@ -118,9 +134,7 @@ public class MainWindowController {
         plansNavButton.pseudoClassStateChanged(SELECTED, route == Route.PLAN);
         historyNavButton.pseudoClassStateChanged(SELECTED, route == Route.HISTORY);
         resumesNavButton.pseudoClassStateChanged(SELECTED, route == Route.RESUME);
-        profilesNavButton.pseudoClassStateChanged(SELECTED, route == Route.PROFILE);
         knowledgeNavButton.pseudoClassStateChanged(SELECTED, route == Route.KNOWLEDGE);
-        tasksNavButton.pseudoClassStateChanged(SELECTED, route == Route.TASK);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
     }
 
@@ -157,7 +171,6 @@ public class MainWindowController {
 
     private void handleTaskNotification(TaskNotification notification) {
         if (mainRoot.getScene() == null) return;
-        refreshTaskIndicator();
         if (notification.outcome() == TaskNotificationCenter.Outcome.QUEUED
                 || notification.outcome() == TaskNotificationCenter.Outcome.RUNNING
                 || notification.outcome() == TaskNotificationCenter.Outcome.DELETED) return;
@@ -174,23 +187,9 @@ public class MainWindowController {
         receiptTimeout.play();
     }
 
-    private void refreshTaskIndicator() {
-        var tasks = taskService.listDtos(sessionState.requireCurrentUser().id());
-        long active = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.PENDING
-                || task.status() == BackgroundTaskStatus.RUNNING).count();
-        long failed = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.FAILED).count();
-        taskStatusButton.pseudoClassStateChanged(ACTIVE, active > 0);
-        taskStatusButton.pseudoClassStateChanged(FAILED, active == 0 && failed > 0);
-        if (active > 0) {
-            taskStatusButton.setText("后台处理中 · " + active);
-            taskStatusButton.setAccessibleText(active + " 个后台任务正在处理，打开任务中心");
-        } else if (failed > 0) {
-            taskStatusButton.setText("任务待处理 · " + failed);
-            taskStatusButton.setAccessibleText(failed + " 个后台任务失败，打开任务中心");
-        } else {
-            taskStatusButton.setText("后台任务");
-            taskStatusButton.setAccessibleText("打开任务中心");
-        }
+    private String avatarInitial(String nickname) {
+        if (nickname == null || nickname.isBlank()) return "U";
+        return nickname.strip().substring(0, 1).toUpperCase(Locale.ROOT);
     }
 
     private String notificationTitle(TaskNotification notification) {

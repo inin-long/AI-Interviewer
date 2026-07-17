@@ -26,6 +26,7 @@
         <lucene.version>10.3.2</lucene.version>
         <commonmark.version>0.28.0</commonmark.version>
         <testfx.version>4.0.18</testfx.version>
+        <ikonli.version>12.4.0</ikonli.version>
         <jacoco.version>0.8.15</jacoco.version>
         <flyway.version>12.10.0</flyway.version>
         <javafx-maven-plugin.version>0.0.8</javafx-maven-plugin.version>
@@ -107,6 +108,16 @@
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-web</artifactId>
             <version>${javafx.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-javafx</artifactId>
+            <version>${ikonli.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.kordamp.ikonli</groupId>
+            <artifactId>ikonli-materialdesign2-pack</artifactId>
+            <version>${ikonli.version}</version>
         </dependency>
 
         <dependency>

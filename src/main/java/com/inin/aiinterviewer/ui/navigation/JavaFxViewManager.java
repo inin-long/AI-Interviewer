@@ -6,6 +6,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -36,6 +37,10 @@ public class JavaFxViewManager implements ViewManager {
         this.primaryStage = Objects.requireNonNull(stage, "stage");
         stage.setMinWidth(1024);
         stage.setMinHeight(720);
+        URL icon = getClass().getResource("/images/home/app-icon.png");
+        if (icon != null) {
+            stage.getIcons().setAll(new Image(icon.toExternalForm()));
+        }
     }
 
     @Override
@@ -60,7 +65,7 @@ public class JavaFxViewManager implements ViewManager {
             } else {
                 scene.setRoot(root);
             }
-            primaryStage.setTitle("AI Interviewer · " + route.title());
+            primaryStage.setTitle("AI Interviewer");
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to load view: " + route, exception);
         }

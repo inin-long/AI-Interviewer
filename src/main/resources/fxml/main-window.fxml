@@ -2,7 +2,10 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -10,38 +13,66 @@
             fx:id="mainRoot"
             styleClass="app-root">
     <left>
-        <VBox fx:id="sidebar" prefWidth="216" spacing="6" styleClass="sidebar">
-            <padding><Insets top="22" right="14" bottom="18" left="14"/></padding>
+        <VBox fx:id="sidebar" minWidth="232" prefWidth="232" maxWidth="232" spacing="6" styleClass="sidebar">
+            <padding><Insets top="26" right="12" bottom="18" left="12"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="12" styleClass="sidebar-brand">
-                <Label text="AI" styleClass="brand-mark-small"/>
+                <ImageView fitWidth="40" fitHeight="40" preserveRatio="true" smooth="true">
+                    <image><Image url="@../images/home/app-icon.png"/></image>
+                </ImageView>
                 <Label text="AI Interviewer" styleClass="window-brand"/>
             </HBox>
-            <Region prefHeight="24"/>
-            <Button fx:id="dashboardNavButton" text="首页" onAction="#showDashboard" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="resumesNavButton" text="简历" onAction="#showResumes" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="profilesNavButton" text="候选人画像" onAction="#showProfiles" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="plansNavButton" text="面试方案" onAction="#showPlans" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="historyNavButton" text="面试记录" onAction="#showHistory" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="knowledgeNavButton" text="知识库" onAction="#showKnowledge" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="tasksNavButton" text="任务中心" onAction="#showTasks" maxWidth="Infinity" styleClass="nav-button"/>
-            <Button fx:id="settingsNavButton" text="设置" onAction="#showSettings" maxWidth="Infinity" styleClass="nav-button"/>
+            <Region prefHeight="22"/>
+            <Button fx:id="dashboardNavButton" text="首页" onAction="#showDashboard"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2h-home-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="plansNavButton" text="面试方案" onAction="#showPlans"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2f-file-document-edit-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="historyNavButton" text="面试记录" onAction="#showHistory"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2c-calendar-clock-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="resumesNavButton" text="简历" onAction="#showResumes"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2f-file-account-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="knowledgeNavButton" text="知识库" onAction="#showKnowledge"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2b-book-open-variant" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="settingsNavButton" text="设置" onAction="#showSettings"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2c-cog-outline" iconSize="21"/></graphic>
+            </Button>
             <Region VBox.vgrow="ALWAYS"/>
-            <Label fx:id="aiStatusLabel" text="AI 尚未配置" styleClass="sidebar-status" wrapText="true"/>
-            <Label text="版本 0.1.0" styleClass="fine-print"/>
+            <Separator styleClass="sidebar-divider"/>
+            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="sidebar-service-row">
+                <FontIcon fx:id="aiStatusIcon" iconLiteral="mdi2c-circle" iconSize="10" styleClass="service-status-icon"/>
+                <Label fx:id="aiStatusLabel" text="AI 服务状态：正常" styleClass="sidebar-status-text"/>
+            </HBox>
+            <Label text="版本 0.1.0" styleClass="fine-print sidebar-version"/>
         </VBox>
     </left>
     <center>
         <BorderPane>
             <top>
                 <VBox>
-                    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="topbar">
-                        <padding><Insets top="12" right="24" bottom="12" left="28"/></padding>
+                    <HBox minHeight="62" prefHeight="62" alignment="CENTER_LEFT" spacing="14" styleClass="topbar">
+                        <padding><Insets top="0" right="28" bottom="0" left="30"/></padding>
+                        <FontIcon iconLiteral="mdi2m-menu" iconSize="22" styleClass="topbar-menu-icon"/>
                         <Label fx:id="contentTitleLabel" text="首页" styleClass="topbar-title"/>
                         <Region HBox.hgrow="ALWAYS"/>
-                        <Button fx:id="taskStatusButton" text="后台任务" onAction="#showTasks"
-                                styleClass="task-status-button" accessibleText="打开任务中心"/>
-                        <Label fx:id="usernameLabel" text="用户" styleClass="user-chip"/>
-                        <Button text="退出" onAction="#logout" styleClass="text-button"/>
+                        <Button fx:id="userMenuButton" onAction="#showUserMenu" styleClass="user-menu-button">
+                            <graphic>
+                                <HBox alignment="CENTER" spacing="9">
+                                    <Label fx:id="avatarLabel" text="M" styleClass="user-avatar"/>
+                                    <Label fx:id="usernameLabel" text="用户" styleClass="username-text"/>
+                                    <FontIcon iconLiteral="mdi2c-chevron-down" iconSize="17" styleClass="user-chevron"/>
+                                </HBox>
+                            </graphic>
+                        </Button>
                     </HBox>
                     <HBox fx:id="activityReceipt" alignment="CENTER_LEFT" spacing="14"
                           visible="false" managed="false" styleClass="activity-receipt">
