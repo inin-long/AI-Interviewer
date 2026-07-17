@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.application.service.SessionBranchService;
 import com.inin.aiinterviewer.application.service.TrainingRecommendationService;
+import com.inin.aiinterviewer.application.service.TrainingProgressService;
 import com.inin.aiinterviewer.application.dto.TrainingRecommendationDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.model.Message;
@@ -44,6 +45,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private final InterviewSessionService sessionService;
     private final SessionBranchService branchService;
     private final TrainingRecommendationService trainingService;
+    private final TrainingProgressService trainingProgressService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -71,6 +73,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
             InterviewSessionService sessionService,
             SessionBranchService branchService,
             TrainingRecommendationService trainingService,
+            TrainingProgressService trainingProgressService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -80,6 +83,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         this.sessionService = sessionService;
         this.branchService = branchService;
         this.trainingService = trainingService;
+        this.trainingProgressService = trainingProgressService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -106,6 +110,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         renderEvidenceNavigation(report.evidence());
         renderBranchNavigation(branchService.list(userId, interviewId));
         renderTrainingRecommendation(trainingService.recommend(userId, interviewId));
+        renderTrainingProgress(trainingProgressService.find(userId, interviewId));
         renderCitationNavigation(sessionService.messages(userId, interviewId));
     }
 
@@ -231,6 +236,42 @@ public class InterviewReportController implements ContextAwareController<Long> {
             knowledge.getStyleClass().add("secondary-text");
             trainingRecommendationContainer.getChildren().add(knowledge);
         }
+    }
+
+    private void renderTrainingProgress(
+            List<com.inin.aiinterviewer.application.dto.TrainingScoreChangeDto> changes
+    ) {
+        if (changes.isEmpty()) return;
+        Label heading = new Label("复试评分变化");
+        heading.getStyleClass().add("summary-label");
+        trainingRecommendationContainer.getChildren().add(heading);
+        changes.stream().limit(5).forEach(change -> {
+            Button link = new Button(change.title() + " · " + scoreChangeText(change));
+            link.setMaxWidth(Double.MAX_VALUE);
+            link.getStyleClass().add("report-question-link");
+            link.setAccessibleText("查看专项复试报告：" + change.title());
+            String dimensions = change.dimensions().stream().limit(4)
+                    .map(value -> value.label() + " " + signed(value.delta()))
+                    .collect(Collectors.joining("；"));
+            if (!dimensions.isBlank()) link.setTooltip(new Tooltip(dimensions));
+            link.setOnAction(event -> contentNavigator.showSubPage(
+                    "/fxml/report-detail-view.fxml", "面试报告", change.sessionId()));
+            trainingRecommendationContainer.getChildren().add(link);
+        });
+    }
+
+    private String scoreChangeText(
+            com.inin.aiinterviewer.application.dto.TrainingScoreChangeDto change
+    ) {
+        if (!change.sourceScored() || !change.retestScored() || change.overallDelta() == null) {
+            return "存在证据不足维度";
+        }
+        return change.sourceScore() + " → " + change.retestScore()
+                + "（" + signed(change.overallDelta()) + "）";
+    }
+
+    private String signed(int value) {
+        return value > 0 ? "+" + value : Integer.toString(value);
     }
 
     @FXML
