@@ -180,15 +180,21 @@ public class InterviewResultService {
         var ledger = evidenceLedgerService.ledger(report.getUserId(), report.getInterviewId());
         Map<Long, Integer> questionNumbers = messageQuestionNumbers(
                 report.getUserId(), report.getInterviewId());
-        Map<String, Double> confidence = ledger.summaries().entrySet().stream()
-                .collect(java.util.stream.Collectors.toUnmodifiableMap(
-                        Map.Entry::getKey, entry -> entry.getValue().confidence()));
+        Map<String, Double> confidence = payload.scoreEvidence().isEmpty()
+                ? ledger.summaries().entrySet().stream()
+                        .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                                Map.Entry::getKey, entry -> entry.getValue().confidence()))
+                : payload.scoreEvidence().entrySet().stream()
+                        .filter(entry -> !entry.getKey().equals(EvidenceScoreAggregator.OVERALL))
+                        .collect(java.util.stream.Collectors.toUnmodifiableMap(
+                                Map.Entry::getKey, entry -> entry.getValue().confidence()));
         return new InterviewReportDto(report.getId(), report.getInterviewId(), report.getTitle(),
                 payload.overallScore(), dimensions(payload), payload.summary(), report.getContentMarkdown(),
                 confidence, ledger.evidence().stream()
                         .map(evidence -> EvaluationEvidenceDto.from(
                                 evidence, questionNumbers.getOrDefault(evidence.messageId(), 0)))
-                        .toList());
+                        .toList(), payload.scoreEvidence(), payload.overallConfidence(),
+                payload.overallScored());
     }
 
     private Map<Long, Integer> messageQuestionNumbers(long userId, long sessionId) {
@@ -232,7 +238,15 @@ public class InterviewResultService {
 
     private EvaluationPayload readPayload(String json) {
         try {
-            return objectMapper.readValue(json, EvaluationPayload.class);
+            EvaluationPayload payload = objectMapper.readValue(json, EvaluationPayload.class);
+            if (!objectMapper.readTree(json).has("scoreEvidence")) {
+                return new EvaluationPayload(
+                        payload.overallScore(), payload.technicalScore(),
+                        payload.problemSolvingScore(), payload.projectScore(),
+                        payload.systemDesignScore(), payload.communicationScore(),
+                        payload.comprehensiveScore(), payload.summary());
+            }
+            return payload;
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }

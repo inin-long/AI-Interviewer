@@ -449,6 +449,11 @@
     -fx-padding: 10 12;
 }
 
+.score-evidence-link {
+    -fx-text-fill: -primary;
+    -fx-underline: true;
+}
+
 .transcript-area {
     -fx-font-size: 15px;
     -fx-line-spacing: 4px;

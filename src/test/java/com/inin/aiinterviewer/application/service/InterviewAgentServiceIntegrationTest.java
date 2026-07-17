@@ -618,9 +618,12 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.require(user.id(), session.id()).stage()).isEqualTo(InterviewStage.COMPLETED);
         assertThat(interviewResultService.find(user.id(), session.id()))
                 .get().satisfies(report -> {
-                    assertThat(report.overallScore()).isEqualTo(78);
+                    assertThat(report.overallScore()).isEqualTo(79);
                     assertThat(report.dimensions()).hasSize(6);
-                    assertThat(report.confidence()).containsKey("PROBLEM_SOLVING");
+                    assertThat(report.confidence()).containsKey("problemSolving");
+                    assertThat(report.scoreEvidence().get("problemSolving").scored()).isTrue();
+                    assertThat(report.scoreEvidence().get("technical").scored()).isFalse();
+                    assertThat(report.overallScored()).isTrue();
                     assertThat(report.evidence()).singleElement()
                             .satisfies(evidence -> assertThat(evidence.questionNumber()).isEqualTo(1));
                     assertThat(report.contentMarkdown()).contains(
@@ -632,14 +635,15 @@ class InterviewAgentServiceIntegrationTest {
                             "## 9. 协作与观点修正能力", "## 10. 前后不一致及澄清结果",
                             "## 11. 优势", "## 12. 风险点", "## 13. 改进建议",
                             "## 14. 学习计划", "## 15. 关键问答证据",
-                            "证据 `", "Q1");
+                            "证据 `", "Q1", "证据不足", "消息 `");
                 });
         assertThat(chatService.lastChatPrompt()).contains(
-                "评分必须以证据账本为主要依据", "PROBLEM_SOLVING", "逐条证据");
+                "不负责评分", "PROBLEM_SOLVING", "逐条证据")
+                .doesNotContain("完整问答", "我通过拆分事务边界解决了长事务问题");
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
                 .get().satisfies(state -> {
                     assertThat(state.stage()).isEqualTo(InterviewStage.COMPLETED);
-                    assertThat(state.evaluation().overallScore()).isEqualTo(78);
+                    assertThat(state.evaluation().overallScore()).isEqualTo(79);
                 });
     }
 
@@ -766,7 +770,7 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(backgroundTaskService.executeNext("report-retry-worker")).isTrue();
         var report = interviewResultService.find(user.id(), session.id()).orElseThrow();
 
-        assertThat(report.overallScore()).isEqualTo(81);
+        assertThat(report.overallScore()).isEqualTo(79);
         assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
         assertThat(sessionService.messages(user.id(), session.id())).hasSize(2);
         assertThat(completionService.state(user.id(), session.id()).reportStatus())

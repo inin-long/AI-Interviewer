@@ -319,9 +319,10 @@ class CompleteBusinessFlowE2ETest {
         fire(robot, "#reportButton");
         waitForNode(robot, "#overallScoreLabel");
 
-        assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("88 / 100");
-        assertThat(label(robot, "#technicalScoreLabel").getText()).isEqualTo("91 分");
-        assertThat(label(robot, "#systemDesignScoreLabel").getText()).isEqualTo("90 分");
+        assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("88 / 100 · 中置信度");
+        assertThat(label(robot, "#technicalScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
+        assertThat(label(robot, "#problemSolvingScoreLabel").getText()).isEqualTo("证据不足");
+        assertThat(label(robot, "#systemDesignScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
 
         MarkdownView reportView = robot.lookup("#reportView").queryAs(MarkdownView.class);
         assertThat(reportView.getMarkdown())
@@ -330,7 +331,15 @@ class CompleteBusinessFlowE2ETest {
 
         var report = resultService.find(userId, sessionId).orElseThrow();
         assertThat(report.overallScore()).isEqualTo(88);
-        assertThat(report.dimensions()).containsEntry("technical", 91).containsEntry("systemDesign", 90);
+        assertThat(report.dimensions()).containsEntry("technical", 88).containsEntry("systemDesign", 88);
+        assertThat(report.scoreEvidence().get("technical").evidenceIds()).hasSize(3);
+        assertThat(label(robot, "#systemDesignScoreLabel").getStyleClass())
+                .contains("score-evidence-link");
+        assertThat(label(robot, "#problemSolvingScoreLabel").getStyleClass())
+                .doesNotContain("score-evidence-link");
+        Label scoreLink = label(robot, "#systemDesignScoreLabel");
+        robot.interact(() -> scoreLink.getOnMouseClicked().handle(null));
+        waitForNode(robot, "#messageCountLabel");
     }
 
     private void deleteCompletedTask(FxRobot robot, long userId) throws Exception {
@@ -492,7 +501,7 @@ class CompleteBusinessFlowE2ETest {
                     if (prompt.contains("跨轮面试一致性检查器")) {
                         return "{\"issues\":[],\"resolutions\":[]}";
                     }
-                    if (prompt.contains("技术面试评分器")) {
+                    if (prompt.contains("技术面试证据摘要助手")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,
                                 "projectScore":90,"systemDesignScore":90,"communicationScore":86,

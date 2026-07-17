@@ -1,6 +1,7 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.model.EvaluationPayload;
 import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
@@ -24,6 +25,7 @@ import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +40,7 @@ public class InterviewCompletionService {
     private final ObjectMapper objectMapper;
     private final EvidenceLedgerService evidenceLedgerService;
     private final ConsistencyIssueService consistencyIssueService;
+    private final EvidenceScoreAggregator scoreAggregator;
     private final Set<String> generationsInProgress = ConcurrentHashMap.newKeySet();
 
     public InterviewCompletionService(
@@ -47,7 +50,8 @@ public class InterviewCompletionService {
             StructuredAiResponseParser parser,
             ObjectMapper objectMapper,
             EvidenceLedgerService evidenceLedgerService,
-            ConsistencyIssueService consistencyIssueService
+            ConsistencyIssueService consistencyIssueService,
+            EvidenceScoreAggregator scoreAggregator
     ) {
         this.sessionService = sessionService;
         this.resultService = resultService;
@@ -56,6 +60,7 @@ public class InterviewCompletionService {
         this.objectMapper = objectMapper;
         this.evidenceLedgerService = evidenceLedgerService;
         this.consistencyIssueService = consistencyIssueService;
+        this.scoreAggregator = scoreAggregator;
     }
 
     public InterviewReportDto complete(long userId, long sessionId) {
@@ -96,11 +101,13 @@ public class InterviewCompletionService {
         String summary = compactSummary(messages);
         resultService.beginGeneration(userId, session);
         try {
-            EvaluationPayload payload = parser.parse(
+            EvaluationNarrativePayload narrative = parser.parse(
                     chatService.chat(evaluationPrompt(
-                            session.jobTitle(), messages, summary, evidenceLedger)),
-                    EvaluationPayload.class);
-            validate(payload);
+                            session.jobTitle(), evidenceLedger, claimLedger)),
+                    EvaluationNarrativePayload.class);
+            validate(narrative);
+            EvaluationPayload payload = scoreAggregator.aggregate(
+                    evidenceLedger, claimLedger, narrative.summary());
             String markdown = markdown(
                     session, previous, payload, summary, messages, evidenceLedger,
                     claimLedger, questionNumbers);
@@ -136,45 +143,26 @@ public class InterviewCompletionService {
 
     private String evaluationPrompt(
             String jobTitle,
-            List<InterviewMessageDto> messages,
-            String summary,
-            EvidenceLedger evidenceLedger
+            EvidenceLedger evidenceLedger,
+            ClaimLedger claimLedger
     ) {
         return """
-                你是技术面试评分器。评分必须以证据账本为主要依据，并用完整问答校验上下文。
-                不得把 INSUFFICIENT（证据不足）当作 NEGATIVE（负面能力证据）。
-                低置信度能力只能给出保守结论；没有证据的能力不得推测。
-                strength 表示信号强度，confidence 表示证据可靠程度，两者不得混用。
-                必须只返回 JSON，不要 Markdown：
-                {"overallScore":0到100整数,"technicalScore":0到100整数,
-                "problemSolvingScore":0到100整数,"projectScore":0到100整数,
-                "systemDesignScore":0到100整数,"communicationScore":0到100整数,
-                "comprehensiveScore":0到100整数,"summary":"综合评价"}
+                你是技术面试证据摘要助手，不负责评分。分数将由程序根据逐轮证据确定。
+                只能概括下面的证据账本和一致性结果，不得补充对话中未形成证据的能力结论，
+                不得把 INSUFFICIENT（证据不足）描述成 NEGATIVE（能力较弱）。
+                必须只返回 JSON，不要 Markdown，不要返回任何分数字段：
+                {"summary":"基于证据的综合评价；明确区分已观察结论与证据不足"}
 
                 目标岗位：%s
-                对话摘要：%s
                 能力证据汇总：%s
                 逐条证据：%s
-                完整问答：%s
-                """.formatted(jobTitle, summary, json(evidenceLedger.summaries()),
-                json(evidenceLedger.evidence()), json(messages.stream()
-                        .map(message -> java.util.Map.of(
-                                "role", message.role().name(),
-                                "content", message.content()))
-                        .toList()));
+                一致性结果：%s
+                """.formatted(jobTitle, json(evidenceLedger.summaries()),
+                json(evidenceLedger.evidence()), json(claimLedger.issues()));
     }
 
-    private void validate(EvaluationPayload payload) {
-        int[] scores = {payload.overallScore(), payload.technicalScore(), payload.problemSolvingScore(),
-                payload.projectScore(), payload.systemDesignScore(), payload.communicationScore(),
-                payload.comprehensiveScore()};
-        for (int score : scores) {
-            if (score < 0 || score > 100) {
-                throw new AIException(ErrorCode.AI_RESPONSE_INVALID,
-                        new IllegalArgumentException("Evaluation score outside 0..100"));
-            }
-        }
-        if (payload.summary() == null || payload.summary().isBlank()) {
+    private void validate(EvaluationNarrativePayload payload) {
+        if (payload == null || payload.summary() == null || payload.summary().isBlank()) {
             throw new AIException(ErrorCode.AI_RESPONSE_INVALID,
                     new IllegalArgumentException("Evaluation summary is blank"));
         }
@@ -203,7 +191,7 @@ public class InterviewCompletionService {
             Map<Long, Integer> questionNumbers
     ) {
         InterviewPlanSettings settings = InterviewPlanSettings.fromRules(session.planSnapshot().rules());
-        String trace = evidenceLedger.evidence().isEmpty()
+        String trace = !value.overallScored()
                 ? "当前没有形成可用评分证据，所有能力结论均应视为证据不足。"
                 : "综合判断关联证据：" + evidenceLedger.evidence().stream().limit(8)
                         .map(evidence -> "`" + evidence.id() + "`（Q"
@@ -223,7 +211,7 @@ public class InterviewCompletionService {
 
                 ## 2. 综合结论
 
-                **综合得分：%d / 100**
+                **综合得分：%s**
 
                 **综合评价：**
 
@@ -233,14 +221,7 @@ public class InterviewCompletionService {
 
                 ## 3. 能力评分与置信度
 
-                | 维度 | 得分 |
-                | --- | ---: |
-                | 技术基础 | %d |
-                | 问题解决 | %d |
-                | 项目经验 | %d |
-                | 系统设计 | %d |
-                | 沟通表达 | %d |
-                | 综合能力 | %d |
+                %s
 
                 ### 证据与置信度摘要
 
@@ -305,9 +286,8 @@ public class InterviewCompletionService {
                 inline(session.title(), 128), inline(session.jobTitle(), 128), settings.mode(),
                 settings.persona(), session.planSnapshot().difficulty(),
                 messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count(),
-                value.overallScore(), inline(value.summary(), 1_200), trace,
-                value.technicalScore(), value.problemSolvingScore(), value.projectScore(),
-                value.systemDesignScore(), value.communicationScore(), value.comprehensiveScore(),
+                overallScoreText(value), inline(value.summary(), 1_200), trace,
+                dimensionScoreMarkdown(value, evidenceLedger, questionNumbers),
                 confidenceMarkdown(evidenceLedger), evidenceMarkdown(evidenceLedger, questionNumbers),
                 claimMarkdown(claimLedger, questionNumbers), logicMarkdown(state.logicChainResult()),
                 pressureScenarioMarkdown(state), decisionMarkdown(claimLedger, state.logicChainResult()),
@@ -317,6 +297,82 @@ public class InterviewCompletionService {
                 learningMarkdown(evidenceLedger, state.logicChainResult(), session.knowledgeSnapshot()),
                 keyQaMarkdown(messages, evidenceLedger, questionNumbers), citationMarkdown(messages),
                 inline(contextSummary, 2_400));
+    }
+
+    private String overallScoreText(EvaluationPayload value) {
+        return value.overallScored()
+                ? value.overallScore() + " / 100（置信度 " + confidenceLevel(value.overallConfidence())
+                        + " " + format(value.overallConfidence()) + "）"
+                : "证据不足（不作能力结论）";
+    }
+
+    private String dimensionScoreMarkdown(
+            EvaluationPayload value,
+            EvidenceLedger ledger,
+            Map<Long, Integer> questionNumbers
+    ) {
+        LinkedHashMap<String, String> labels = new LinkedHashMap<>();
+        labels.put(EvidenceScoreAggregator.TECHNICAL, "技术基础");
+        labels.put(EvidenceScoreAggregator.PROBLEM_SOLVING, "问题解决");
+        labels.put(EvidenceScoreAggregator.PROJECT, "项目经验");
+        labels.put(EvidenceScoreAggregator.SYSTEM_DESIGN, "系统设计");
+        labels.put(EvidenceScoreAggregator.COMMUNICATION, "沟通表达");
+        labels.put(EvidenceScoreAggregator.COMPREHENSIVE, "综合能力");
+        Map<String, Integer> scores = Map.of(
+                EvidenceScoreAggregator.TECHNICAL, value.technicalScore(),
+                EvidenceScoreAggregator.PROBLEM_SOLVING, value.problemSolvingScore(),
+                EvidenceScoreAggregator.PROJECT, value.projectScore(),
+                EvidenceScoreAggregator.SYSTEM_DESIGN, value.systemDesignScore(),
+                EvidenceScoreAggregator.COMMUNICATION, value.communicationScore(),
+                EvidenceScoreAggregator.COMPREHENSIVE, value.comprehensiveScore());
+        StringBuilder markdown = new StringBuilder(
+                "| 维度 | 得分 | 置信度 | 判断来源 |\n| --- | ---: | --- | --- |\n");
+        labels.forEach((key, label) -> {
+            EvaluationPayload.EvidenceTrace trace = value.scoreEvidence().get(key);
+            boolean legacy = trace == null;
+            boolean scored = legacy || trace.scored();
+            markdown.append("| ").append(label).append(" | ")
+                    .append(scored ? scores.get(key) : "证据不足")
+                    .append(" | ")
+                    .append(legacy ? "历史报告未记录" : confidenceLevel(trace.confidence())
+                            + " " + format(trace.confidence()))
+                    .append(" | ")
+                    .append(legacy ? "历史报告未记录"
+                            : scoreSources(trace, ledger, questionNumbers))
+                    .append(" |\n");
+        });
+        return markdown.toString().stripTrailing();
+    }
+
+    private String scoreSources(
+            EvaluationPayload.EvidenceTrace trace,
+            EvidenceLedger ledger,
+            Map<Long, Integer> questionNumbers
+    ) {
+        if (trace.evidenceIds().isEmpty()) return "无——不作能力结论";
+        Map<String, EvaluationEvidence> byId = ledger.evidence().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        EvaluationEvidence::id, value -> value, (left, right) -> left));
+        return trace.evidenceIds().stream().limit(5).map(id -> {
+            EvaluationEvidence evidence = byId.get(id);
+            if (evidence == null) return "`" + id + "`";
+            String claims = evidence.relatedClaimIds().isEmpty() ? ""
+                    : " / 主张 " + evidence.relatedClaimIds().stream()
+                            .map(claimId -> "`" + claimId + "`")
+                            .collect(java.util.stream.Collectors.joining("、"));
+            return "`" + id + "` / Q" + questionNumbers.getOrDefault(evidence.messageId(), 0)
+                    + " / 消息 `" + evidence.messageId() + "`" + claims;
+        }).collect(java.util.stream.Collectors.joining("<br>"));
+    }
+
+    private String confidenceLevel(double value) {
+        if (value >= 0.7) return "高";
+        if (value >= 0.45) return "中";
+        return "低";
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record EvaluationNarrativePayload(String summary) {
     }
 
     String evidenceMarkdown(EvidenceLedger ledger) {

@@ -20,6 +20,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.Cursor;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.FileChooser;
@@ -93,13 +94,13 @@ public class InterviewReportController implements ContextAwareController<Long> {
         var report = resultService.find(userId, interviewId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERVIEW_NOT_FOUND));
         titleLabel.setText(report.title());
-        overallScoreLabel.setText(report.overallScore() + " / 100");
-        technicalScoreLabel.setText(score(report, "technical"));
-        problemSolvingScoreLabel.setText(score(report, "problemSolving"));
-        projectScoreLabel.setText(score(report, "project"));
-        systemDesignScoreLabel.setText(score(report, "systemDesign"));
-        communicationScoreLabel.setText(score(report, "communication"));
-        comprehensiveScoreLabel.setText(score(report, "comprehensive"));
+        configureOverallScore(overallScoreLabel, report);
+        configureScore(technicalScoreLabel, report, "technical");
+        configureScore(problemSolvingScoreLabel, report, "problemSolving");
+        configureScore(projectScoreLabel, report, "project");
+        configureScore(systemDesignScoreLabel, report, "systemDesign");
+        configureScore(communicationScoreLabel, report, "communication");
+        configureScore(comprehensiveScoreLabel, report, "comprehensive");
         markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
         reportView.setMarkdown(markdown);
         renderEvidenceNavigation(report.evidence());
@@ -309,7 +310,57 @@ public class InterviewReportController implements ContextAwareController<Long> {
         return text.length() > 90 ? text.substring(0, 90) + "…" : text;
     }
 
-    private String score(com.inin.aiinterviewer.application.dto.InterviewReportDto report, String key) {
-        return report.dimensions().getOrDefault(key, 0) + " 分";
+    private void configureOverallScore(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report
+    ) {
+        if (report.scoreEvidence().isEmpty()) {
+            label.setText(report.overallScore() + " / 100");
+            return;
+        }
+        label.setText(report.overallScored()
+                ? report.overallScore() + " / 100 · " + confidenceText(report.overallConfidence())
+                : "证据不足");
+        configureScoreNavigation(label, report, "overall");
+    }
+
+    private void configureScore(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report,
+            String key
+    ) {
+        var trace = report.scoreEvidence().get(key);
+        if (trace == null) {
+            label.setText(report.dimensions().getOrDefault(key, 0) + " 分");
+            return;
+        }
+        label.setText(trace.scored()
+                ? report.dimensions().getOrDefault(key, 0) + " 分 · " + confidenceText(trace.confidence())
+                : "证据不足");
+        configureScoreNavigation(label, report, key);
+    }
+
+    private void configureScoreNavigation(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report,
+            String key
+    ) {
+        var trace = report.scoreEvidence().get(key);
+        if (trace == null || trace.evidenceIds().isEmpty()) return;
+        int question = trace.evidenceIds().stream()
+                .flatMap(id -> report.evidence().stream().filter(item -> item.id().equals(id)))
+                .mapToInt(com.inin.aiinterviewer.application.dto.EvaluationEvidenceDto::questionNumber)
+                .filter(value -> value > 0).findFirst().orElse(0);
+        if (question == 0) return;
+        label.setCursor(Cursor.HAND);
+        label.getStyleClass().add("score-evidence-link");
+        label.setTooltip(new Tooltip("点击查看该评分的首条证据（Q" + question + "）"));
+        label.setOnMouseClicked(event -> openTranscriptAt(question));
+    }
+
+    private String confidenceText(double value) {
+        if (value >= 0.7) return "高置信度";
+        if (value >= 0.45) return "中置信度";
+        return "低置信度";
     }
 }
