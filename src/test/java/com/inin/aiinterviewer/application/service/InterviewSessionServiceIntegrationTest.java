@@ -64,6 +64,11 @@ class InterviewSessionServiceIntegrationTest {
         assertThat(session.planSnapshot().name()).isEqualTo("Java 基础面试");
         assertThat(session.profileId()).isEqualTo(confirmedProfile.id());
         assertThat(session.profileSnapshot().content().summary()).isEqualTo("初始画像摘要");
+        assertThat(session.domainPack().id()).isEqualTo("java-backend-1.0.0");
+        assertThat(sessionService.domainPackSnapshot(owner.id(), session.id())).get().satisfies(snapshot -> {
+            assertThat(snapshot.version()).isEqualTo("1.0.0");
+            assertThat(snapshot.content().failurePatterns()).isNotEmpty();
+        });
         assertThat(sessionService.loadLatestState(owner.id(), session.id()))
                 .get().satisfies(state -> {
                     assertThat(state.stage()).isEqualTo(InterviewStage.INTRODUCTION);
@@ -80,9 +85,12 @@ class InterviewSessionServiceIntegrationTest {
         assertThat(sessionService.require(owner.id(), session.id()).profileSnapshot().content().summary())
                 .isEqualTo("初始画像摘要");
 
-        planService.update(owner.id(), plan.id(), command("已修改的方案", "数据库"));
+        planService.update(owner.id(), plan.id(),
+                command("已修改的方案", "数据库", null, null, "full-stack-1.0.0"));
         assertThat(sessionService.require(owner.id(), session.id()).planSnapshot().name())
                 .isEqualTo("Java 基础面试");
+        assertThat(sessionService.require(owner.id(), session.id()).domainPack().id())
+                .isEqualTo("java-backend-1.0.0");
 
         InterviewState answered = sessionService.appendUserAnswer(owner.id(), session.id(), "我会从 JVM 内存模型开始回答。");
         assertThat(answered.latestAnswer()).contains("JVM");
@@ -131,10 +139,17 @@ class InterviewSessionServiceIntegrationTest {
     }
 
     private SaveInterviewPlanCommand command(String name, String focus, Long resumeId, Long profileId) {
+        return command(name, focus, resumeId, profileId, "java-backend-1.0.0");
+    }
+
+    private SaveInterviewPlanCommand command(
+            String name, String focus, Long resumeId, Long profileId, String domainPackId
+    ) {
         return new SaveInterviewPlanCommand(
                 name, "Java 工程师", "负责核心服务开发", InterviewDifficulty.MEDIUM,
-                45, 10, resumeId, profileId, Map.of("focus", focus),
-                List.of("INTRODUCTION", "RESUME_REVIEW", "TECHNICAL_DEEP_DIVE", "SUMMARY"));
+                45, 10, resumeId, profileId, List.of(), Map.of("focus", focus),
+                List.of("INTRODUCTION", "RESUME_REVIEW", "TECHNICAL_DEEP_DIVE", "SUMMARY"),
+                domainPackId);
     }
 
     private CandidateProfileContent profile(String summary, String skill) {

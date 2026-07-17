@@ -6,6 +6,7 @@ import com.inin.aiinterviewer.application.dto.UserDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,13 @@ class InterviewPlanServiceIntegrationTest {
         InterviewPlanDto created = planService.create(owner.id(), create);
         assertThat(created.name()).isEqualTo("Java 后端高级面试");
         assertThat(created.rules()).containsEntry("focus", "Spring, 数据库");
+        assertThat(created.rules())
+                .containsEntry(InterviewPlanSettings.MODE_KEY, "FORMAL_SIMULATION")
+                .containsEntry(InterviewPlanSettings.PERSONA_KEY, "PROFESSIONAL_INTERVIEWER")
+                .containsEntry(InterviewPlanSettings.PRESSURE_KEY, "STANDARD")
+                .containsEntry(InterviewPlanSettings.STRICTNESS_KEY, "STANDARD")
+                .containsEntry(InterviewPlanSettings.SCENARIO_RATIO_KEY, 0);
+        assertThat(created.domainPackId()).isEqualTo("java-backend-1.0.0");
         assertThat(planService.list(other.id())).isEmpty();
         assertThatThrownBy(() -> planService.require(created.id(), other.id()))
                 .isInstanceOf(BusinessException.class);
@@ -67,6 +75,18 @@ class InterviewPlanServiceIntegrationTest {
 
         planService.delete(owner.id(), created.id());
         assertThat(planService.list(owner.id())).extracting(InterviewPlanDto::id).containsExactly(copy.id());
+
+        SaveInterviewPlanCommand invalidPack = new SaveInterviewPlanCommand(
+                "无效知识包", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                45, 10, null, null, List.of(), Map.of(), null, "missing-pack");
+        assertThatThrownBy(() -> planService.create(owner.id(), invalidPack))
+                .isInstanceOf(BusinessException.class);
+
+        SaveInterviewPlanCommand invalidScenarioRatio = new SaveInterviewPlanCommand(
+                "无效沙盘比例", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                45, 10, null, Map.of(InterviewPlanSettings.SCENARIO_RATIO_KEY, 40), null);
+        assertThatThrownBy(() -> planService.create(owner.id(), invalidScenarioRatio))
+                .isInstanceOf(BusinessException.class);
     }
 
     @Test

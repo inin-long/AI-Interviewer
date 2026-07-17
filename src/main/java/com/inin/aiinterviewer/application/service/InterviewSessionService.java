@@ -3,6 +3,8 @@ package com.inin.aiinterviewer.application.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.stage.StageManager;
+import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.state.InterviewState;
 import com.inin.aiinterviewer.agent.state.StateSerializer;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -11,6 +13,7 @@ import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeDocumentSnapshotDto;
+import com.inin.aiinterviewer.application.dto.DomainPackDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
@@ -22,8 +25,20 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
+import com.inin.aiinterviewer.domain.model.ClaimLedger;
+import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
+import com.inin.aiinterviewer.domain.model.EvidenceLedger;
+import com.inin.aiinterviewer.domain.model.DeferredProbe;
+import com.inin.aiinterviewer.domain.model.PressureState;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
+import com.inin.aiinterviewer.domain.model.InterviewStrategy;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewMessageMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewClaimMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.EvaluationEvidenceMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ConsistencyIssueMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.DeferredProbeMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.ScenarioSessionMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewResultMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewSessionMapper;
 import org.slf4j.Logger;
@@ -41,13 +56,19 @@ import com.fasterxml.jackson.core.type.TypeReference;
 public class InterviewSessionService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewSessionService.class);
-    private static final String PROMPT_VERSION = "v1.2";
+    private static final String PROMPT_VERSION = "v2.0-s1";
 
     private final InterviewPlanService planService;
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
+    private final DomainPackService domainPackService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
+    private final InterviewClaimMapper claimMapper;
+    private final EvaluationEvidenceMapper evidenceMapper;
+    private final ConsistencyIssueMapper consistencyIssueMapper;
+    private final DeferredProbeMapper deferredProbeMapper;
+    private final ScenarioSessionMapper scenarioSessionMapper;
     private final AgentCheckpointMapper checkpointMapper;
     private final InterviewResultMapper resultMapper;
     private final StateSerializer stateSerializer;
@@ -58,8 +79,14 @@ public class InterviewSessionService {
             InterviewPlanService planService,
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
+            DomainPackService domainPackService,
             InterviewSessionMapper sessionMapper,
             InterviewMessageMapper messageMapper,
+            InterviewClaimMapper claimMapper,
+            EvaluationEvidenceMapper evidenceMapper,
+            ConsistencyIssueMapper consistencyIssueMapper,
+            DeferredProbeMapper deferredProbeMapper,
+            ScenarioSessionMapper scenarioSessionMapper,
             AgentCheckpointMapper checkpointMapper,
             InterviewResultMapper resultMapper,
             StateSerializer stateSerializer,
@@ -69,8 +96,14 @@ public class InterviewSessionService {
         this.planService = planService;
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
+        this.domainPackService = domainPackService;
         this.sessionMapper = sessionMapper;
         this.messageMapper = messageMapper;
+        this.claimMapper = claimMapper;
+        this.evidenceMapper = evidenceMapper;
+        this.consistencyIssueMapper = consistencyIssueMapper;
+        this.deferredProbeMapper = deferredProbeMapper;
+        this.scenarioSessionMapper = scenarioSessionMapper;
         this.checkpointMapper = checkpointMapper;
         this.resultMapper = resultMapper;
         this.stateSerializer = stateSerializer;
@@ -100,6 +133,7 @@ public class InterviewSessionService {
                 .requireReadyAll(userId, plan.knowledgeDocumentIds()).stream()
                 .map(KnowledgeDocumentSnapshotDto::from)
                 .toList();
+        DomainPackSnapshot domainPackSnapshot = domainPackService.snapshot(plan.domainPackId());
         InterviewStage initialStage = initialStage(plan.stages());
 
         InterviewSessionEntity entity = new InterviewSessionEntity();
@@ -112,6 +146,9 @@ public class InterviewSessionService {
         entity.setPlanSnapshotJson(writeJson(plan));
         entity.setProfileSnapshotJson(profileSnapshot == null ? "{}" : writeJson(profileSnapshot));
         entity.setKnowledgeSnapshotJson(writeJson(knowledgeSnapshot));
+        entity.setDomainPackId(domainPackSnapshot.id());
+        entity.setDomainPackVersion(domainPackSnapshot.version());
+        entity.setDomainPackSnapshotJson(writeJson(domainPackSnapshot));
         entity.setStage(initialStage);
         entity.setStatus(InterviewStatus.RUNNING);
         entity.setPromptVersion(PROMPT_VERSION);
@@ -119,7 +156,11 @@ public class InterviewSessionService {
 
         InterviewState state = new InterviewState(
                 InterviewState.CURRENT_VERSION, entity.getId(), userId, initialStage,
-                List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "");
+                List.of(), "", "", null, null, stateProfile(profileSnapshot), plan.rules(), "",
+                ClaimLedger.empty(), EvidenceLedger.empty(), LogicChainResult.skippedResult(),
+                null, List.of(), PressureState.initial(), null,
+                InterviewCoverage.fromDomainPack(domainPackSnapshot.content()),
+                InterviewStrategy.empty());
         saveCheckpointInternal(userId, entity.getId(), "session_started", state);
         return require(userId, entity.getId());
     }
@@ -159,9 +200,27 @@ public class InterviewSessionService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<DomainPackSnapshot> domainPackSnapshot(long userId, long sessionId) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        return Optional.ofNullable(readDomainPackSnapshot(session.getDomainPackSnapshotJson()));
+    }
+
+    @Transactional(readOnly = true)
     public List<InterviewMessageDto> messages(long userId, long sessionId) {
         requireEntity(userId, sessionId);
         return messageMapper.findAll(userId, sessionId).stream().map(this::toMessageDto).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Integer> messageQuestionNumbers(long userId, long sessionId) {
+        requireEntity(userId, sessionId);
+        Map<Long, Integer> result = new java.util.LinkedHashMap<>();
+        int questionNumber = 0;
+        for (InterviewMessageEntity message : messageMapper.findAll(userId, sessionId)) {
+            if (message.getRole() == Message.Role.ASSISTANT) questionNumber++;
+            if (questionNumber > 0) result.put(message.getId(), questionNumber);
+        }
+        return Map.copyOf(result);
     }
 
     @Transactional
@@ -186,7 +245,10 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, previous.stage(), messages,
                 previous.currentQuestion(), answer.strip(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
         saveCheckpointInternal(userId, sessionId, "user_answer_saved", updated);
         return updated;
     }
@@ -234,7 +296,10 @@ public class InterviewSessionService {
                 previous.stateVersion(), sessionId, userId, session.getStage(),
                 allMessages, question.strip(), previous.latestAnswer(),
                 analysis == null ? previous.analysis() : analysis, previous.evaluation(),
-                previous.profile(), previous.rules(), summary);
+                previous.profile(), previous.rules(), summary, previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
         saveCheckpointInternal(userId, sessionId,
                 partial ? "question_stream_interrupted" : "agent_turn_completed", updated);
         return updated;
@@ -273,8 +338,170 @@ public class InterviewSessionService {
         InterviewState updated = new InterviewState(
                 previous.stateVersion(), sessionId, userId, stage, previous.messages(),
                 previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
-                previous.profile(), previous.rules(), previous.summary());
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
         saveCheckpointInternal(userId, sessionId, "stage_" + stage.name().toLowerCase(), updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateClaimLedger(long userId, long sessionId, ClaimLedger claimLedger) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(),
+                claimLedger == null ? ClaimLedger.empty() : claimLedger,
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "claim_ledger_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateProbePlan(long userId, long sessionId, ProbePlan probePlan) {
+        if (probePlan == null || probePlan.objective().isBlank() || probePlan.strategy() == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), probePlan,
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "probe_planned", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateLogicChain(long userId, long sessionId, LogicChainResult logicChainResult) {
+        if (logicChainResult == null) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), logicChainResult, previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                previous.coverage(), previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "logic_chain_evaluated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateEvidenceLedger(long userId, long sessionId, EvidenceLedger evidenceLedger) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger,
+                previous.logicChainResult(), previous.probePlan(), previous.deferredProbes(),
+                previous.pressureState(), previous.activeScenario(), previous.coverage(),
+                previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "evidence_ledger_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateCoverageAndStrategy(
+            long userId,
+            long sessionId,
+            InterviewCoverage coverage,
+            InterviewStrategy strategy
+    ) {
+        if (coverage == null || strategy == null) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), previous.activeScenario(),
+                coverage, strategy);
+        saveCheckpointInternal(userId, sessionId, "coverage_strategy_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateDeferredProbes(
+            long userId,
+            long sessionId,
+            List<DeferredProbe> deferredProbes
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                deferredProbes == null ? List.of() : deferredProbes,
+                previous.pressureState(), previous.activeScenario(), previous.coverage(),
+                previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "deferred_probes_updated", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updatePressureState(
+            long userId,
+            long sessionId,
+            PressureState pressureState
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(),
+                pressureState == null ? PressureState.initial() : pressureState,
+                previous.activeScenario(), previous.coverage(), previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "pressure_controlled", updated);
+        return updated;
+    }
+
+    @Transactional
+    public InterviewState updateScenarioState(
+            long userId,
+            long sessionId,
+            com.inin.aiinterviewer.domain.model.ScenarioState scenarioState
+    ) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        InterviewState previous = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        if (scenarioState != null && scenarioState.sessionId() != sessionId) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        InterviewState updated = new InterviewState(
+                InterviewState.CURRENT_VERSION, sessionId, userId, previous.stage(), previous.messages(),
+                previous.currentQuestion(), previous.latestAnswer(), previous.analysis(), previous.evaluation(),
+                previous.profile(), previous.rules(), previous.summary(), previous.claimLedger(),
+                previous.evidenceLedger(), previous.logicChainResult(), previous.probePlan(),
+                previous.deferredProbes(), previous.pressureState(), scenarioState,
+                previous.coverage(), previous.strategy());
+        saveCheckpointInternal(userId, sessionId, "scenario_state_updated", updated);
         return updated;
     }
 
@@ -331,11 +558,16 @@ public class InterviewSessionService {
     private InterviewState baseState(InterviewSessionEntity session) {
         InterviewPlanDto snapshot = readPlan(session.getPlanSnapshotJson());
         CandidateProfileDto profileSnapshot = readProfile(session.getProfileSnapshotJson());
+        DomainPackSnapshot domainPack = readDomainPackSnapshot(session.getDomainPackSnapshotJson());
         return new InterviewState(
                 InterviewState.CURRENT_VERSION, session.getId(), session.getUserId(), session.getStage(),
                 domainMessages(session.getUserId(), session.getId()), "", "", null, null,
                 stateProfile(profileSnapshot),
-                snapshot.rules() == null ? Map.of() : snapshot.rules(), "");
+                snapshot.rules() == null ? Map.of() : snapshot.rules(), "", ClaimLedger.empty(),
+                EvidenceLedger.empty(), LogicChainResult.skippedResult(), null, List.of(),
+                PressureState.initial(), null,
+                InterviewCoverage.fromDomainPack(domainPack == null ? null : domainPack.content()),
+                InterviewStrategy.empty());
     }
 
     private void validateStateIdentity(long userId, long sessionId, InterviewState state) {
@@ -356,14 +588,26 @@ public class InterviewSessionService {
                 readProfile(entity.getProfileSnapshotJson()),
                 readKnowledgeSnapshot(entity.getKnowledgeSnapshotJson()), entity.getStage(), entity.getStatus(),
                 entity.getPromptVersion(), entity.getStartedTime(), entity.getCompletedTime(),
-                entity.getCreateTime(), entity.getUpdateTime());
+                entity.getCreateTime(), entity.getUpdateTime(), domainPackDto(entity));
+    }
+
+    private DomainPackDto domainPackDto(InterviewSessionEntity entity) {
+        DomainPackSnapshot snapshot = readDomainPackSnapshot(entity.getDomainPackSnapshotJson());
+        if (snapshot != null && snapshot.content() != null) {
+            var pack = snapshot.content();
+            return new DomainPackDto(pack.id(), pack.roleCode(), pack.industryCode(),
+                    snapshot.version(), pack.displayName());
+        }
+        if (entity.getDomainPackId() == null || entity.getDomainPackId().isBlank()) return null;
+        return new DomainPackDto(entity.getDomainPackId(), "legacy", null,
+                entity.getDomainPackVersion(), entity.getDomainPackId());
     }
 
     private InterviewMessageDto toMessageDto(InterviewMessageEntity entity) {
         MessageMetadata metadata = readMessageMetadata(entity.getMetadataJson(), entity.getId());
         return new InterviewMessageDto(
                 entity.getSequenceNo(), entity.getRole(), entity.getContent(), entity.getCreateTime(),
-                metadata.partial(), metadata.citations());
+                metadata.partial(), metadata.citations(), entity.getId());
     }
 
     private List<KnowledgeCitationDto> normalizeCitations(
@@ -475,6 +719,15 @@ public class InterviewSessionService {
         }
     }
 
+    private DomainPackSnapshot readDomainPackSnapshot(String json) {
+        if (json == null || json.isBlank() || "{}".equals(json.strip())) return null;
+        try {
+            return objectMapper.readValue(json, DomainPackSnapshot.class);
+        } catch (JsonProcessingException exception) {
+            throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
     private record MessageMetadata(boolean partial, List<KnowledgeCitationDto> citations) {
         private MessageMetadata {
             citations = citations == null ? List.of() : List.copyOf(citations);
@@ -501,6 +754,11 @@ public class InterviewSessionService {
         requireEntity(userId, sessionId);
         resultMapper.deleteReport(userId, sessionId);
         resultMapper.deleteEvaluation(userId, sessionId);
+        evidenceMapper.deleteBySession(userId, sessionId);
+        consistencyIssueMapper.deleteBySession(userId, sessionId);
+        deferredProbeMapper.deleteBySession(userId, sessionId);
+        scenarioSessionMapper.deleteBySession(userId, sessionId);
+        claimMapper.deleteBySession(userId, sessionId);
         messageMapper.deleteBySession(userId, sessionId);
         checkpointMapper.deleteBySession(userId, sessionId);
         sessionMapper.delete(sessionId, userId);

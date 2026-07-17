@@ -5,6 +5,10 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
+import com.inin.aiinterviewer.application.service.SessionBranchService;
+import com.inin.aiinterviewer.application.service.TrainingRecommendationService;
+import com.inin.aiinterviewer.application.service.TrainingProgressService;
+import com.inin.aiinterviewer.application.dto.TrainingRecommendationDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
@@ -17,10 +21,13 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
+import javafx.scene.Cursor;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.FileChooser;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -36,6 +43,9 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     private final InterviewResultService resultService;
     private final InterviewSessionService sessionService;
+    private final SessionBranchService branchService;
+    private final TrainingRecommendationService trainingService;
+    private final TrainingProgressService trainingProgressService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -52,11 +62,18 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private Label communicationScoreLabel;
     @FXML private Label comprehensiveScoreLabel;
     @FXML private MarkdownView reportView;
+    @FXML private VBox evidenceNavigationContainer;
+    @FXML private VBox branchNavigationContainer;
+    @FXML private VBox trainingRecommendationContainer;
+    @FXML private Button trainingPlanButton;
     @FXML private VBox citationNavigationContainer;
 
     public InterviewReportController(
             InterviewResultService resultService,
             InterviewSessionService sessionService,
+            SessionBranchService branchService,
+            TrainingRecommendationService trainingService,
+            TrainingProgressService trainingProgressService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -64,6 +81,9 @@ public class InterviewReportController implements ContextAwareController<Long> {
     ) {
         this.resultService = resultService;
         this.sessionService = sessionService;
+        this.branchService = branchService;
+        this.trainingService = trainingService;
+        this.trainingProgressService = trainingProgressService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -78,15 +98,19 @@ public class InterviewReportController implements ContextAwareController<Long> {
         var report = resultService.find(userId, interviewId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INTERVIEW_NOT_FOUND));
         titleLabel.setText(report.title());
-        overallScoreLabel.setText(report.overallScore() + " / 100");
-        technicalScoreLabel.setText(score(report, "technical"));
-        problemSolvingScoreLabel.setText(score(report, "problemSolving"));
-        projectScoreLabel.setText(score(report, "project"));
-        systemDesignScoreLabel.setText(score(report, "systemDesign"));
-        communicationScoreLabel.setText(score(report, "communication"));
-        comprehensiveScoreLabel.setText(score(report, "comprehensive"));
+        configureOverallScore(overallScoreLabel, report);
+        configureScore(technicalScoreLabel, report, "technical");
+        configureScore(problemSolvingScoreLabel, report, "problemSolving");
+        configureScore(projectScoreLabel, report, "project");
+        configureScore(systemDesignScoreLabel, report, "systemDesign");
+        configureScore(communicationScoreLabel, report, "communication");
+        configureScore(comprehensiveScoreLabel, report, "comprehensive");
         markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
         reportView.setMarkdown(markdown);
+        renderEvidenceNavigation(report.evidence());
+        renderBranchNavigation(branchService.list(userId, interviewId));
+        renderTrainingRecommendation(trainingService.recommend(userId, interviewId));
+        renderTrainingProgress(trainingProgressService.find(userId, interviewId));
         renderCitationNavigation(sessionService.messages(userId, interviewId));
     }
 
@@ -127,6 +151,159 @@ public class InterviewReportController implements ContextAwareController<Long> {
             empty.getStyleClass().add("citation-empty");
             citationNavigationContainer.getChildren().add(empty);
         }
+    }
+
+    private void renderEvidenceNavigation(
+            List<com.inin.aiinterviewer.application.dto.EvaluationEvidenceDto> evidence
+    ) {
+        evidenceNavigationContainer.getChildren().clear();
+        evidence.stream()
+                .filter(item -> item.questionNumber() > 0)
+                .forEach(item -> {
+                    Button link = new Button("Q" + item.questionNumber() + " · "
+                            + evidenceSignalText(item.signal()) + " · " + item.competencyCode()
+                            + " · " + shortEvidenceId(item.id()));
+                    link.setMaxWidth(Double.MAX_VALUE);
+                    link.getStyleClass().add("report-question-link");
+                    link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
+                    link.setTooltip(new Tooltip(preview(item.reason())));
+                    link.setOnAction(event -> openTranscriptAt(item.questionNumber()));
+                    Button replay = new Button("重答");
+                    replay.getStyleClass().add("secondary-button");
+                    replay.setAccessibleText("重新回答第 " + item.questionNumber() + " 题");
+                    replay.setOnAction(event -> createBranch(item.questionNumber()));
+                    HBox row = new HBox(6, link, replay);
+                    HBox.setHgrow(link, Priority.ALWAYS);
+                    evidenceNavigationContainer.getChildren().add(row);
+                });
+        if (evidenceNavigationContainer.getChildren().isEmpty()) {
+            Label empty = new Label("暂无可定位的评分证据");
+            empty.setWrapText(true);
+            empty.getStyleClass().add("citation-empty");
+            evidenceNavigationContainer.getChildren().add(empty);
+        }
+    }
+
+    private void renderBranchNavigation(
+            List<com.inin.aiinterviewer.application.dto.SessionBranchDto> branches
+    ) {
+        branchNavigationContainer.getChildren().clear();
+        branches.stream().limit(6).forEach(branch -> {
+            Button link = new Button("Q" + branch.sourceQuestionNumber() + " · "
+                    + branchStatusText(branch.status()));
+            link.setMaxWidth(Double.MAX_VALUE);
+            link.getStyleClass().add("report-question-link");
+            link.setOnAction(event -> openBranch(branch.id()));
+            branchNavigationContainer.getChildren().add(link);
+        });
+        if (branchNavigationContainer.getChildren().isEmpty()) {
+            Label empty = new Label("从评分证据点击“重答”创建分支");
+            empty.setWrapText(true);
+            empty.getStyleClass().add("citation-empty");
+            branchNavigationContainer.getChildren().add(empty);
+        }
+    }
+
+    private void createBranch(int questionNumber) {
+        try {
+            long userId = sessionState.requireCurrentUser().id();
+            var branch = branchService.create(userId, interviewId, questionNumber, null);
+            openBranch(branch.id());
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    private void openBranch(String branchId) {
+        contentNavigator.showSubPage(
+                "/fxml/session-branch-view.fxml", "分支复盘", branchId);
+    }
+
+    private void renderTrainingRecommendation(TrainingRecommendationDto recommendation) {
+        trainingRecommendationContainer.getChildren().clear();
+        recommendation.topics().stream().limit(3).forEach(topic -> {
+            String questions = topic.sourceQuestionNumbers().isEmpty() ? ""
+                    : " · Q" + topic.sourceQuestionNumbers().stream()
+                    .map(String::valueOf).collect(Collectors.joining("/"));
+            Label label = new Label("• " + topic.title() + questions);
+            label.setWrapText(true);
+            label.setTooltip(new Tooltip(topic.rationale()));
+            label.getStyleClass().add("secondary-text");
+            trainingRecommendationContainer.getChildren().add(label);
+        });
+        if (!recommendation.knowledgeResources().isEmpty()) {
+            Label knowledge = new Label("已关联 " + recommendation.knowledgeResources().size() + " 份知识资料");
+            knowledge.getStyleClass().add("secondary-text");
+            trainingRecommendationContainer.getChildren().add(knowledge);
+        }
+    }
+
+    private void renderTrainingProgress(
+            List<com.inin.aiinterviewer.application.dto.TrainingScoreChangeDto> changes
+    ) {
+        if (changes.isEmpty()) return;
+        Label heading = new Label("复试评分变化");
+        heading.getStyleClass().add("summary-label");
+        trainingRecommendationContainer.getChildren().add(heading);
+        changes.stream().limit(5).forEach(change -> {
+            Button link = new Button(change.title() + " · " + scoreChangeText(change));
+            link.setMaxWidth(Double.MAX_VALUE);
+            link.getStyleClass().add("report-question-link");
+            link.setAccessibleText("查看专项复试报告：" + change.title());
+            String dimensions = change.dimensions().stream().limit(4)
+                    .map(value -> value.label() + " " + signed(value.delta()))
+                    .collect(Collectors.joining("；"));
+            if (!dimensions.isBlank()) link.setTooltip(new Tooltip(dimensions));
+            link.setOnAction(event -> contentNavigator.showSubPage(
+                    "/fxml/report-detail-view.fxml", "面试报告", change.sessionId()));
+            trainingRecommendationContainer.getChildren().add(link);
+        });
+    }
+
+    private String scoreChangeText(
+            com.inin.aiinterviewer.application.dto.TrainingScoreChangeDto change
+    ) {
+        if (!change.sourceScored() || !change.retestScored() || change.overallDelta() == null) {
+            return "存在证据不足维度";
+        }
+        return change.sourceScore() + " → " + change.retestScore()
+                + "（" + signed(change.overallDelta()) + "）";
+    }
+
+    private String signed(int value) {
+        return value > 0 ? "+" + value : Integer.toString(value);
+    }
+
+    @FXML
+    private void createTrainingPlan() {
+        trainingPlanButton.setDisable(true);
+        try {
+            long userId = sessionState.requireCurrentUser().id();
+            var plan = trainingService.createTrainingPlan(userId, interviewId);
+            contentNavigator.showSubPage(
+                    "/fxml/plan-editor-view.fxml", "专项训练方案", plan.id());
+        } catch (RuntimeException exception) {
+            trainingPlanButton.setDisable(false);
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    private String branchStatusText(com.inin.aiinterviewer.domain.enums.SessionBranchStatus status) {
+        return switch (status) {
+            case DRAFT -> "待重答";
+            case PROCESSING -> "比较中";
+            case COMPLETED -> "已完成";
+            case FAILED -> "可重试";
+        };
+    }
+
+    private String evidenceSignalText(com.inin.aiinterviewer.domain.enums.EvidenceSignal signal) {
+        return switch (signal) {
+            case POSITIVE -> "正向";
+            case NEGATIVE -> "负向";
+            case NEUTRAL -> "中性";
+            case INSUFFICIENT -> "证据不足";
+        };
     }
 
     private void openTranscriptAt(int questionNumber) {
@@ -175,7 +352,62 @@ public class InterviewReportController implements ContextAwareController<Long> {
         return text.length() > 90 ? text.substring(0, 90) + "…" : text;
     }
 
-    private String score(com.inin.aiinterviewer.application.dto.InterviewReportDto report, String key) {
-        return report.dimensions().getOrDefault(key, 0) + " 分";
+    private String shortEvidenceId(String id) {
+        if (id == null || id.isBlank()) return "未编号";
+        return id.length() <= 8 ? id : id.substring(0, 8);
+    }
+
+    private void configureOverallScore(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report
+    ) {
+        if (report.scoreEvidence().isEmpty()) {
+            label.setText(report.overallScore() + " / 100");
+            return;
+        }
+        label.setText(report.overallScored()
+                ? report.overallScore() + " / 100 · " + confidenceText(report.overallConfidence())
+                : "证据不足");
+        configureScoreNavigation(label, report, "overall");
+    }
+
+    private void configureScore(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report,
+            String key
+    ) {
+        var trace = report.scoreEvidence().get(key);
+        if (trace == null) {
+            label.setText(report.dimensions().getOrDefault(key, 0) + " 分");
+            return;
+        }
+        label.setText(trace.scored()
+                ? report.dimensions().getOrDefault(key, 0) + " 分 · " + confidenceText(trace.confidence())
+                : "证据不足");
+        configureScoreNavigation(label, report, key);
+    }
+
+    private void configureScoreNavigation(
+            Label label,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report,
+            String key
+    ) {
+        var trace = report.scoreEvidence().get(key);
+        if (trace == null || trace.evidenceIds().isEmpty()) return;
+        int question = trace.evidenceIds().stream()
+                .flatMap(id -> report.evidence().stream().filter(item -> item.id().equals(id)))
+                .mapToInt(com.inin.aiinterviewer.application.dto.EvaluationEvidenceDto::questionNumber)
+                .filter(value -> value > 0).findFirst().orElse(0);
+        if (question == 0) return;
+        label.setCursor(Cursor.HAND);
+        label.getStyleClass().add("score-evidence-link");
+        label.setTooltip(new Tooltip("点击查看该评分的首条证据（Q" + question + "）"));
+        label.setOnMouseClicked(event -> openTranscriptAt(question));
+    }
+
+    private String confidenceText(double value) {
+        if (value >= 0.7) return "高置信度";
+        if (value >= 0.45) return "中置信度";
+        return "低置信度";
     }
 }

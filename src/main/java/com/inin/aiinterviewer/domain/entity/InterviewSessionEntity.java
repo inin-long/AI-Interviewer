@@ -16,6 +16,9 @@ public class InterviewSessionEntity {
     private String planSnapshotJson;
     private String profileSnapshotJson;
     private String knowledgeSnapshotJson;
+    private String domainPackId;
+    private String domainPackVersion;
+    private String domainPackSnapshotJson;
     private InterviewStage stage;
     private InterviewStatus status;
     private String promptVersion;
@@ -45,6 +48,12 @@ public class InterviewSessionEntity {
     public void setProfileSnapshotJson(String profileSnapshotJson) { this.profileSnapshotJson = profileSnapshotJson; }
     public String getKnowledgeSnapshotJson() { return knowledgeSnapshotJson; }
     public void setKnowledgeSnapshotJson(String knowledgeSnapshotJson) { this.knowledgeSnapshotJson = knowledgeSnapshotJson; }
+    public String getDomainPackId() { return domainPackId; }
+    public void setDomainPackId(String domainPackId) { this.domainPackId = domainPackId; }
+    public String getDomainPackVersion() { return domainPackVersion; }
+    public void setDomainPackVersion(String domainPackVersion) { this.domainPackVersion = domainPackVersion; }
+    public String getDomainPackSnapshotJson() { return domainPackSnapshotJson; }
+    public void setDomainPackSnapshotJson(String domainPackSnapshotJson) { this.domainPackSnapshotJson = domainPackSnapshotJson; }
     public InterviewStage getStage() { return stage; }
     public void setStage(InterviewStage stage) { this.stage = stage; }
     public InterviewStatus getStatus() { return status; }

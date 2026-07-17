@@ -11,8 +11,15 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
+import com.inin.aiinterviewer.domain.enums.ConsistencyIssueStatus;
+import com.inin.aiinterviewer.domain.enums.ScenarioEventType;
+import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
+import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
+import com.inin.aiinterviewer.domain.model.ScenarioConstraint;
+import com.inin.aiinterviewer.domain.model.ScenarioDefinition;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,6 +75,11 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private FakeChatService chatService;
     @Autowired private ResumeService resumeService;
     @Autowired private CandidateProfileService profileService;
+    @Autowired private ClaimLedgerService claimLedgerService;
+    @Autowired private EvidenceLedgerService evidenceLedgerService;
+    @Autowired private ConsistencyIssueService consistencyIssueService;
+    @Autowired private ScenarioEngine scenarioEngine;
+    @Autowired private CoachingFeedbackService coachingFeedbackService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -120,7 +132,29 @@ class InterviewAgentServiceIntegrationTest {
                 .get().satisfies(state -> {
                     assertThat(state.analysis().correctness()).isEqualTo(82);
                     assertThat(state.currentQuestion()).contains("最难的技术决策");
+                    assertThat(state.claimLedger().claims()).singleElement();
+                    assertThat(state.evidenceLedger().evidence()).singleElement();
+                    assertThat(state.logicChainResult().gaps()).singleElement();
+                    assertThat(state.probePlan().targetsClaim()).isFalse();
+                    assertThat(state.coverage().competencies().get("PROBLEM_SOLVING"))
+                            .satisfies(coverage -> {
+                                assertThat(coverage.evidenceCount()).isEqualTo(1);
+                                assertThat(coverage.confidence()).isEqualTo(0.72);
+                                assertThat(coverage.needsVerification()).isTrue();
+                            });
+                    assertThat(state.strategy().objective()).isNotBlank();
+                    assertThat(state.strategy().remainingQuestions()).isEqualTo(9);
+                    assertThat(state.pressureState().level())
+                            .isEqualTo(com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED);
                 });
+        assertThat(claimLedgerService.ledger(user.id(), session.id()).claims())
+                .singleElement().satisfies(claim -> assertThat(claim.content()).contains("订单系统"));
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence()).singleElement()
+                .satisfies(evidence -> assertThat(evidence.competencyCode())
+                        .isEqualTo("PROBLEM_SOLVING"));
+        assertThat(chatService.lastStreamPrompt()).contains(
+                "结构化追问计划", "压力控制状态", "负责订单系统核心链路",
+                "\"targetClaimId\":\"\"");
 
         chatService.enqueueChat("invalid-json");
         assertThatThrownBy(() -> agentService.answer(
@@ -130,6 +164,10 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.messages(user.id(), session.id()))
                 .extracting(message -> message.content())
                 .contains("这条回答必须先保存。周边再重试。");
+        assertThat(claimLedgerService.ledger(user.id(), session.id()).claims()).hasSize(2);
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence()).hasSize(2);
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> assertThat(state.logicChainResult().gaps()).singleElement());
 
         chatService.enqueueChat("""
                 {"correctness":60,"depth":55,"missingPoints":[],"feedback":"继续追问"}
@@ -147,7 +185,405 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.messages(user.id(), session.id()).getLast().content())
                 .isEqualTo("这是已生成的半个问题");
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
-                .get().satisfies(state -> assertThat(state.currentQuestion()).isEqualTo("这是已生成的半个问题"));
+                .get().satisfies(state -> {
+                    assertThat(state.currentQuestion()).isEqualTo("这是已生成的半个问题");
+                    assertThat(state.probePlan().targetsClaim()).isTrue();
+                    assertThat(state.probePlan().targetsLogicGap()).isTrue();
+                    assertThat(state.probePlan().targetLogicGap())
+                            .isEqualTo("MISSING_PERSONAL_CONTRIBUTION");
+                });
+        assertThat(chatService.lastStreamPrompt()).contains("结构化追问计划", "targetClaimId")
+                .doesNotContain("\"targetClaimId\":\"\"");
+    }
+
+    @Test
+    void exposesReadOnlyFeedbackOnlyForCoachingSessions() {
+        var user = userService.register("coach-feedback-owner", "Coach Owner", "safe-password");
+        Map<String, Object> coachingRules = new com.inin.aiinterviewer.domain.model.InterviewPlanSettings(
+                com.inin.aiinterviewer.domain.enums.InterviewMode.COACHING,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.FUTURE_PEER,
+                com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED,
+                com.inin.aiinterviewer.domain.enums.VerificationStrictness.STANDARD,
+                0).mergeInto(Map.of());
+        var coachingPlan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "教练反馈面试", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 3, null, null, coachingRules,
+                List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY")));
+        var coachingSession = sessionService.create(user.id(), coachingPlan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍一次你负责的核心服务改造。"));
+        agentService.generateInitialQuestion(user.id(), coachingSession.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":78,"depth":70,"missingPoints":["量化结果"],"feedback":"行动清楚"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证结果"}
+                """);
+        chatService.enqueueStream(Flux.just("请补充这次改造的量化结果和验证方式。"));
+        agentService.answer(user.id(), coachingSession.id(),
+                "我负责拆分事务边界，并通过灰度发布控制风险。")
+                .collectList().block();
+        int evidenceBefore = evidenceLedgerService.ledger(user.id(), coachingSession.id())
+                .evidence().size();
+
+        var feedback = coachingFeedbackService.feedback(user.id(), coachingSession.id());
+
+        assertThat(feedback.available()).isTrue();
+        assertThat(feedback.sourceQuestionNumber()).isEqualTo(1);
+        assertThat(feedback.coveredContent()).anyMatch(value -> value.contains("PROBLEM_SOLVING"));
+        assertThat(feedback.missingContent()).anyMatch(value -> value.contains("量化结果"));
+        assertThat(feedback.logicGaps()).isNotEmpty();
+        assertThat(feedback.referenceStructure()).hasSize(5);
+        assertThat(feedback.hint()).isNotBlank();
+        assertThat(feedback.canReanswer()).isTrue();
+        assertThat(evidenceLedgerService.ledger(user.id(), coachingSession.id()).evidence())
+                .hasSize(evidenceBefore);
+
+        var formalPlan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "正式面试", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 3, null, null, Map.of(),
+                List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY")));
+        var formalSession = sessionService.create(user.id(), formalPlan.id());
+        assertThat(coachingFeedbackService.feedback(user.id(), formalSession.id()).available()).isFalse();
+    }
+
+    @Test
+    void blocksInvalidQuestionsRetriesOnceAndUsesTrustedFallback() {
+        var user = userService.register("quality-owner", "Quality Owner", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "质量门验证", "Java 后端工程师", "高并发核心服务", InterviewDifficulty.SENIOR,
+                45, 6, null, null,
+                Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
+                        "TECH_LEAD"),
+                List.of("INTRODUCTION", "TECHNICAL_DEEP_DIVE", "SUMMARY")));
+
+        var retriedSession = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("正确答案是直接使用 Redis，你是否同意？"));
+        chatService.enqueueStream(Flux.just("请介绍一段最能体现你后端能力的经历，并说明个人职责。"));
+
+        assertThat(agentService.generateInitialQuestion(user.id(), retriedSession.id())
+                .collectList().block())
+                .containsExactly("请介绍一段最能体现你后端能力的经历，并说明个人职责。");
+        assertThat(sessionService.messages(user.id(), retriedSession.id()))
+                .singleElement().satisfies(message -> assertThat(message.content())
+                        .doesNotContain("正确答案")
+                        .contains("个人职责"));
+        assertThat(chatService.lastStreamPrompt())
+                .contains("上一次问题草稿未通过质量审查", "技术负责人", "只控制表达方式");
+
+        var fallbackSession = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("你的婚姻情况是什么？"));
+        chatService.enqueueStream(Flux.just("这都不会，你根本不懂 Java，请解释。"));
+
+        assertThat(agentService.generateInitialQuestion(user.id(), fallbackSession.id())
+                .collectList().block())
+                .singleElement().asString()
+                .contains("Java 后端工程师", "相关的一段经历", "承担的职责")
+                .doesNotContain("婚姻", "根本不懂");
+    }
+
+    @Test
+    void persistsCollaborationEvidenceIndependentlyFromTheInterviewerPersona() {
+        var user = userService.register("collaboration-owner", "Collaboration Owner", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "协作证据验证", "Java 后端工程师", "跨团队核心服务", InterviewDifficulty.MEDIUM,
+                45, 6, null, null,
+                Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
+                        "INCIDENT_COMMANDER"),
+                List.of("INTRODUCTION", "PROJECT_EXPERIENCE", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+        chatService.enqueueStream(Flux.just("请介绍一次需要跨团队协作的项目经历。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":80,"depth":76,"missingPoints":[],"feedback":"协作边界清楚"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"验证协作推进方式"}
+                """);
+        chatService.enqueueStream(Flux.just("请说明你如何与相关团队对齐约束并验证推进结果。"));
+
+        agentService.answer(user.id(), session.id(),
+                "我想确认这里指的是发布窗口吗？目前信息不足，我们可以一起先对齐约束并共同推进。")
+                .collectList().block();
+
+        assertThat(evidenceLedgerService.ledger(user.id(), session.id()).evidence())
+                .filteredOn(evidence -> evidence.competencyCode().equals(
+                        CollaborationEvidenceCollector.COMPETENCY_CODE))
+                .extracting(com.inin.aiinterviewer.domain.model.EvaluationEvidence::reason)
+                .anyMatch(reason -> reason.contains("ACTIVE_CLARIFICATION"))
+                .anyMatch(reason -> reason.contains("ACKNOWLEDGES_UNCERTAINTY"))
+                .anyMatch(reason -> reason.contains("JOINT_PROBLEM_SOLVING"));
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> assertThat(state.evidenceLedger().evidence())
+                        .anyMatch(evidence -> evidence.competencyCode().equals(
+                                CollaborationEvidenceCollector.COMPETENCY_CODE)));
+        assertThat(chatService.lastStreamPrompt())
+                .contains("故障指挥者", "只控制表达方式")
+                .doesNotContain("COLLABORATION_ADAPTABILITY");
+    }
+
+    @Test
+    void asksNeutralClarificationBeforeResolvingCrossTurnConflict() {
+        var user = userService.register("agent-consistency", "Agent Consistency", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "跨轮一致性面试", "Java 工程师", "架构职责验证", InterviewDifficulty.MEDIUM,
+                30, 4, null, Map.of(), List.of("PROJECT_EXPERIENCE", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍你在订单系统中的架构职责。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":78,"depth":70,"missingPoints":["职责边界"],"feedback":"继续核实"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续核实职责"}
+                """);
+        chatService.enqueueStream(Flux.just("你具体负责了哪些架构设计工作？"));
+        agentService.answer(user.id(), session.id(), "我主导了订单系统技术方案设计。")
+                .collectList().block();
+        String firstClaimId = claimLedgerService.ledger(user.id(), session.id()).claims().stream()
+                .filter(claim -> claim.content().contains("负责订单系统核心链路"))
+                .findFirst().orElseThrow().id();
+
+        chatService.enqueueConsistency("""
+                {"issues":[{"issueId":"","type":"OWNERSHIP_CONFLICT",
+                "description":"技术方案主导权与架构选型责任的范围需要澄清",
+                "relatedClaimIds":["%s","CURRENT_CLAIM"],
+                "clarificationQuestion":"前面你提到主导技术方案，现在又说架构选型由架构师决定，请说明双方各自负责哪些决策？",
+                "confidence":0.86}],"resolutions":[]}
+                """.formatted(firstClaimId));
+        chatService.enqueueChat("""
+                {"correctness":76,"depth":68,"missingPoints":["决策边界"],"feedback":"需要澄清"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"澄清前后陈述"}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "前面你提到主导技术方案，现在又说架构选型由架构师决定，",
+                "请说明双方各自负责哪些决策？"));
+
+        agentService.answer(user.id(), session.id(), "架构选型主要由架构师决定。")
+                .collectList().block();
+
+        var clarified = consistencyIssueService.ledger(user.id(), session.id()).issues();
+        assertThat(clarified).singleElement().satisfies(issue -> {
+            assertThat(issue.status()).isEqualTo(ConsistencyIssueStatus.CLARIFIED);
+            assertThat(issue.description()).doesNotContain("撒谎", "不诚实");
+            assertThat(issue.clarificationMessageId()).isPositive();
+        });
+        assertThat(sessionService.messages(user.id(), session.id()).getLast().content())
+                .contains("双方各自负责哪些决策").doesNotContain("撒谎", "不诚实");
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.probePlan().targetsConsistencyIssue()).isTrue();
+                    assertThat(state.claimLedger().issues()).singleElement();
+                });
+
+        String issueId = clarified.getFirst().id();
+        chatService.enqueueConsistency("""
+                {"issues":[],"resolutions":[{"issueId":"%s","status":"RESOLVED",
+                "resolution":"候选人说明自己负责接口与数据模型设计，架构师负责公司级技术栈选型，职责边界不冲突。",
+                "confidence":0.91}]}
+                """.formatted(issueId));
+        chatService.enqueueChat("""
+                {"correctness":86,"depth":82,"missingPoints":[],"feedback":"职责边界已澄清"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证架构能力"}
+                """);
+        chatService.enqueueStream(Flux.just("请继续说明接口设计中的关键取舍。"));
+        agentService.answer(user.id(), session.id(),
+                "我负责接口与数据模型设计，架构师负责公司级技术栈选型。")
+                .collectList().block();
+
+        assertThat(consistencyIssueService.ledger(user.id(), session.id()).issues())
+                .singleElement().satisfies(issue -> {
+                    assertThat(issue.status()).isEqualTo(ConsistencyIssueStatus.RESOLVED);
+                    assertThat(issue.resolution()).contains("职责边界不冲突");
+                });
+    }
+
+    @Test
+    void directsAndPersistsScenarioOnlyAfterQuestionStreamCompletes() {
+        var user = userService.register("agent-scenario", "Agent Scenario", "safe-password");
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "故障沙盘面试", "Java 工程师", "核心查询服务稳定性", InterviewDifficulty.SENIOR,
+                30, 4, null, Map.of("pressureLevel", "CHALLENGING"),
+                List.of("SYSTEM_DESIGN", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("核心查询服务出现延迟，你会先检查什么？"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        var startedScenario = scenarioEngine.start(user.id(), session.id(), new ScenarioDefinition(
+                SimulationType.INCIDENT_RESPONSE, "验证故障处置和取舍",
+                "核心查询服务在流量上涨后延迟增加", "当班技术负责人",
+                List.of("流量达到平时两倍"), List.of("数据库允许增加只读实例"),
+                Map.of("rootCause", "databasePrimaryLag"),
+                Map.of("cacheAvailable", true, "databaseCpu", 68),
+                List.of(new ScenarioConstraint("preserve_core_queries", "必须保障核心查询可用", true, true)),
+                List.of("故障处置", "权衡分析"), List.of("核心查询恢复稳定"), 3));
+        var started = scenarioEngine.markIntroduced(
+                user.id(), session.id(), startedScenario.id());
+
+        chatService.enqueueChat("""
+                {"correctness":84,"depth":80,"missingPoints":["回源保护"],"feedback":"处置顺序清晰"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证故障处置"}
+                """);
+        chatService.enqueueChat("""
+                {"decisionAction":"启用熔断并将读流量切到降级缓存",
+                "decisionRationale":"先保护主数据库并维持核心查询可用",
+                "eventType":"DEPENDENCY_FAILURE",
+                "eventDescription":"缓存依赖完全不可用，降级读流量回源导致数据库 CPU 上升",
+                "changes":{"cacheAvailable":false,"databaseCpu":86},
+                "nextQuestion":"缓存完全不可用且数据库 CPU 已升至 86%，你接下来如何保障核心查询？",
+                "completeAfterEvent":false}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "缓存完全不可用且数据库 CPU 已升至 86%，",
+                "你接下来如何保障核心查询？"));
+
+        assertThat(agentService.answer(
+                user.id(), session.id(), "我会先启用熔断，把读流量切到降级缓存。")
+                .collectList().block()).containsExactly(
+                        "缓存完全不可用且数据库 CPU 已升至 86%，",
+                        "你接下来如何保障核心查询？");
+
+        var advanced = scenarioEngine.findActive(user.id(), session.id()).orElseThrow();
+        assertThat(advanced.id()).isEqualTo(started.id());
+        assertThat(advanced.currentRound()).isEqualTo(1);
+        assertThat(advanced.status()).isEqualTo(ScenarioStatus.ACTIVE);
+        assertThat(advanced.variables()).containsEntry("cacheAvailable", false)
+                .containsEntry("databaseCpu", 86);
+        assertThat(advanced.decisions()).singleElement().satisfies(decision -> {
+            assertThat(decision.action()).contains("熔断");
+            assertThat(decision.sourceMessageId()).isPositive();
+        });
+        assertThat(advanced.events()).singleElement().satisfies(event -> {
+            assertThat(event.type()).isEqualTo(ScenarioEventType.DEPENDENCY_FAILURE);
+            assertThat(event.triggeredByDecisionId()).isEqualTo(advanced.decisions().getFirst().id());
+        });
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.stateVersion()).isEqualTo(com.inin.aiinterviewer.agent.state.InterviewState.CURRENT_VERSION);
+                    assertThat(state.activeScenario()).isEqualTo(advanced);
+                    assertThat(state.probePlan().shouldInjectScenario()).isTrue();
+                    assertThat(state.currentQuestion()).contains("数据库 CPU 已升至 86%");
+                });
+        assertThat(chatService.lastStreamPrompt())
+                .contains("当前场景公开状态", "databaseCpu", "场景后果问题")
+                .doesNotContain("databasePrimaryLag", "hiddenInformation", "rootCause");
+
+        chatService.enqueueChat("""
+                {"correctness":70,"depth":62,"missingPoints":["容量依据"],"feedback":"继续验证"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"补充容量判断依据"}
+                """);
+        chatService.enqueueChat("not-json");
+        chatService.enqueueChat("still-not-json");
+        chatService.enqueueStream(Flux.just("请说明你判断数据库容量是否足够的指标依据。"));
+
+        assertThat(agentService.answer(
+                user.id(), session.id(), "我会限制非核心查询并继续观察数据库容量。")
+                .collectList().block())
+                .containsExactly("请说明你判断数据库容量是否足够的指标依据。");
+
+        assertThat(scenarioEngine.findActive(user.id(), session.id())).isEmpty();
+        assertThat(scenarioEngine.require(user.id(), session.id(), started.id())).satisfies(failed -> {
+            assertThat(failed.status()).isEqualTo(ScenarioStatus.FAILED);
+            assertThat(failed.terminationReason()).contains("场景导演失败");
+            assertThat(failed.currentRound()).isEqualTo(1);
+        });
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.activeScenario().status()).isEqualTo(ScenarioStatus.FAILED);
+                    assertThat(state.probePlan().shouldInjectScenario()).isFalse();
+                    assertThat(state.currentQuestion()).contains("容量是否足够");
+                });
+    }
+
+    @Test
+    void startsBuiltInScenarioFromPlanRatioAndCompletesItsDecisionRound() {
+        var user = userService.register("scheduled-scenario", "Scheduled Scenario", "safe-password");
+        Map<String, Object> rules = new InterviewPlanSettings(
+                com.inin.aiinterviewer.domain.enums.InterviewMode.SCENARIO_SIMULATION,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.INCIDENT_COMMANDER,
+                com.inin.aiinterviewer.domain.enums.PressureLevel.CHALLENGING,
+                com.inin.aiinterviewer.domain.enums.VerificationStrictness.STRICT,
+                50).mergeInto(Map.of("focus", "故障处理"));
+        var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "自动沙盘面试", "Java 后端工程师", "核心订单服务", InterviewDifficulty.SENIOR,
+                30, 3, null, rules, List.of("SYSTEM_DESIGN", "SUMMARY")));
+        var session = sessionService.create(user.id(), plan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍你处理线上故障的基本顺序。"));
+        agentService.generateInitialQuestion(user.id(), session.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":80,"depth":74,"missingPoints":["容量指标"],"feedback":"处置顺序清晰"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"进入岗位故障沙盘"}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "秒杀开始后 Redis 集群出现故障，数据库 CPU 持续升高。",
+                "请说明你首先会采取什么行动，以及判断依据。"));
+
+        agentService.answer(user.id(), session.id(), "我会先确认影响范围并冻结高风险变更。")
+                .collectList().block();
+
+        var introduced = scenarioEngine.findActive(user.id(), session.id()).orElseThrow();
+        assertThat(introduced.introduced()).isTrue();
+        assertThat(introduced.currentRound()).isZero();
+        assertThat(introduced.hiddenInformation())
+                .containsEntry("templateId", "flash-sale-incident")
+                .containsKey("injectableEvents");
+        assertThat(introduced.maxRounds()).isEqualTo(1);
+        assertThat(sessionService.loadLatestState(user.id(), session.id())).get()
+                .satisfies(state -> {
+                    assertThat(state.activeScenario()).isEqualTo(introduced);
+                    assertThat(state.probePlan().shouldInjectScenario()).isTrue();
+                    assertThat(state.currentQuestion()).contains("首先会采取什么行动");
+                });
+        assertThat(chatService.lastStreamPrompt())
+                .contains("秒杀订单系统当班技术负责人", "不能超卖")
+                .doesNotContain("热点库存键失效后重试风暴放大回源流量", "rootCause", "injectableEvents");
+
+        chatService.enqueueChat("""
+                {"correctness":86,"depth":82,"missingPoints":["恢复节奏"],"feedback":"止损思路明确"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"验证决策后果处理"}
+                """);
+        chatService.enqueueChat("""
+                {"decisionAction":"限制非核心流量并保护数据库",
+                "decisionRationale":"优先维持下单链路可用并避免连接池耗尽",
+                "eventType":"RESOURCE_SHOCK",
+                "eventDescription":"限流生效前数据库连接池使用率升至 95%",
+                "changes":{"databaseConnections":95,"databaseCpu":92},
+                "nextQuestion":"数据库连接池使用率达到 95% 时，你如何安排进一步止损和恢复？",
+                "completeAfterEvent":false}
+                """);
+        chatService.enqueueStream(Flux.just(
+                "数据库连接池使用率达到 95% 时，",
+                "你如何安排进一步止损和恢复？"));
+
+        agentService.answer(user.id(), session.id(), "我先限制非核心流量，保护数据库和下单写路径。")
+                .collectList().block();
+
+        assertThat(scenarioEngine.findActive(user.id(), session.id())).isEmpty();
+        assertThat(scenarioEngine.require(user.id(), session.id(), introduced.id()))
+                .satisfies(completed -> {
+                    assertThat(completed.status()).isEqualTo(ScenarioStatus.COMPLETED);
+                    assertThat(completed.currentRound()).isEqualTo(1);
+                    assertThat(completed.variables())
+                            .containsEntry("databaseConnections", 95)
+                            .containsEntry("databaseCpu", 92);
+                    assertThat(completed.events()).singleElement()
+                            .satisfies(event -> assertThat(event.triggeredByDecisionId())
+                                    .isEqualTo(completed.decisions().getFirst().id()));
+                });
     }
 
     @Test
@@ -182,16 +618,32 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(sessionService.require(user.id(), session.id()).stage()).isEqualTo(InterviewStage.COMPLETED);
         assertThat(interviewResultService.find(user.id(), session.id()))
                 .get().satisfies(report -> {
-                    assertThat(report.overallScore()).isEqualTo(78);
+                    assertThat(report.overallScore()).isEqualTo(79);
                     assertThat(report.dimensions()).hasSize(6);
+                    assertThat(report.confidence()).containsKey("problemSolving");
+                    assertThat(report.scoreEvidence().get("problemSolving").scored()).isTrue();
+                    assertThat(report.scoreEvidence().get("technical").scored()).isFalse();
+                    assertThat(report.overallScored()).isTrue();
+                    assertThat(report.evidence()).singleElement()
+                            .satisfies(evidence -> assertThat(evidence.questionNumber()).isEqualTo(1));
                     assertThat(report.contentMarkdown()).contains(
-                            "技术基础", "综合评价", "问答摘要", "参考依据",
-                            "本次面试未使用知识库片段作为提问依据");
+                            "技术基础", "综合评价", "问答摘要", "证据与置信度", "证据明细", "参考依据",
+                            "本次面试未使用知识库片段作为提问依据",
+                            "## 1. 面试基本信息", "## 2. 综合结论", "## 3. 能力评分与置信度",
+                            "## 4. 关键能力证据", "## 5. 核心主张可信度", "## 6. 逻辑链完整度",
+                            "## 7. 压力场景表现", "## 8. 决策与取舍风格",
+                            "## 9. 协作与观点修正能力", "## 10. 前后不一致及澄清结果",
+                            "## 11. 优势", "## 12. 风险点", "## 13. 改进建议",
+                            "## 14. 学习计划", "## 15. 关键问答证据",
+                            "证据 `", "Q1", "证据不足", "消息 `");
                 });
+        assertThat(chatService.lastChatPrompt()).contains(
+                "不负责评分", "PROBLEM_SOLVING", "逐条证据")
+                .doesNotContain("完整问答", "我通过拆分事务边界解决了长事务问题");
         assertThat(sessionService.loadLatestState(user.id(), session.id()))
                 .get().satisfies(state -> {
                     assertThat(state.stage()).isEqualTo(InterviewStage.COMPLETED);
-                    assertThat(state.evaluation().overallScore()).isEqualTo(78);
+                    assertThat(state.evaluation().overallScore()).isEqualTo(79);
                 });
     }
 
@@ -318,7 +770,7 @@ class InterviewAgentServiceIntegrationTest {
         assertThat(backgroundTaskService.executeNext("report-retry-worker")).isTrue();
         var report = interviewResultService.find(user.id(), session.id()).orElseThrow();
 
-        assertThat(report.overallScore()).isEqualTo(81);
+        assertThat(report.overallScore()).isEqualTo(79);
         assertThat(sessionService.require(user.id(), session.id()).status()).isEqualTo(InterviewStatus.COMPLETED);
         assertThat(sessionService.messages(user.id(), session.id())).hasSize(2);
         assertThat(completionService.state(user.id(), session.id()).reportStatus())
@@ -357,8 +809,10 @@ class InterviewAgentServiceIntegrationTest {
 
     static class FakeChatService implements ChatService {
         private final Queue<String> chats = new ArrayDeque<>();
+        private final Queue<String> consistencyChats = new ArrayDeque<>();
         private final Queue<Flux<String>> streams = new ArrayDeque<>();
         private String lastStreamPrompt;
+        private String lastChatPrompt;
 
         synchronized void enqueueChat(String response) {
             chats.add(response);
@@ -368,8 +822,52 @@ class InterviewAgentServiceIntegrationTest {
             streams.add(response);
         }
 
+        synchronized void enqueueConsistency(String response) {
+            consistencyChats.add(response);
+        }
+
         @Override
         public synchronized String chat(String prompt) {
+            lastChatPrompt = prompt;
+            if (prompt.contains("候选人主张提取器")) {
+                if (prompt.contains("接口与数据模型设计")) {
+                    return claim("负责接口与数据模型设计，架构师负责技术栈选型");
+                }
+                if (prompt.contains("架构选型主要由架构师决定")) {
+                    return claim("架构选型主要由架构师决定");
+                }
+                return """
+                        {"claims":[{"type":"OWNERSHIP","content":"负责订单系统核心链路",
+                        "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
+                        """;
+            }
+            if (prompt.contains("逻辑链评估器")) {
+                return """
+                        {"premises":["订单核心链路需要稳定交付"],"problemDiagnosis":"核心链路职责复杂",
+                        "alternatives":[],"decision":"负责核心链路","reasoning":"","actions":[],
+                        "outcome":"","validation":"","reflection":"",
+                        "gaps":[{"type":"MISSING_PERSONAL_CONTRIBUTION","description":"缺少个人行动和职责边界",
+                        "severity":0.85,"relatedClaimIds":[]}]}
+                        """;
+            }
+            if (prompt.contains("逐轮面试证据收集器")) {
+                return """
+                        {"evidence":[{"competencyCode":"PROBLEM_SOLVING","signal":"POSITIVE",
+                        "strength":0.8,"confidence":0.72,"reason":"回答给出了明确的技术决策",
+                        "relatedClaimIds":[]}]}
+                        """;
+            }
+            if (prompt.contains("跨轮面试一致性检查器")) {
+                if (consistencyChats.isEmpty()) {
+                    return "{\"issues\":[],\"resolutions\":[]}";
+                }
+                String response = consistencyChats.remove();
+                if (response.contains("CURRENT_CLAIM")) {
+                    String currentClaimId = extractCurrentClaimId(prompt);
+                    return response.replace("CURRENT_CLAIM", currentClaimId);
+                }
+                return response;
+            }
             return chats.remove();
         }
 
@@ -383,10 +881,31 @@ class InterviewAgentServiceIntegrationTest {
             return lastStreamPrompt;
         }
 
+        synchronized String lastChatPrompt() {
+            return lastChatPrompt;
+        }
+
         synchronized void clear() {
             chats.clear();
+            consistencyChats.clear();
             streams.clear();
             lastStreamPrompt = null;
+            lastChatPrompt = null;
+        }
+
+        private String claim(String content) {
+            return """
+                    {"claims":[{"type":"OWNERSHIP","content":"%s",
+                    "importance":0.9,"credibility":0.7,"missingEvidence":["职责边界"]}]}
+                    """.formatted(content);
+        }
+
+        private String extractCurrentClaimId(String prompt) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern
+                    .compile("本轮主张：\\[InterviewClaim\\[id=([0-9a-f-]{36})")
+                    .matcher(prompt);
+            if (!matcher.find()) throw new IllegalStateException("Current claim id missing from prompt");
+            return matcher.group(1);
         }
     }
 }

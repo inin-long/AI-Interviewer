@@ -11,12 +11,12 @@ import reactor.core.publisher.Flux;
 import java.util.Map;
 
 @Component
-public class QuestionGeneratorNode implements NodeAction<InterviewGraphState> {
+public class QuestionRendererNode implements NodeAction<InterviewGraphState> {
 
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
 
-    public QuestionGeneratorNode(ChatService chatService, ObjectMapper objectMapper) {
+    public QuestionRendererNode(ChatService chatService, ObjectMapper objectMapper) {
         this.chatService = chatService;
         this.objectMapper = objectMapper;
     }

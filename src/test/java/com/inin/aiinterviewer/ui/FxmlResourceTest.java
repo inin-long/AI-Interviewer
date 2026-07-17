@@ -17,6 +17,7 @@ class FxmlResourceTest {
             "/fxml/profile-view.fxml", "/fxml/task-view.fxml", "/fxml/task-detail-view.fxml",
             "/fxml/plan-view.fxml", "/fxml/plan-editor-view.fxml",
             "/fxml/interview-workspace-view.fxml", "/fxml/report-detail-view.fxml",
+            "/fxml/session-branch-view.fxml",
             "/fxml/knowledge-view.fxml", "/fxml/knowledge-detail-view.fxml",
             "/fxml/history-view.fxml", "/fxml/interview-history-detail-view.fxml",
             "/fxml/settings-view.fxml"

@@ -319,9 +319,10 @@ class CompleteBusinessFlowE2ETest {
         fire(robot, "#reportButton");
         waitForNode(robot, "#overallScoreLabel");
 
-        assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("88 / 100");
-        assertThat(label(robot, "#technicalScoreLabel").getText()).isEqualTo("91 分");
-        assertThat(label(robot, "#systemDesignScoreLabel").getText()).isEqualTo("90 分");
+        assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("88 / 100 · 中置信度");
+        assertThat(label(robot, "#technicalScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
+        assertThat(label(robot, "#problemSolvingScoreLabel").getText()).isEqualTo("证据不足");
+        assertThat(label(robot, "#systemDesignScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
 
         MarkdownView reportView = robot.lookup("#reportView").queryAs(MarkdownView.class);
         assertThat(reportView.getMarkdown())
@@ -330,7 +331,15 @@ class CompleteBusinessFlowE2ETest {
 
         var report = resultService.find(userId, sessionId).orElseThrow();
         assertThat(report.overallScore()).isEqualTo(88);
-        assertThat(report.dimensions()).containsEntry("technical", 91).containsEntry("systemDesign", 90);
+        assertThat(report.dimensions()).containsEntry("technical", 88).containsEntry("systemDesign", 88);
+        assertThat(report.scoreEvidence().get("technical").evidenceIds()).hasSize(3);
+        assertThat(label(robot, "#systemDesignScoreLabel").getStyleClass())
+                .contains("score-evidence-link");
+        assertThat(label(robot, "#problemSolvingScoreLabel").getStyleClass())
+                .doesNotContain("score-evidence-link");
+        Label scoreLink = label(robot, "#systemDesignScoreLabel");
+        robot.interact(() -> scoreLink.getOnMouseClicked().handle(null));
+        waitForNode(robot, "#messageCountLabel");
     }
 
     private void deleteCompletedTask(FxRobot robot, long userId) throws Exception {
@@ -466,7 +475,33 @@ class CompleteBusinessFlowE2ETest {
             return new ChatService() {
                 @Override
                 public String chat(String prompt) {
-                    if (prompt.contains("技术面试评分器")) {
+                    if (prompt.contains("候选人主张提取器")) {
+                        return """
+                                {"claims":[{"type":"DECISION","content":"使用 Outbox 保证事件最终一致性",
+                                "importance":0.95,"credibility":0.8,"missingEvidence":["故障恢复数据"]}]}
+                                """;
+                    }
+                    if (prompt.contains("逻辑链评估器")) {
+                        return """
+                                {"premises":["订单和事件需要最终一致"],"problemDiagnosis":"跨服务事务不可用",
+                                "alternatives":["分布式事务","Outbox"],"decision":"使用 Outbox",
+                                "reasoning":"业务提交与事件记录在同一事务","actions":["写入 Outbox","异步投递"],
+                                "outcome":"事件可恢复投递","validation":"通过 requestId 对账","reflection":"",
+                                "gaps":[{"type":"MISSING_FAILURE_HANDLING","description":"需要补充持续投递失败的处置",
+                                "severity":0.72,"relatedClaimIds":[]}]}
+                                """;
+                    }
+                    if (prompt.contains("逐轮面试证据收集器")) {
+                        return """
+                                {"evidence":[{"competencyCode":"SYSTEM_DESIGN","signal":"POSITIVE",
+                                "strength":0.9,"confidence":0.84,"reason":"能够比较方案并说明 Outbox 的一致性路径",
+                                "relatedClaimIds":[]}]}
+                                """;
+                    }
+                    if (prompt.contains("跨轮面试一致性检查器")) {
+                        return "{\"issues\":[],\"resolutions\":[]}";
+                    }
+                    if (prompt.contains("技术面试证据摘要助手")) {
                         return """
                                 {"overallScore":88,"technicalScore":91,"problemSolvingScore":89,
                                 "projectScore":90,"systemDesignScore":90,"communicationScore":86,

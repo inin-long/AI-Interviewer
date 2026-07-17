@@ -3,6 +3,11 @@ package com.inin.aiinterviewer.application.service;
 import com.inin.aiinterviewer.agent.graph.InterviewGraph;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
+import com.inin.aiinterviewer.agent.model.ProbePlan;
+import com.inin.aiinterviewer.agent.model.QuestionQualityContext;
+import com.inin.aiinterviewer.agent.model.ScenarioDirectionResult;
+import com.inin.aiinterviewer.agent.node.QuestionQualityGateNode;
+import com.inin.aiinterviewer.agent.prompt.AgentPrompts;
 import com.inin.aiinterviewer.agent.tool.ToolInput;
 import com.inin.aiinterviewer.agent.tool.ToolRegistry;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
@@ -16,6 +21,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,6 +43,14 @@ public class InterviewAgentService {
     private final InterviewSessionService sessionService;
     private final InterviewGraph interviewGraph;
     private final ReportGenerationTaskService reportTaskService;
+    private final ClaimLedgerService claimLedgerService;
+    private final EvidenceLedgerService evidenceLedgerService;
+    private final ConsistencyIssueService consistencyIssueService;
+    private final DeferredProbeService deferredProbeService;
+    private final ScenarioEngine scenarioEngine;
+    private final ScenarioSchedulingService scenarioSchedulingService;
+    private final CollaborationEvidenceCollector collaborationEvidenceCollector;
+    private final QuestionQualityGateNode questionQualityGate;
     private final ToolRegistry toolRegistry;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -44,12 +58,28 @@ public class InterviewAgentService {
             InterviewSessionService sessionService,
             InterviewGraph interviewGraph,
             ReportGenerationTaskService reportTaskService,
+            ClaimLedgerService claimLedgerService,
+            EvidenceLedgerService evidenceLedgerService,
+            ConsistencyIssueService consistencyIssueService,
+            DeferredProbeService deferredProbeService,
+            ScenarioEngine scenarioEngine,
+            ScenarioSchedulingService scenarioSchedulingService,
+            CollaborationEvidenceCollector collaborationEvidenceCollector,
+            QuestionQualityGateNode questionQualityGate,
             ToolRegistry toolRegistry,
             ApplicationEventPublisher eventPublisher
     ) {
         this.sessionService = sessionService;
         this.interviewGraph = interviewGraph;
         this.reportTaskService = reportTaskService;
+        this.claimLedgerService = claimLedgerService;
+        this.evidenceLedgerService = evidenceLedgerService;
+        this.consistencyIssueService = consistencyIssueService;
+        this.deferredProbeService = deferredProbeService;
+        this.scenarioEngine = scenarioEngine;
+        this.scenarioSchedulingService = scenarioSchedulingService;
+        this.collaborationEvidenceCollector = collaborationEvidenceCollector;
+        this.questionQualityGate = questionQualityGate;
         this.toolRegistry = toolRegistry;
         this.eventPublisher = eventPublisher;
     }
@@ -63,9 +93,14 @@ public class InterviewAgentService {
             }
             InterviewTurnInput input = new InterviewTurnInput(
                     session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
-                    retrieveCandidateProfile(userId, sessionId));
+                    retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
+                    claimLedgerService.compactSummary(userId, sessionId),
+                    evidenceLedgerService.compactSummary(userId, sessionId))
+                    .withCoverage(coverage(userId, sessionId, InterviewCoverage.empty()));
             String prompt = interviewGraph.initialQuestionPrompt(input);
-            return streamAndPersist(userId, sessionId, session.stage(), prompt, null, List.of());
+            return streamAndPersist(
+                    userId, sessionId, session.stage(), prompt, null, List.of(), null, null, null,
+                    qualityContext(input, session.stage(), null));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -86,23 +121,100 @@ public class InterviewAgentService {
             long askedQuestions = persistedMessages.stream()
                     .filter(message -> message.role() == Message.Role.ASSISTANT)
                     .count();
-            if (askedQuestions >= session.planSnapshot().questionCount()) {
-                reportTaskService.enqueue(userId, sessionId);
-                return Flux.empty();
-            }
             List<Message> messages = domainMessages(persistedMessages);
             KnowledgeRetrieval retrieval = retrieveKnowledge(
                     userId, sessionId, answeredState.currentQuestion() + "\n" + answeredState.latestAnswer());
-            InterviewTurnPlan turn = interviewGraph.plan(new InterviewTurnInput(
+            InterviewTurnInput turnInput = new InterviewTurnInput(
                     session.stage(), answeredState.currentQuestion(), answeredState.latestAnswer(),
                     session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
-                    retrieveCandidateProfile(userId, sessionId)));
+                    retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
+                    claimLedgerService.compactSummary(userId, sessionId),
+                    evidenceLedgerService.compactSummary(userId, sessionId))
+                    .withCoverage(coverage(userId, sessionId, answeredState.coverage()));
+
+            var extraction = interviewGraph.extractClaims(turnInput);
+            var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
+            sessionService.updateClaimLedger(userId, sessionId, claimLedger);
+            turnInput = turnInput.withClaimContext(
+                    extraction, claimLedgerService.compactSummary(userId, sessionId));
+            var logicChain = interviewGraph.evaluateLogic(turnInput);
+            sessionService.updateLogicChain(userId, sessionId, logicChain);
+            turnInput = turnInput.withLogicChainResult(logicChain);
+            var evidenceResult = collaborationEvidenceCollector.enrich(
+                    answeredState.latestAnswer(), interviewGraph.collectEvidence(turnInput));
+            var evidenceLedger = evidenceLedgerService.recordLatestAnswer(userId, sessionId, evidenceResult);
+            sessionService.updateEvidenceLedger(userId, sessionId, evidenceLedger);
+            turnInput = turnInput.withEvidenceContext(
+                    evidenceResult, evidenceLedgerService.compactSummary(userId, sessionId));
+            var consistencyContext = consistencyIssueService.prepareContext(userId, sessionId);
+            turnInput = turnInput.withConsistencyContext(
+                    consistencyContext, null, claimLedgerService.compactSummary(userId, sessionId));
+            var consistencyResult = interviewGraph.checkConsistency(turnInput);
+            var appliedConsistency = consistencyIssueService.apply(userId, sessionId, consistencyResult);
+            sessionService.updateClaimLedger(userId, sessionId, appliedConsistency.ledger());
+            turnInput = turnInput.withConsistencyContext(
+                    consistencyContext, appliedConsistency.result(),
+                    claimLedgerService.compactSummary(userId, sessionId));
+            var deferredProbes = deferredProbeService.scheduleLatestAnswer(
+                    userId, sessionId, session.planSnapshot(), session.stage(),
+                    appliedConsistency.result().degraded());
+            sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
+            turnInput = turnInput.withDeferredProbes(deferredProbes);
+            turnInput = turnInput.withPressureState(answeredState.pressureState());
+            var activeScenario = scenarioEngine.findActive(userId, sessionId).orElse(null);
+            if (askedQuestions >= session.planSnapshot().questionCount()) {
+                if (activeScenario != null) {
+                    var aborted = scenarioEngine.abort(
+                            userId, sessionId, activeScenario.id(), "面试达到题目上限");
+                    sessionService.updateScenarioState(userId, sessionId, aborted);
+                }
+                reportTaskService.enqueue(userId, sessionId);
+                return Flux.empty();
+            }
+            if (activeScenario == null && !scenarioEngine.hasScenario(userId, sessionId)) {
+                var scheduled = sessionService.domainPackSnapshot(userId, sessionId)
+                        .flatMap(snapshot -> scenarioSchedulingService.select(
+                                sessionId, session.planSnapshot(), snapshot,
+                                session.stage(), askedQuestions));
+                if (scheduled.isPresent()) {
+                    try {
+                        activeScenario = scenarioEngine.start(userId, sessionId, scheduled.get());
+                        sessionService.updateScenarioState(userId, sessionId, activeScenario);
+                    } catch (RuntimeException exception) {
+                        log.warn("Cannot start scheduled scenario for session {}; continuing regular interview",
+                                sessionId, exception);
+                    }
+                }
+            }
+            turnInput = turnInput.withActiveScenario(activeScenario);
+
+            InterviewTurnPlan turn = interviewGraph.plan(turnInput);
+            sessionService.updateCoverageAndStrategy(
+                    userId, sessionId, turn.coverage(), turn.strategy());
+            sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
+            sessionService.updatePressureState(userId, sessionId, turn.pressureState());
+
+            ScenarioDirectionResult scenarioDirection = turn.scenarioDirectionResult();
+            if (activeScenario != null && scenarioDirection.degraded()) {
+                try {
+                    var failed = scenarioEngine.failActive(
+                            userId, sessionId, "场景导演失败，已返回普通面试流程");
+                    sessionService.updateScenarioState(userId, sessionId, failed);
+                } catch (RuntimeException exception) {
+                    log.warn("Cannot close degraded scenario {} for session {}",
+                            activeScenario.id(), sessionId, exception);
+                }
+                scenarioDirection = null;
+            }
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
             }
             return streamAndPersist(
-                    userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(), retrieval.citations());
+                    userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(),
+                    retrieval.citations(), turn.probePlan(),
+                    activeScenario == null ? null : activeScenario.id(), scenarioDirection,
+                    qualityContext(turnInput, turn.stage(), turn.probePlan()));
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
@@ -112,11 +224,16 @@ public class InterviewAgentService {
             InterviewStage stage,
             String prompt,
             AnswerAnalysis analysis,
-            List<KnowledgeCitationDto> citations
+            List<KnowledgeCitationDto> citations,
+            ProbePlan probePlan,
+            String scenarioId,
+            ScenarioDirectionResult scenarioDirection,
+            QuestionQualityContext qualityContext
     ) {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
-        return interviewGraph.questionGenerator().stream(prompt)
+        AtomicBoolean qualityFallbackUsed = new AtomicBoolean(false);
+        return reviewedQuestion(prompt, qualityContext, qualityFallbackUsed)
                 .filter(chunk -> chunk != null && !chunk.isEmpty())
                 .switchIfEmpty(Flux.error(new AIException(
                         ErrorCode.AI_CALL_FAILED, new IllegalStateException("AI returned an empty stream"))))
@@ -128,7 +245,39 @@ public class InterviewAgentService {
                     }
                     persistenceAttempted.set(true);
                     sessionService.saveAssistantOutput(
-                            userId, sessionId, generated.toString(), analysis, false, citations);
+                            userId, sessionId, generated.toString(), analysis, false,
+                            qualityFallbackUsed.get() ? List.of() : citations);
+                    if (probePlan != null && probePlan.targetsConsistencyIssue()) {
+                        var ledger = consistencyIssueService.markClarificationAsked(
+                                userId, sessionId, probePlan.targetConsistencyIssueId());
+                        sessionService.updateClaimLedger(userId, sessionId, ledger);
+                    }
+                    if (probePlan != null && probePlan.targetsDeferredProbe()) {
+                        var deferredProbes = deferredProbeService.markCompleted(
+                                userId, sessionId, probePlan.targetDeferredProbeId());
+                        sessionService.updateDeferredProbes(userId, sessionId, deferredProbes);
+                    }
+                    if (scenarioId != null && scenarioDirection != null
+                            && scenarioDirection.requiresScenarioPrompt()) {
+                        try {
+                            var scenario = scenarioDirection.kickoff()
+                                    ? scenarioEngine.markIntroduced(userId, sessionId, scenarioId)
+                                    : scenarioEngine.advance(
+                                            userId, sessionId, scenarioId, scenarioDirection.toCommand());
+                            sessionService.updateScenarioState(userId, sessionId, scenario);
+                        } catch (RuntimeException scenarioFailure) {
+                            log.warn("Cannot advance scenario {} for session {}; returning to regular interview",
+                                    scenarioId, sessionId, scenarioFailure);
+                            try {
+                                var failed = scenarioEngine.failActive(
+                                        userId, sessionId, "场景状态保存失败，已返回普通面试流程");
+                                sessionService.updateScenarioState(userId, sessionId, failed);
+                            } catch (RuntimeException closeFailure) {
+                                log.error("Cannot close failed scenario {} for session {}",
+                                        scenarioId, sessionId, closeFailure);
+                            }
+                        }
+                    }
                     eventPublisher.publishEvent(
                             new InterviewTurnCompletedEvent(userId, sessionId, stage, false));
                 })
@@ -139,13 +288,86 @@ public class InterviewAgentService {
                     }
                     try {
                         sessionService.saveAssistantOutput(
-                                userId, sessionId, generated.toString(), analysis, true, citations);
+                                userId, sessionId, generated.toString(), analysis, true,
+                                qualityFallbackUsed.get() ? List.of() : citations);
                         eventPublisher.publishEvent(
                                 new InterviewTurnCompletedEvent(userId, sessionId, stage, true));
                     } catch (RuntimeException persistenceFailure) {
                         log.error("Cannot preserve partial AI output for session {}", sessionId, persistenceFailure);
                     }
                 });
+    }
+
+    private Flux<String> reviewedQuestion(
+            String prompt,
+            QuestionQualityContext context,
+            AtomicBoolean fallbackUsed
+    ) {
+        return renderDraft(prompt).flatMapMany(draft -> {
+            var firstReview = questionQualityGate.review(context, draft.text());
+            if (firstReview.approved()) return Flux.fromIterable(draft.chunks());
+            String retryPrompt = AgentPrompts.regenerateQuestion(
+                    prompt, draft.text(), firstReview.issues());
+            return renderDraft(retryPrompt).flatMapMany(retry -> {
+                var secondReview = questionQualityGate.review(context, retry.text());
+                if (secondReview.approved()) return Flux.fromIterable(retry.chunks());
+                log.warn("Question quality gate rejected both drafts for stage {}: first={}, second={}",
+                        context.stage(), firstReview.issues(), secondReview.issues());
+                fallbackUsed.set(true);
+                return Flux.just(questionQualityGate.fallback(context));
+            });
+        }).onErrorResume(QuestionRenderingException.class, failure -> {
+            Flux<String> partial = Flux.fromIterable(failure.partialChunks());
+            return failure.partialChunks().isEmpty()
+                    ? Flux.error(failure.getCause())
+                    : partial.concatWith(Flux.error(failure.getCause()));
+        });
+    }
+
+    private reactor.core.publisher.Mono<RenderedQuestion> renderDraft(String prompt) {
+        List<String> chunks = new ArrayList<>();
+        return interviewGraph.questionRenderer().stream(prompt)
+                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .doOnNext(chunks::add)
+                .collectList()
+                .flatMap(ignored -> {
+                    String text = String.join("", chunks);
+                    if (text.isBlank()) {
+                        return reactor.core.publisher.Mono.error(new AIException(
+                                ErrorCode.AI_CALL_FAILED,
+                                new IllegalStateException("AI returned an empty question stream")));
+                    }
+                    return reactor.core.publisher.Mono.just(
+                            new RenderedQuestion(List.copyOf(chunks), text));
+                })
+                .onErrorMap(exception -> exception instanceof QuestionRenderingException
+                        ? exception : new QuestionRenderingException(exception, List.copyOf(chunks)));
+    }
+
+    private QuestionQualityContext qualityContext(
+            InterviewTurnInput input,
+            InterviewStage stage,
+            ProbePlan probePlan
+    ) {
+        return new QuestionQualityContext(
+                stage, input.plan(), probePlan, input.pressureState(), input.activeScenario(),
+                input.messages(), input.candidateProfileContext(), input.domainPackContext());
+    }
+
+    private record RenderedQuestion(List<String> chunks, String text) {
+    }
+
+    private static final class QuestionRenderingException extends RuntimeException {
+        private final List<String> partialChunks;
+
+        private QuestionRenderingException(Throwable cause, List<String> partialChunks) {
+            super(cause);
+            this.partialChunks = partialChunks;
+        }
+
+        private List<String> partialChunks() {
+            return partialChunks;
+        }
     }
 
     private InterviewSessionDto requireRunning(long userId, long sessionId) {
@@ -204,6 +426,33 @@ public class InterviewAgentService {
                 .filter(result -> result.success())
                 .map(result -> result.data().toString())
                 .orElse("未关联已确认候选人画像");
+    }
+
+    private String domainPackContext(long userId, long sessionId) {
+        return sessionService.domainPackSnapshot(userId, sessionId)
+                .map(snapshot -> {
+                    var pack = snapshot.content();
+                    return Map.of(
+                            "id", snapshot.id(),
+                            "version", snapshot.version(),
+                            "displayName", pack.displayName(),
+                            "competencies", pack.competencies(),
+                            "metrics", pack.metrics(),
+                            "failurePatterns", pack.failurePatterns(),
+                            "probePlaybooks", pack.probePlaybooks(),
+                            "rubrics", pack.rubrics()).toString();
+                })
+                .orElse("未关联领域知识包");
+    }
+
+    private InterviewCoverage coverage(
+            long userId,
+            long sessionId,
+            InterviewCoverage current
+    ) {
+        return sessionService.domainPackSnapshot(userId, sessionId)
+                .map(snapshot -> current.ensureDomainPack(snapshot.content()))
+                .orElse(current);
     }
 
     private record KnowledgeRetrieval(String context, List<KnowledgeCitationDto> citations) {

@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.entity.InterviewPlanEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanDocumentMapper;
@@ -33,6 +34,7 @@ public class InterviewPlanService {
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
     private final InterviewPlanDocumentMapper planDocumentMapper;
+    private final DomainPackService domainPackService;
     private final ObjectMapper objectMapper;
 
     public InterviewPlanService(
@@ -41,6 +43,7 @@ public class InterviewPlanService {
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
             InterviewPlanDocumentMapper planDocumentMapper,
+            DomainPackService domainPackService,
             ObjectMapper objectMapper
     ) {
         this.planMapper = planMapper;
@@ -48,6 +51,7 @@ public class InterviewPlanService {
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
         this.planDocumentMapper = planDocumentMapper;
+        this.domainPackService = domainPackService;
         this.objectMapper = objectMapper;
     }
 
@@ -76,7 +80,7 @@ public class InterviewPlanService {
         SaveInterviewPlanCommand copy = new SaveInterviewPlanCommand(
                 source.name() + " 副本", source.jobTitle(), source.jobDescription(), source.difficulty(),
                 source.durationMinutes(), source.questionCount(), source.resumeId(), source.profileId(),
-                source.knowledgeDocumentIds(), source.rules(), source.stages());
+                source.knowledgeDocumentIds(), source.rules(), source.stages(), source.domainPackId());
         return create(userId, copy);
     }
 
@@ -132,7 +136,13 @@ public class InterviewPlanService {
         entity.setQuestionCount(command.questionCount());
         entity.setResumeId(resumeId);
         entity.setProfileId(command.profileId());
-        entity.setRulesJson(writeJson(command.rules() == null ? Map.of() : command.rules()));
+        entity.setDomainPackId(domainPackService.resolveId(command.domainPackId(), command.jobTitle()));
+        Map<String, Object> rules = command.rules() == null ? Map.of() : command.rules();
+        try {
+            entity.setRulesJson(writeJson(InterviewPlanSettings.fromRules(rules).mergeInto(rules)));
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
         entity.setStagesJson(writeJson(command.stages() == null || command.stages().isEmpty()
                 ? DEFAULT_STAGES : command.stages()));
         entity.setDefaultPlan(false);
@@ -144,7 +154,8 @@ public class InterviewPlanService {
                 entity.getJobDescription(), entity.getDifficulty(), entity.getDurationMinutes(),
                 entity.getQuestionCount(), entity.getResumeId(), entity.getProfileId(),
                 planDocumentMapper.findDocumentIds(entity.getId(), entity.getUserId()), readMap(entity.getRulesJson()),
-                readList(entity.getStagesJson()), entity.isDefaultPlan(), entity.getCreateTime(), entity.getUpdateTime());
+                readList(entity.getStagesJson()), entity.isDefaultPlan(), entity.getCreateTime(), entity.getUpdateTime(),
+                entity.getDomainPackId());
     }
 
     private void replaceDocuments(long planId, long userId, List<Long> documentIds) {

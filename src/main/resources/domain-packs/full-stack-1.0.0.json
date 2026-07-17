@@ -1,0 +1,32 @@
+{
+  "id": "full-stack-1.0.0",
+  "roleCode": "full-stack",
+  "industryCode": "internet",
+  "version": "1.0.0",
+  "displayName": "全栈工程师",
+  "competencies": [
+    {"code":"FRONTEND_ENGINEERING","name":"前端工程化","description":"组件设计、状态管理、性能和可访问性","importance":0.85,"indicators":["说明用户指标和技术指标","能定位浏览器性能瓶颈"]},
+    {"code":"BACKEND_ENGINEERING","name":"后端工程","description":"API、事务、异步任务和服务治理","importance":0.9,"indicators":["覆盖接口契约和异常路径","能够说明数据边界"]},
+    {"code":"DELIVERY","name":"交付与质量","description":"测试、发布、监控和跨端问题定位","importance":0.8,"indicators":["具备端到端责任意识","能用证据复盘故障"]}
+  ],
+  "metrics": [
+    {"code":"WEB_VITALS","name":"Core Web Vitals","description":"关注 LCP、INP、CLS 与真实用户监控"},
+    {"code":"API_SLO","name":"API SLO","description":"综合延迟、错误率和可用性目标"}
+  ],
+  "failurePatterns": [
+    {"code":"STALE_UI","name":"前后端状态不一致","description":"缓存、并发请求或契约变化导致界面展示旧状态","symptoms":["刷新后状态回退","重复提交"],"probes":["如何设计幂等和状态同步","如何复现竞态"]},
+    {"code":"RELEASE_REGRESSION","name":"发布回归","description":"跨端变更未被契约测试覆盖","symptoms":["部分用户白屏","旧客户端接口失败"],"probes":["如何灰度和回滚","如何保证向后兼容"]}
+  ],
+  "probePlaybooks": [
+    {"code":"TRACE_END_TO_END","objective":"验证候选人能否沿完整请求链定位问题","expectedEvidence":["浏览器证据","服务日志和链路","数据库或缓存证据"],"templates":["请按浏览器到数据库的顺序说明如何定位。"]},
+    {"code":"VERIFY_DELIVERY","objective":"验证方案是否包含测试、发布和监控","expectedEvidence":["测试分层","灰度策略","业务监控"],"templates":["如何证明上线后没有破坏旧流程？"]}
+  ],
+  "scenarios": [
+    {"id":"checkout-regression","type":"INCIDENT_RESPONSE","objective":"处理结算页发布后的重复下单和白屏问题","background":"前端与订单 API 同时发布，5% 用户出现异常。","candidateRole":"结算链路发布负责人","knownFacts":["异常用户比例为 5%","旧客户端占比为 30%","当前版本允许回滚"],"assumptions":["订单流水可用于核对重复提交","灰度平台可按客户端版本分流"],"hiddenInformation":{"rootCause":"前端重试与服务端幂等键变更共同导致重复下单"},"variables":{"affectedUsers":5,"rollbackAvailable":true,"oldClients":30,"duplicateOrders":0},"constraints":["十分钟内止损","保留订单一致性"],"competencies":["FRONTEND_ENGINEERING","BACKEND_ENGINEERING","DELIVERY"],"events":[{"round":1,"type":"REQUIREMENT_CHANGE","changes":{"duplicateOrders":120},"description":"核对发现已产生 120 笔重复订单"}],"endConditions":["完成止损和根因验证"],"maxRounds":3}
+  ],
+  "rubrics": [
+    {"competencyCode":"FRONTEND_ENGINEERING","positiveSignals":["结合真实用户指标与浏览器证据"],"negativeSignals":["只建议重写页面"],"insufficientEvidenceSignals":["没有前端细节"]},
+    {"competencyCode":"BACKEND_ENGINEERING","positiveSignals":["说明契约、幂等和事务边界"],"negativeSignals":["忽略重复提交副作用"],"insufficientEvidenceSignals":["没有后端执行路径"]},
+    {"competencyCode":"DELIVERY","positiveSignals":["包含灰度、回滚、监控和复盘"],"negativeSignals":["上线后依赖人工观察"],"insufficientEvidenceSignals":["未讨论交付过程"]}
+  ]
+}

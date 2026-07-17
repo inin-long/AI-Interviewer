@@ -197,7 +197,34 @@ class KnowledgeDocumentServiceIntegrationTest {
         synchronized void enqueueStream(Flux<String> response) { streams.add(response); }
 
         @Override
-        public synchronized String chat(String prompt) { return chats.remove(); }
+        public synchronized String chat(String prompt) {
+            if (prompt.contains("候选人主张提取器")) {
+                return """
+                        {"claims":[{"type":"DECISION","content":"使用空值缓存和布隆过滤器防止缓存穿透",
+                        "importance":0.9,"credibility":0.75,"missingEvidence":["边界条件"]}]}
+                        """;
+            }
+            if (prompt.contains("逻辑链评估器")) {
+                return """
+                        {"premises":["缓存穿透会增加回源"],"problemDiagnosis":"不存在的键重复访问数据库",
+                        "alternatives":["空值缓存","布隆过滤器"],"decision":"组合使用两种方案",
+                        "reasoning":"先过滤不存在的键","actions":[],"outcome":"降低回源",
+                        "validation":"","reflection":"","gaps":[{"type":"MISSING_FAILURE_HANDLING",
+                        "description":"未说明布隆过滤器失效时的处理","severity":0.7,"relatedClaimIds":[]}]}
+                        """;
+            }
+            if (prompt.contains("逐轮面试证据收集器")) {
+                return """
+                        {"evidence":[{"competencyCode":"CACHE_DESIGN","signal":"POSITIVE",
+                        "strength":0.82,"confidence":0.76,"reason":"能够提出缓存穿透的组合治理方案",
+                        "relatedClaimIds":[]}]}
+                        """;
+            }
+            if (prompt.contains("跨轮面试一致性检查器")) {
+                return "{\"issues\":[],\"resolutions\":[]}";
+            }
+            return chats.remove();
+        }
 
         @Override
         public synchronized Flux<String> stream(String prompt) { return streams.remove(); }
