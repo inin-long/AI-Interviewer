@@ -19,3 +19,6 @@ logs/
 .DS_Store
 Thumbs.db
 
+# WorkBuddy local project data (memory, logs, etc.)
+.workbuddy/
+
