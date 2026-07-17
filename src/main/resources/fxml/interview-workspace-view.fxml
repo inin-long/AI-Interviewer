@@ -29,6 +29,7 @@
                     <Label fx:id="scenarioLabel" text="场景 0 / 0" styleClass="status-tag"
                            visible="false" managed="false"/>
                     <Label fx:id="progressLabel" text="第 0 / 0 题" styleClass="secondary-text"/>
+                    <Label fx:id="remainingTimeLabel" text="剩余 0 分钟" styleClass="secondary-text"/>
                 </HBox>
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
@@ -65,24 +66,61 @@
                                 defaultButton="true" styleClass="primary-button"/>
                     </HBox>
                 </VBox>
-                <VBox fx:id="citationRail" spacing="12" minWidth="270" prefWidth="300" maxWidth="330"
-                      styleClass="content-card,citation-rail">
-                    <padding><Insets top="20" right="18" bottom="18" left="18"/></padding>
-                    <HBox alignment="CENTER_LEFT">
-                        <VBox spacing="3">
-                            <Label text="参考依据" styleClass="module-title"/>
-                            <Label text="本次提问实际采用的片段" styleClass="secondary-text"/>
-                        </VBox>
-                        <Region HBox.hgrow="ALWAYS"/>
-                    </HBox>
-                    <Label fx:id="citationCountLabel" text="暂无引用" styleClass="citation-count"/>
-                    <Separator/>
-                    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS"
-                                styleClass="citation-scroll">
-                        <content>
-                            <VBox fx:id="citationContainer" spacing="10" fillWidth="true"/>
-                        </content>
-                    </ScrollPane>
+                <VBox fx:id="rightRail" spacing="12" minWidth="290" prefWidth="320" maxWidth="350">
+                    <VBox fx:id="coachingPanel" spacing="10" styleClass="content-card,mode-detail-card"
+                          visible="false" managed="false">
+                        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+                        <Label text="教练反馈" styleClass="module-title"/>
+                        <Label text="仅用于训练，不进入正式能力证据" wrapText="true"
+                               styleClass="mode-isolation-note"/>
+                        <Label text="已经覆盖" styleClass="field-label"/>
+                        <Label fx:id="coachCoveredLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="缺失内容" styleClass="field-label"/>
+                        <Label fx:id="coachMissingLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="逻辑缺口" styleClass="field-label"/>
+                        <Label fx:id="coachLogicLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="参考结构" styleClass="field-label"/>
+                        <Label fx:id="coachStructureLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label fx:id="coachHintLabel" wrapText="true" styleClass="coach-hint"
+                               visible="false" managed="false"/>
+                        <HBox spacing="8">
+                            <Button fx:id="coachHintButton" text="请求提示" onAction="#requestCoachHint"
+                                    styleClass="secondary-button" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                            <Button fx:id="coachReanswerButton" text="重新组织回答" onAction="#reanswerLatest"
+                                    styleClass="secondary-button" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                        </HBox>
+                    </VBox>
+                    <VBox fx:id="scenarioPanel" spacing="10" styleClass="content-card,mode-detail-card"
+                          visible="false" managed="false">
+                        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+                        <Label text="情境沙盘" styleClass="module-title"/>
+                        <Label fx:id="scenarioObjectiveLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="公开事实与约束" styleClass="field-label"/>
+                        <Label fx:id="scenarioFactsLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="当前事件" styleClass="field-label"/>
+                        <Label fx:id="scenarioEventLabel" wrapText="true" styleClass="mode-detail-value"/>
+                        <Label text="最近决策" styleClass="field-label"/>
+                        <Label fx:id="scenarioDecisionLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    </VBox>
+                    <VBox fx:id="citationRail" spacing="12" VBox.vgrow="ALWAYS"
+                          styleClass="content-card,citation-rail">
+                        <padding><Insets top="20" right="18" bottom="18" left="18"/></padding>
+                        <HBox alignment="CENTER_LEFT">
+                            <VBox spacing="3">
+                                <Label text="参考依据" styleClass="module-title"/>
+                                <Label text="本次提问实际采用的片段" styleClass="secondary-text"/>
+                            </VBox>
+                            <Region HBox.hgrow="ALWAYS"/>
+                        </HBox>
+                        <Label fx:id="citationCountLabel" text="暂无引用" styleClass="citation-count"/>
+                        <Separator/>
+                        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS"
+                                    styleClass="citation-scroll">
+                            <content>
+                                <VBox fx:id="citationContainer" spacing="10" fillWidth="true"/>
+                            </content>
+                        </ScrollPane>
+                    </VBox>
                 </VBox>
             </HBox>
         </VBox>

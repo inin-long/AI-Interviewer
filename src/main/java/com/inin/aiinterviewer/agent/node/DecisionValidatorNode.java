@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.time.LocalDateTime;
 
 @Component
 public class DecisionValidatorNode implements NodeAction<InterviewGraphState> {
@@ -44,11 +45,12 @@ public class DecisionValidatorNode implements NodeAction<InterviewGraphState> {
                             : "追问压力超过方案上限，决策校验已降压");
         }
         int remaining = Math.max(0, state.plan().questionCount() - (int) asked);
+        int remainingMinutes = remainingMinutes(state);
         boolean scenarioTurn = state.activeScenario() != null
                 && state.scenarioDirectionResult().requiresScenarioPrompt();
         InterviewStrategy strategy = new InterviewStrategy(
                 stage, probe.strategy(), probe.targetClaimId(), probe.targetCompetencyCode(),
-                probe.objective(), pressure, remaining, scenarioTurn,
+                probe.objective(), pressure, remaining, remainingMinutes, scenarioTurn,
                 probe.reason().isBlank() ? "决策已通过程序规则校验" : probe.reason());
 
         LinkedHashMap<String, Object> output = new LinkedHashMap<>();
@@ -104,5 +106,17 @@ public class DecisionValidatorNode implements NodeAction<InterviewGraphState> {
 
     private PressureLevel lower(PressureLevel requested, PressureLevel maximum) {
         return requested.ordinal() <= maximum.ordinal() ? requested : maximum;
+    }
+
+    private int remainingMinutes(InterviewGraphState state) {
+        LocalDateTime started = state.messages().stream()
+                .map(Message::createTime)
+                .filter(value -> value != null)
+                .min(LocalDateTime::compareTo).orElse(LocalDateTime.now());
+        long elapsedSeconds = Math.max(0,
+                java.time.Duration.between(started, LocalDateTime.now()).toSeconds());
+        long remainingSeconds = Math.max(
+                0, state.plan().durationMinutes() * 60L - elapsedSeconds);
+        return (int) ((remainingSeconds + 59) / 60);
     }
 }

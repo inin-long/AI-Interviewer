@@ -3,10 +3,13 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewSessionDto;
 import com.inin.aiinterviewer.application.dto.ReportGenerationTaskStateDto;
+import com.inin.aiinterviewer.application.dto.CoachingFeedbackDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewAgentService;
 import com.inin.aiinterviewer.application.service.ReportGenerationTaskService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
+import com.inin.aiinterviewer.application.service.CoachingFeedbackService;
+import com.inin.aiinterviewer.application.service.SessionBranchService;
 import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
@@ -40,6 +43,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import reactor.core.publisher.Flux;
 
 @Component
@@ -49,6 +53,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private final InterviewSessionService sessionService;
     private final InterviewAgentService agentService;
     private final ReportGenerationTaskService reportTaskService;
+    private final CoachingFeedbackService coachingFeedbackService;
+    private final SessionBranchService branchService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -65,9 +71,21 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label pressureLabel;
     @FXML private Label scenarioLabel;
     @FXML private Label progressLabel;
+    @FXML private Label remainingTimeLabel;
     @FXML private Label aiNoticeLabel;
     @FXML private Label citationCountLabel;
     @FXML private VBox citationContainer;
+    @FXML private VBox coachingPanel;
+    @FXML private VBox scenarioPanel;
+    @FXML private Label coachCoveredLabel;
+    @FXML private Label coachMissingLabel;
+    @FXML private Label coachLogicLabel;
+    @FXML private Label coachStructureLabel;
+    @FXML private Label coachHintLabel;
+    @FXML private Label scenarioObjectiveLabel;
+    @FXML private Label scenarioFactsLabel;
+    @FXML private Label scenarioEventLabel;
+    @FXML private Label scenarioDecisionLabel;
     @FXML private InterviewTranscriptView transcriptView;
     @FXML private TextArea answerArea;
     @FXML private Button pauseButton;
@@ -75,16 +93,22 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Button retryQuestionButton;
     @FXML private Button retryReportButton;
     @FXML private Button reportButton;
+    @FXML private Button coachHintButton;
+    @FXML private Button coachReanswerButton;
 
     private long sessionId;
     private InterviewSessionDto currentSession;
     private boolean generationInProgress;
     private Timeline reportStatePoller;
+    private Timeline workspaceClock;
+    private CoachingFeedbackDto currentCoachingFeedback = CoachingFeedbackDto.unavailable();
 
     public InterviewWorkspaceController(
             InterviewSessionService sessionService,
             InterviewAgentService agentService,
             ReportGenerationTaskService reportTaskService,
+            CoachingFeedbackService coachingFeedbackService,
+            SessionBranchService branchService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -94,6 +118,8 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         this.sessionService = sessionService;
         this.agentService = agentService;
         this.reportTaskService = reportTaskService;
+        this.coachingFeedbackService = coachingFeedbackService;
+        this.branchService = branchService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -109,11 +135,12 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         sessionId = context;
         viewManager.maximizePrimaryStage();
         workspaceRoot.sceneProperty().addListener((observable, previous, current) -> {
-            if (previous != null && current == null) stopReportStatePolling();
+            if (previous != null && current == null) stopWorkspaceTimers();
         });
         transcriptView.setEmptyMessage("会话已创建，等待 AI 面试官生成第一道问题。");
         transcriptView.setCitationHandler(this::openCitation);
         refresh();
+        startWorkspaceClock();
         if (llmProperties.isConfigured()
                 && currentSession.status() == InterviewStatus.RUNNING
                 && sessionService.messages(userId(), sessionId).isEmpty()) {
@@ -182,6 +209,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             }
         }
         stopReportStatePolling();
+        stopWorkspaceClock();
         contentNavigator.back();
     }
 
@@ -210,6 +238,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                     scenarioLabel.setVisible(false);
                     scenarioLabel.setManaged(false);
                 });
+        renderModeDetails(settings, latestState.orElse(null));
         transcriptView.setMessages(messages);
         renderCitations(messages);
         ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
@@ -217,6 +246,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
         progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
                 + " / " + currentSession.planSnapshot().questionCount() + " 题");
+        refreshRemainingTime();
 
         boolean running = currentSession.status() == InterviewStatus.RUNNING;
         boolean hasQuestion = sessionService.loadLatestState(userId(), sessionId)
@@ -257,7 +287,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
 
     @FXML
     private void openReport() {
-        stopReportStatePolling();
+        stopWorkspaceTimers();
         contentNavigator.showSubPage(
                 "/fxml/report-detail-view.fxml", "面试报告", sessionId);
     }
@@ -399,6 +429,136 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         if (reportStatePoller == null) return;
         reportStatePoller.stop();
         reportStatePoller = null;
+    }
+
+    private void startWorkspaceClock() {
+        if (workspaceClock != null) return;
+        workspaceClock = new Timeline(new KeyFrame(Duration.seconds(30), event -> refreshRemainingTime()));
+        workspaceClock.setCycleCount(Timeline.INDEFINITE);
+        workspaceClock.play();
+    }
+
+    private void stopWorkspaceClock() {
+        if (workspaceClock == null) return;
+        workspaceClock.stop();
+        workspaceClock = null;
+    }
+
+    private void stopWorkspaceTimers() {
+        stopReportStatePolling();
+        stopWorkspaceClock();
+    }
+
+    private void refreshRemainingTime() {
+        if (currentSession == null) return;
+        int durationMinutes = currentSession.planSnapshot().durationMinutes();
+        if (currentSession.status() == InterviewStatus.COMPLETED) {
+            remainingTimeLabel.setText("已结束");
+            return;
+        }
+        if (currentSession.status() == InterviewStatus.PAUSED) {
+            remainingTimeLabel.setText("已暂停 · 计划 " + durationMinutes + " 分钟");
+            return;
+        }
+        LocalDateTime started = currentSession.startedTime() == null
+                ? currentSession.createTime() : currentSession.startedTime();
+        long elapsedSeconds = Math.max(0,
+                java.time.Duration.between(started, LocalDateTime.now()).toSeconds());
+        long remainingSeconds = Math.max(0, durationMinutes * 60L - elapsedSeconds);
+        long remainingMinutes = (remainingSeconds + 59) / 60;
+        remainingTimeLabel.setText(remainingSeconds == 0
+                ? "已到计划时长" : "剩余 " + remainingMinutes + " 分钟");
+    }
+
+    private void renderModeDetails(
+            InterviewPlanSettings settings,
+            com.inin.aiinterviewer.agent.state.InterviewState state
+    ) {
+        boolean coaching = settings.mode() == InterviewMode.COACHING;
+        show(coachingPanel, coaching);
+        if (coaching) renderCoachingFeedback();
+
+        var scenario = state == null ? null : state.activeScenario();
+        boolean scenarioMode = settings.mode() == InterviewMode.SCENARIO_SIMULATION;
+        show(scenarioPanel, scenarioMode || (scenario != null && scenario.status() == ScenarioStatus.ACTIVE));
+        if (scenario == null) {
+            scenarioObjectiveLabel.setText("等待按方案规则进入情境沙盘");
+            scenarioFactsLabel.setText("场景开始后仅展示已公开事实、约束和变量。");
+            scenarioEventLabel.setText("尚无场景事件");
+            scenarioDecisionLabel.setText("尚无候选人决策");
+            return;
+        }
+        scenarioObjectiveLabel.setText(scenario.objective() + "\n角色：" + scenario.candidateRole());
+        List<String> publicState = new java.util.ArrayList<>(scenario.knownFacts());
+        scenario.constraints().stream().filter(constraint -> constraint.active())
+                .map(constraint -> "约束：" + constraint.description()).forEach(publicState::add);
+        if (!scenario.variables().isEmpty()) publicState.add("当前变量：" + scenario.variables());
+        scenarioFactsLabel.setText(bullets(publicState, "暂无公开事实"));
+        scenarioEventLabel.setText(scenario.events().isEmpty() ? "尚无场景事件"
+                : scenario.events().getLast().description());
+        scenarioDecisionLabel.setText(scenario.decisions().isEmpty() ? "尚无候选人决策"
+                : scenario.decisions().getLast().action() + "\n依据："
+                + scenario.decisions().getLast().rationale());
+    }
+
+    private void renderCoachingFeedback() {
+        currentCoachingFeedback = coachingFeedbackService.feedback(userId(), sessionId);
+        coachHintLabel.setVisible(false);
+        coachHintLabel.setManaged(false);
+        if (!currentCoachingFeedback.available()) {
+            coachCoveredLabel.setText("完成一轮回答后显示");
+            coachMissingLabel.setText("完成一轮回答后显示");
+            coachLogicLabel.setText("完成一轮回答后显示");
+            coachStructureLabel.setText(bullets(List.of(
+                    "背景与约束", "个人行动与取舍", "结果与验证"), ""));
+            coachHintButton.setDisable(true);
+            coachReanswerButton.setDisable(true);
+            return;
+        }
+        coachCoveredLabel.setText(bullets(currentCoachingFeedback.coveredContent(), "暂无"));
+        coachMissingLabel.setText(bullets(currentCoachingFeedback.missingContent(), "暂无"));
+        coachLogicLabel.setText(bullets(currentCoachingFeedback.logicGaps(), "暂无"));
+        coachStructureLabel.setText(bullets(currentCoachingFeedback.referenceStructure(), "暂无"));
+        coachHintLabel.setText(currentCoachingFeedback.hint());
+        coachHintButton.setDisable(generationInProgress);
+        coachReanswerButton.setDisable(generationInProgress || !currentCoachingFeedback.canReanswer());
+    }
+
+    @FXML
+    private void requestCoachHint() {
+        if (!currentCoachingFeedback.available() || generationInProgress) return;
+        coachHintLabel.setVisible(true);
+        coachHintLabel.setManaged(true);
+    }
+
+    @FXML
+    private void reanswerLatest() {
+        if (!currentCoachingFeedback.canReanswer() || generationInProgress) return;
+        try {
+            if (currentSession.status() == InterviewStatus.RUNNING) {
+                sessionService.pause(userId(), sessionId);
+            }
+            var branch = branchService.create(
+                    userId(), sessionId, currentCoachingFeedback.sourceQuestionNumber(), null);
+            stopWorkspaceTimers();
+            contentNavigator.showSubPage(
+                    "/fxml/session-branch-view.fxml", "教练重答", branch.id());
+        } catch (RuntimeException exception) {
+            refresh();
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    private void show(VBox node, boolean value) {
+        node.setVisible(value);
+        node.setManaged(value);
+    }
+
+    private String bullets(List<String> values, String emptyText) {
+        if (values == null || values.isEmpty()) return emptyText;
+        return values.stream().filter(value -> value != null && !value.isBlank())
+                .map(value -> "• " + value).reduce((left, right) -> left + "\n" + right)
+                .orElse(emptyText);
     }
 
     private void renderCitations(List<InterviewMessageDto> messages) {

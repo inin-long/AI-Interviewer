@@ -14,9 +14,25 @@ public record InterviewStrategy(
         String objective,
         PressureLevel pressureLevel,
         int remainingQuestions,
+        int remainingMinutes,
         boolean scenarioTurn,
         String reason
 ) implements Serializable {
+
+    public InterviewStrategy(
+            InterviewStage stage,
+            ProbeStrategy probeStrategy,
+            String targetClaimId,
+            String targetCompetencyCode,
+            String objective,
+            PressureLevel pressureLevel,
+            int remainingQuestions,
+            boolean scenarioTurn,
+            String reason
+    ) {
+        this(stage, probeStrategy, targetClaimId, targetCompetencyCode, objective,
+                pressureLevel, remainingQuestions, 0, scenarioTurn, reason);
+    }
 
     public InterviewStrategy {
         stage = stage == null ? InterviewStage.INTRODUCTION : stage;
@@ -26,13 +42,14 @@ public record InterviewStrategy(
         objective = text(objective);
         pressureLevel = pressureLevel == null ? PressureLevel.STANDARD : pressureLevel;
         remainingQuestions = Math.max(0, remainingQuestions);
+        remainingMinutes = Math.max(0, remainingMinutes);
         reason = text(reason);
     }
 
     public static InterviewStrategy empty() {
         return new InterviewStrategy(
                 InterviewStage.INTRODUCTION, ProbeStrategy.CLARIFY_CONCEPT,
-                "", "", "", PressureLevel.STANDARD, 0, false, "");
+                "", "", "", PressureLevel.STANDARD, 0, 0, false, "");
     }
 
     private static String text(String value) {

@@ -607,7 +607,7 @@ public class InterviewSessionService {
         MessageMetadata metadata = readMessageMetadata(entity.getMetadataJson(), entity.getId());
         return new InterviewMessageDto(
                 entity.getSequenceNo(), entity.getRole(), entity.getContent(), entity.getCreateTime(),
-                metadata.partial(), metadata.citations());
+                metadata.partial(), metadata.citations(), entity.getId());
     }
 
     private List<KnowledgeCitationDto> normalizeCitations(

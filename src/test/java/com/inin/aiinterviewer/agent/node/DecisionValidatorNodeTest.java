@@ -49,6 +49,7 @@ class DecisionValidatorNodeTest {
         assertThat(pressure.lowered()).isTrue();
         assertThat(strategy.targetCompetencyCode()).isEqualTo("SYSTEM_DESIGN");
         assertThat(strategy.remainingQuestions()).isEqualTo(3);
+        assertThat(strategy.remainingMinutes()).isEqualTo(45);
     }
 
     @Test

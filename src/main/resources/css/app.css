@@ -422,6 +422,33 @@
     -fx-padding: 8 10;
 }
 
+.mode-detail-card {
+    -fx-background-color: #FBFCFF;
+}
+
+.mode-isolation-note {
+    -fx-background-color: -primary-soft;
+    -fx-background-radius: 7;
+    -fx-text-fill: -primary-pressed;
+    -fx-font-size: 12px;
+    -fx-padding: 8 10;
+}
+
+.mode-detail-value {
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 12px;
+    -fx-line-spacing: 2px;
+}
+
+.coach-hint {
+    -fx-background-color: #FFF8E8;
+    -fx-border-color: #F2D99B;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-text-fill: #7A5613;
+    -fx-padding: 10 12;
+}
+
 .transcript-area {
     -fx-font-size: 15px;
     -fx-line-spacing: 4px;

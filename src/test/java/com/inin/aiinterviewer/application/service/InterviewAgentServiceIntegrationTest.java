@@ -79,6 +79,7 @@ class InterviewAgentServiceIntegrationTest {
     @Autowired private EvidenceLedgerService evidenceLedgerService;
     @Autowired private ConsistencyIssueService consistencyIssueService;
     @Autowired private ScenarioEngine scenarioEngine;
+    @Autowired private CoachingFeedbackService coachingFeedbackService;
 
     @BeforeEach
     void resetFakeProvider() {
@@ -193,6 +194,57 @@ class InterviewAgentServiceIntegrationTest {
                 });
         assertThat(chatService.lastStreamPrompt()).contains("结构化追问计划", "targetClaimId")
                 .doesNotContain("\"targetClaimId\":\"\"");
+    }
+
+    @Test
+    void exposesReadOnlyFeedbackOnlyForCoachingSessions() {
+        var user = userService.register("coach-feedback-owner", "Coach Owner", "safe-password");
+        Map<String, Object> coachingRules = new com.inin.aiinterviewer.domain.model.InterviewPlanSettings(
+                com.inin.aiinterviewer.domain.enums.InterviewMode.COACHING,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.FUTURE_PEER,
+                com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED,
+                com.inin.aiinterviewer.domain.enums.VerificationStrictness.STANDARD,
+                0).mergeInto(Map.of());
+        var coachingPlan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "教练反馈面试", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 3, null, null, coachingRules,
+                List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY")));
+        var coachingSession = sessionService.create(user.id(), coachingPlan.id());
+
+        chatService.enqueueStream(Flux.just("请介绍一次你负责的核心服务改造。"));
+        agentService.generateInitialQuestion(user.id(), coachingSession.id()).collectList().block();
+        chatService.enqueueChat("""
+                {"correctness":78,"depth":70,"missingPoints":["量化结果"],"feedback":"行动清楚"}
+                """);
+        chatService.enqueueChat("""
+                {"action":"FOLLOW_UP","nextStage":null,"reason":"继续验证结果"}
+                """);
+        chatService.enqueueStream(Flux.just("请补充这次改造的量化结果和验证方式。"));
+        agentService.answer(user.id(), coachingSession.id(),
+                "我负责拆分事务边界，并通过灰度发布控制风险。")
+                .collectList().block();
+        int evidenceBefore = evidenceLedgerService.ledger(user.id(), coachingSession.id())
+                .evidence().size();
+
+        var feedback = coachingFeedbackService.feedback(user.id(), coachingSession.id());
+
+        assertThat(feedback.available()).isTrue();
+        assertThat(feedback.sourceQuestionNumber()).isEqualTo(1);
+        assertThat(feedback.coveredContent()).anyMatch(value -> value.contains("PROBLEM_SOLVING"));
+        assertThat(feedback.missingContent()).anyMatch(value -> value.contains("量化结果"));
+        assertThat(feedback.logicGaps()).isNotEmpty();
+        assertThat(feedback.referenceStructure()).hasSize(5);
+        assertThat(feedback.hint()).isNotBlank();
+        assertThat(feedback.canReanswer()).isTrue();
+        assertThat(evidenceLedgerService.ledger(user.id(), coachingSession.id()).evidence())
+                .hasSize(evidenceBefore);
+
+        var formalPlan = planService.create(user.id(), new SaveInterviewPlanCommand(
+                "正式面试", "Java 工程师", "核心服务开发", InterviewDifficulty.MEDIUM,
+                30, 3, null, null, Map.of(),
+                List.of("INTRODUCTION", "RESUME_REVIEW", "SUMMARY")));
+        var formalSession = sessionService.create(user.id(), formalPlan.id());
+        assertThat(coachingFeedbackService.feedback(user.id(), formalSession.id()).available()).isFalse();
     }
 
     @Test

@@ -11,7 +11,8 @@ public record InterviewMessageDto(
         String content,
         LocalDateTime createTime,
         boolean partial,
-        List<KnowledgeCitationDto> citations
+        List<KnowledgeCitationDto> citations,
+        long id
 ) {
     public InterviewMessageDto {
         citations = citations == null ? List.of() : List.copyOf(citations);
@@ -21,8 +22,19 @@ public record InterviewMessageDto(
             int sequenceNo,
             Message.Role role,
             String content,
+            LocalDateTime createTime,
+            boolean partial,
+            List<KnowledgeCitationDto> citations
+    ) {
+        this(sequenceNo, role, content, createTime, partial, citations, 0);
+    }
+
+    public InterviewMessageDto(
+            int sequenceNo,
+            Message.Role role,
+            String content,
             LocalDateTime createTime
     ) {
-        this(sequenceNo, role, content, createTime, false, List.of());
+        this(sequenceNo, role, content, createTime, false, List.of(), 0);
     }
 }

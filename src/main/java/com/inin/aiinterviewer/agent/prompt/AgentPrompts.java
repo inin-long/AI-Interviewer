@@ -253,6 +253,7 @@ public final class AgentPrompts {
 
                 结构化追问计划：%s
                 压力控制状态：%s
+                已校验面试策略（含剩余题量和时间）：%s
                 当前场景公开状态：%s
                 当前阶段：%s
                 目标岗位：%s
@@ -269,6 +270,7 @@ public final class AgentPrompts {
                 """.formatted(PersonaRenderer.instructions(state.plan().rules()), intent,
                 json(objectMapper, state.probePlan()),
                 json(objectMapper, state.pressureState()),
+                json(objectMapper, state.strategy()),
                 json(objectMapper, publicScenario(state)),
                 state.stage(), state.plan().jobTitle(), state.plan().jobDescription(),
                 state.plan().difficulty(), json(objectMapper, state.plan().rules()),
