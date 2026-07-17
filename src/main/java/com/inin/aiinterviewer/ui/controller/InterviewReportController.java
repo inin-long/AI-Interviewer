@@ -156,7 +156,8 @@ public class InterviewReportController implements ContextAwareController<Long> {
                 .filter(item -> item.questionNumber() > 0)
                 .forEach(item -> {
                     Button link = new Button("Q" + item.questionNumber() + " · "
-                            + evidenceSignalText(item.signal()) + " · " + item.competencyCode());
+                            + evidenceSignalText(item.signal()) + " · " + item.competencyCode()
+                            + " · " + shortEvidenceId(item.id()));
                     link.setMaxWidth(Double.MAX_VALUE);
                     link.getStyleClass().add("report-question-link");
                     link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
@@ -308,6 +309,11 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private String preview(String value) {
         String text = value == null ? "" : value.replaceAll("\\s+", " ").strip();
         return text.length() > 90 ? text.substring(0, 90) + "…" : text;
+    }
+
+    private String shortEvidenceId(String id) {
+        if (id == null || id.isBlank()) return "未编号";
+        return id.length() <= 8 ? id : id.substring(0, 8);
     }
 
     private void configureOverallScore(

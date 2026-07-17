@@ -68,6 +68,22 @@ class EvidenceScoreAggregatorTest {
     }
 
     @Test
+    void doesNotScoreUnlinkedEvidenceAsACompetencyJudgment() {
+        var payload = aggregator.aggregate(
+                new EvidenceLedger(List.of(evidence(
+                        "e-unlinked", "SYSTEM_DESIGN", EvidenceSignal.POSITIVE,
+                        0.9, 0.9, List.of()))),
+                ClaimLedger.empty(), "缺少主张关联");
+
+        assertThat(payload.overallScored()).isFalse();
+        assertThat(payload.scoreEvidence().get(EvidenceScoreAggregator.SYSTEM_DESIGN))
+                .satisfies(trace -> {
+                    assertThat(trace.scored()).isFalse();
+                    assertThat(trace.rationale()).contains("缺少主张关联");
+                });
+    }
+
+    @Test
     void appliesConfirmedConflictOnlyThroughRelatedEvidence() {
         EvaluationEvidence evidence = evidence(
                 "e-conflict", "PROBLEM_SOLVING", EvidenceSignal.POSITIVE,

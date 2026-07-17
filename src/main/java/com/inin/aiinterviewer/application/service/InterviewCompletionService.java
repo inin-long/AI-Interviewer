@@ -543,12 +543,12 @@ public class InterviewCompletionService {
         List<EvaluationEvidence> strengths = ledger.evidence().stream()
                 .filter(item -> item.signal() == EvidenceSignal.POSITIVE)
                 .filter(item -> item.confidence() >= 0.55)
+                .filter(item -> !item.relatedClaimIds().isEmpty())
                 .sorted(java.util.Comparator.comparingDouble(EvaluationEvidence::strength).reversed())
                 .limit(8).toList();
         if (strengths.isEmpty()) return "当前没有达到报告阈值的正向证据，不推测优势。";
         return strengths.stream().map(item -> "- " + inline(item.reason(), 280)
-                        + "（证据 `" + item.id() + "`，Q"
-                        + questionNumbers.getOrDefault(item.messageId(), 0) + "）")
+                        + "（" + judgmentSource(item, questionNumbers) + "）")
                 .collect(java.util.stream.Collectors.joining("\n"));
     }
 
@@ -556,13 +556,26 @@ public class InterviewCompletionService {
         List<EvaluationEvidence> risks = ledger.evidence().stream()
                 .filter(item -> item.signal() == EvidenceSignal.NEGATIVE
                         || item.signal() == EvidenceSignal.INSUFFICIENT)
+                .filter(item -> !item.relatedClaimIds().isEmpty())
                 .limit(10).toList();
         if (risks.isEmpty()) return "当前没有达到报告阈值的负向证据；未覆盖能力仍需在后续面试中验证。";
         return risks.stream().map(item -> "- " + (item.signal() == EvidenceSignal.INSUFFICIENT
                         ? "**证据不足（不等同能力不足）：** " : "**待改进证据：** ")
-                        + inline(item.reason(), 280) + "（证据 `" + item.id() + "`，Q"
-                        + questionNumbers.getOrDefault(item.messageId(), 0) + "）")
+                        + inline(item.reason(), 280) + "（"
+                        + judgmentSource(item, questionNumbers) + "）")
                 .collect(java.util.stream.Collectors.joining("\n"));
+    }
+
+    private String judgmentSource(
+            EvaluationEvidence evidence,
+            Map<Long, Integer> questionNumbers
+    ) {
+        String claims = evidence.relatedClaimIds().stream()
+                .map(id -> "`" + id + "`")
+                .collect(java.util.stream.Collectors.joining("、"));
+        return "证据 `" + evidence.id() + "`，Q"
+                + questionNumbers.getOrDefault(evidence.messageId(), 0)
+                + "，消息 `" + evidence.messageId() + "`，主张 " + claims;
     }
 
     private String improvementMarkdown(

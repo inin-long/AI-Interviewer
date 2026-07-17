@@ -73,8 +73,12 @@ public class EvidenceLedgerService {
         if (result == null || result.degraded()) return ledger(userId, sessionId);
         if (result.evidence().size() > 12) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
 
-        Set<String> allowedClaimIds = claimMapper.findAll(userId, sessionId).stream()
+        var claims = claimMapper.findAll(userId, sessionId);
+        Set<String> allowedClaimIds = claims.stream()
                 .map(entity -> entity.getId()).collect(java.util.stream.Collectors.toSet());
+        List<String> sourceClaimIds = claims.stream()
+                .filter(entity -> entity.getSourceMessageId() == messageId)
+                .map(entity -> entity.getId()).toList();
         LinkedHashMap<String, EvidenceCollectionResult.EvidenceCandidate> unique = new LinkedHashMap<>();
         for (EvidenceCollectionResult.EvidenceCandidate candidate : result.evidence()) {
             validate(candidate);
@@ -83,7 +87,8 @@ public class EvidenceLedgerService {
 
         evidenceMapper.deleteByMessage(userId, sessionId, messageId);
         for (EvidenceCollectionResult.EvidenceCandidate candidate : unique.values()) {
-            evidenceMapper.insert(entity(userId, sessionId, messageId, candidate, allowedClaimIds));
+            evidenceMapper.insert(entity(
+                    userId, sessionId, messageId, candidate, allowedClaimIds, sourceClaimIds));
         }
         return ledger(userId, sessionId);
     }
@@ -113,12 +118,16 @@ public class EvidenceLedgerService {
             long sessionId,
             long messageId,
             EvidenceCollectionResult.EvidenceCandidate candidate,
-            Set<String> allowedClaimIds
+            Set<String> allowedClaimIds,
+            List<String> sourceClaimIds
     ) {
         LinkedHashSet<String> claimIds = new LinkedHashSet<>();
         for (String claimId : candidate.relatedClaimIds()) {
             if (claimId != null && allowedClaimIds.contains(claimId)) claimIds.add(claimId);
         }
+        // A structured evidence item must remain traceable even when the provider omits
+        // relatedClaimIds. The claims extracted from the same answer are the only safe fallback.
+        if (claimIds.isEmpty()) claimIds.addAll(sourceClaimIds);
         EvaluationEvidenceEntity entity = new EvaluationEvidenceEntity();
         entity.setId(UUID.randomUUID().toString());
         entity.setUserId(userId);

@@ -69,6 +69,8 @@ class EvidenceLedgerServiceIntegrationTest {
                         assertThat(value.relatedClaimIds()).containsExactly(claimId));
         assertThat(ledger.evidence()).extracting(value -> value.signal())
                 .containsExactlyInAnyOrder(EvidenceSignal.POSITIVE, EvidenceSignal.INSUFFICIENT);
+        assertThat(ledger.evidence()).allSatisfy(value ->
+                assertThat(value.relatedClaimIds()).containsExactly(claimId));
         assertThat(ledger.summaries().get("SYSTEM_DESIGN")).satisfies(summary -> {
             assertThat(summary.positiveStrength()).isEqualTo(0.9);
             assertThat(summary.negativeStrength()).isZero();

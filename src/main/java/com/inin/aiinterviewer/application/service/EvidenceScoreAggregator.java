@@ -84,12 +84,13 @@ public class EvidenceScoreAggregator {
         List<EvaluationEvidence> decisive = relevant.stream()
                 .filter(value -> value.signal() == EvidenceSignal.POSITIVE
                         || value.signal() == EvidenceSignal.NEGATIVE)
+                .filter(value -> !value.relatedClaimIds().isEmpty())
                 .toList();
         if (decisive.isEmpty()) {
             return new DimensionScore(
                     50, false, 0, relevant,
                     relevant.isEmpty() ? "未获得该维度证据，不作能力结论"
-                            : "只有证据不足或中性信号，不作能力强弱结论");
+                            : "只有证据不足、中性或缺少主张关联的信号，不作能力强弱结论");
         }
         double signed = decisive.stream().mapToDouble(value -> {
             double direction = value.signal() == EvidenceSignal.POSITIVE ? 1 : -1;
