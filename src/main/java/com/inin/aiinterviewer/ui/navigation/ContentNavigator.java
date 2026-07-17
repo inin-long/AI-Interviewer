@@ -57,6 +57,10 @@ public class ContentNavigator {
         show(new PageDescriptor(fxmlPath, title, context), false);
     }
 
+    public void showSubRoute(Route route, Object context) {
+        showSubPage(route.contentPath(), route.title(), context);
+    }
+
     public boolean canGoBack() {
         return !history.isEmpty();
     }
