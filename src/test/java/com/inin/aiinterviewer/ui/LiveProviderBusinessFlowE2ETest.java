@@ -270,11 +270,31 @@ class LiveProviderBusinessFlowE2ETest {
         assertThat(report.dimensions()).hasSize(6)
                 .allSatisfy((name, score) -> assertThat(score).isBetween(0, 100));
         assertThat(report.summary()).isNotBlank();
+        assertThat(report.scoreEvidence()).containsKey("overall");
+        assertThat(report.evidence()).isNotEmpty()
+                .allSatisfy(evidence -> assertThat(evidence.relatedClaimIds()).isNotEmpty());
+        assertThat(report.scoreEvidence().values()).anySatisfy(trace -> {
+            assertThat(trace.evidenceIds()).isNotEmpty();
+            assertThat(trace.messageIds()).isNotEmpty();
+            assertThat(trace.claimIds()).isNotEmpty();
+        });
 
         MarkdownView reportView = robot.lookup("#reportView").queryAs(MarkdownView.class);
         assertThat(reportView.getMarkdown())
                 .contains(PLAN_NAME, "综合得分", "综合评价", "问答摘要", "参考依据", FIRST_ANSWER);
-        assertThat(label(robot, "#overallScoreLabel").getText()).endsWith(" / 100");
+        if (report.overallScored()) {
+            assertThat(report.scoreEvidence().get("overall")).satisfies(trace -> {
+                assertThat(trace.scored()).isTrue();
+                assertThat(trace.evidenceIds()).isNotEmpty();
+            });
+            assertThat(label(robot, "#overallScoreLabel").getText())
+                    .startsWith(report.overallScore() + " / 100 · ")
+                    .contains("置信度");
+        } else {
+            assertThat(report.scoreEvidence().get("overall").scored()).isFalse();
+            assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("证据不足");
+            assertThat(report.contentMarkdown()).contains("证据不足（不作能力结论）");
+        }
     }
 
     private void awaitInitialQuestion(FxRobot robot, long userId, long sessionId) throws Exception {
