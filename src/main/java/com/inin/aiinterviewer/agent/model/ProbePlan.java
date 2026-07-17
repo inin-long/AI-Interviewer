@@ -16,7 +16,8 @@ public record ProbePlan(
         PressureLevel pressureLevel,
         String reason,
         List<String> expectedEvidence,
-        boolean shouldInjectScenario
+        boolean shouldInjectScenario,
+        String targetCompetencyCode
 ) implements Serializable {
     public ProbePlan {
         targetClaimId = targetClaimId == null ? "" : targetClaimId;
@@ -27,6 +28,24 @@ public record ProbePlan(
         pressureLevel = pressureLevel == null ? PressureLevel.STANDARD : pressureLevel;
         reason = reason == null ? "" : reason.strip();
         expectedEvidence = expectedEvidence == null ? List.of() : List.copyOf(expectedEvidence);
+        targetCompetencyCode = targetCompetencyCode == null ? "" : targetCompetencyCode.strip();
+    }
+
+    public ProbePlan(
+            String targetClaimId,
+            String targetLogicGap,
+            String targetConsistencyIssueId,
+            String targetDeferredProbeId,
+            String objective,
+            ProbeStrategy strategy,
+            PressureLevel pressureLevel,
+            String reason,
+            List<String> expectedEvidence,
+            boolean shouldInjectScenario
+    ) {
+        this(targetClaimId, targetLogicGap, targetConsistencyIssueId, targetDeferredProbeId,
+                objective, strategy, pressureLevel, reason, expectedEvidence,
+                shouldInjectScenario, "");
     }
 
     public ProbePlan(
@@ -77,6 +96,13 @@ public record ProbePlan(
                 "进入新阶段并覆盖尚未验证的岗位能力", List.of("具体经历", "个人行动", "可验证结果"), false);
     }
 
+    public static ProbePlan stageOpening(String objective, String competencyCode) {
+        return new ProbePlan(
+                "", "", "", "", objective, ProbeStrategy.CLARIFY_CONCEPT, PressureLevel.STANDARD,
+                "优先覆盖尚未充分验证的岗位能力", List.of("具体经历", "个人行动", "可验证结果"),
+                false, competencyCode);
+    }
+
     public boolean targetsClaim() {
         return !targetClaimId.isBlank();
     }
@@ -93,16 +119,21 @@ public record ProbePlan(
         return !targetDeferredProbeId.isBlank();
     }
 
+    public boolean targetsCompetency() {
+        return !targetCompetencyCode.isBlank();
+    }
+
     public ProbePlan withPressureLevel(PressureLevel level) {
         return new ProbePlan(
                 targetClaimId, targetLogicGap, targetConsistencyIssueId, targetDeferredProbeId,
-                objective, strategy, level, reason, expectedEvidence, shouldInjectScenario);
+                objective, strategy, level, reason, expectedEvidence, shouldInjectScenario,
+                targetCompetencyCode);
     }
 
     public ProbePlan withSafetyFallback(String safeObjective, String safeReason) {
         return new ProbePlan(
                 targetClaimId, targetLogicGap, targetConsistencyIssueId, targetDeferredProbeId,
                 safeObjective, ProbeStrategy.CLARIFY_CONCEPT, PressureLevel.RELAXED,
-                safeReason, expectedEvidence, false);
+                safeReason, expectedEvidence, false, targetCompetencyCode);
     }
 }

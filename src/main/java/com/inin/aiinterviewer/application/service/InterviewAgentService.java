@@ -21,6 +21,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -94,7 +95,8 @@ public class InterviewAgentService {
                     session.stage(), "", "", session.planSnapshot(), List.of(), "", "",
                     retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
                     claimLedgerService.compactSummary(userId, sessionId),
-                    evidenceLedgerService.compactSummary(userId, sessionId));
+                    evidenceLedgerService.compactSummary(userId, sessionId))
+                    .withCoverage(coverage(userId, sessionId, InterviewCoverage.empty()));
             String prompt = interviewGraph.initialQuestionPrompt(input);
             return streamAndPersist(
                     userId, sessionId, session.stage(), prompt, null, List.of(), null, null, null,
@@ -127,7 +129,8 @@ public class InterviewAgentService {
                     session.planSnapshot(), messages, answeredState.summary(), retrieval.context(),
                     retrieveCandidateProfile(userId, sessionId), domainPackContext(userId, sessionId),
                     claimLedgerService.compactSummary(userId, sessionId),
-                    evidenceLedgerService.compactSummary(userId, sessionId));
+                    evidenceLedgerService.compactSummary(userId, sessionId))
+                    .withCoverage(coverage(userId, sessionId, answeredState.coverage()));
 
             var extraction = interviewGraph.extractClaims(turnInput);
             var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
@@ -186,6 +189,8 @@ public class InterviewAgentService {
             turnInput = turnInput.withActiveScenario(activeScenario);
 
             InterviewTurnPlan turn = interviewGraph.plan(turnInput);
+            sessionService.updateCoverageAndStrategy(
+                    userId, sessionId, turn.coverage(), turn.strategy());
             sessionService.updateProbePlan(userId, sessionId, turn.probePlan());
             sessionService.updatePressureState(userId, sessionId, turn.pressureState());
 
@@ -438,6 +443,16 @@ public class InterviewAgentService {
                             "rubrics", pack.rubrics()).toString();
                 })
                 .orElse("未关联领域知识包");
+    }
+
+    private InterviewCoverage coverage(
+            long userId,
+            long sessionId,
+            InterviewCoverage current
+    ) {
+        return sessionService.domainPackSnapshot(userId, sessionId)
+                .map(snapshot -> current.ensureDomainPack(snapshot.content()))
+                .orElse(current);
     }
 
     private record KnowledgeRetrieval(String context, List<KnowledgeCitationDto> citations) {

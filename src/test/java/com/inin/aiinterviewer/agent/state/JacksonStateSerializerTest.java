@@ -15,6 +15,8 @@ import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
 import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.PressureState;
 import com.inin.aiinterviewer.domain.model.ScenarioState;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
+import com.inin.aiinterviewer.domain.model.InterviewStrategy;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
@@ -269,5 +271,46 @@ class JacksonStateSerializerTest {
         assertThat(restored).isEqualTo(current);
         assertThat(restored.activeScenario().hiddenInformation())
                 .containsEntry("rootCause", "primaryLag");
+    }
+
+    @Test
+    void upgradesVersionTwoPointEightWithEmptyCoverageAndStrategy() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        InterviewState previous = new InterviewState(
+                "2.8", 12, 34, InterviewStage.SYSTEM_DESIGN, List.of(), "问题", "回答",
+                null, null, null, Map.of(), "", ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证系统设计"), List.of(), PressureState.initial(), null);
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(previous));
+
+        assertThat(restored.stateVersion()).isEqualTo(InterviewState.CURRENT_VERSION);
+        assertThat(restored.coverage()).isEqualTo(InterviewCoverage.empty());
+        assertThat(restored.strategy()).isEqualTo(InterviewStrategy.empty());
+    }
+
+    @Test
+    void roundTripsCoverageAndStrategyInCurrentVersion() {
+        JacksonStateSerializer serializer = new JacksonStateSerializer(
+                JsonMapper.builder().findAndAddModules().build());
+        InterviewCoverage coverage = new InterviewCoverage(Map.of(
+                "SYSTEM_DESIGN", new InterviewCoverage.CompetencyCoverage(
+                        0.9, 3, 0.82, 0.74, false)));
+        InterviewStrategy strategy = new InterviewStrategy(
+                InterviewStage.SYSTEM_DESIGN, ProbeStrategy.ASK_TRADE_OFF,
+                "claim-1", "SYSTEM_DESIGN", "验证缓存方案取舍",
+                PressureLevel.CHALLENGING, 3, false, "覆盖核心能力");
+        InterviewState current = new InterviewState(
+                InterviewState.CURRENT_VERSION, 12, 34, InterviewStage.SYSTEM_DESIGN,
+                List.of(), "问题", "回答", null, null, null, Map.of(), "",
+                ClaimLedger.empty(), EvidenceLedger.empty(),
+                com.inin.aiinterviewer.agent.model.LogicChainResult.skippedResult(),
+                ProbePlan.stageOpening("验证系统设计", "SYSTEM_DESIGN"), List.of(),
+                PressureState.initial(), null, coverage, strategy);
+
+        InterviewState restored = serializer.deserialize(serializer.serialize(current));
+
+        assertThat(restored).isEqualTo(current);
     }
 }

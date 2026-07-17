@@ -10,6 +10,8 @@ import com.inin.aiinterviewer.agent.node.FollowUpDecisionNode;
 import com.inin.aiinterviewer.agent.node.LogicChainEvaluatorNode;
 import com.inin.aiinterviewer.agent.node.EvidenceCollectorNode;
 import com.inin.aiinterviewer.agent.node.ConsistencyCheckNode;
+import com.inin.aiinterviewer.agent.node.CoverageUpdaterNode;
+import com.inin.aiinterviewer.agent.node.DecisionValidatorNode;
 import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.PressureControllerNode;
 import com.inin.aiinterviewer.agent.node.ScenarioDirectorNode;
@@ -60,7 +62,9 @@ class InterviewGraphTest {
                 new ProbePlannerNode(objectMapper),
                 new ScenarioDirectorNode(chatService, parser),
                 new PressureControllerNode(new PressureController()),
-                new QuestionRendererNode(chatService, objectMapper));
+                new QuestionRendererNode(chatService, objectMapper),
+                new CoverageUpdaterNode(),
+                new DecisionValidatorNode());
     }
 
     @Test

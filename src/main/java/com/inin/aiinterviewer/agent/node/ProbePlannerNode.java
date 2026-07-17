@@ -45,8 +45,7 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
                     .filter(probe -> probe.dueAt(state.stage()))
                     .findFirst()
                     .map(probe -> planForDeferred(state, probe))
-                    .orElseGet(() -> ProbePlan.stageOpening(
-                            "验证 " + state.stage().name() + " 阶段的岗位核心能力"));
+                    .orElseGet(() -> planForCoverage(state));
         } else {
             plan = state.deferredProbes().stream()
                     .filter(probe -> probe.dueAt(state.stage()))
@@ -59,10 +58,23 @@ public class ProbePlannerNode implements NodeAction<InterviewGraphState> {
                         return importantGap.map(this::planForGap).orElseGet(() -> pendingClaims(state).stream()
                                 .max(Comparator.comparingDouble(this::priority))
                                 .map(this::planFor)
-                                .orElseGet(() -> fallback(state)));
+                                .orElseGet(() -> state.coverage().competencies().isEmpty()
+                                        ? fallback(state) : planForCoverage(state)));
                     });
         }
         return Map.of(InterviewGraphState.PROBE_PLAN, plan);
+    }
+
+    private ProbePlan planForCoverage(InterviewGraphState state) {
+        return state.coverage().competencies().entrySet().stream()
+                .filter(entry -> entry.getValue().needsVerification())
+                .max(Comparator.comparingDouble(entry -> entry.getValue().priority()))
+                .map(entry -> ProbePlan.stageOpening(
+                        "验证岗位能力 " + entry.getKey() + " 的具体经历、个人行动和可验证结果",
+                        entry.getKey()))
+                .orElseGet(() -> ProbePlan.stageOpening(
+                        "验证 " + state.stage().name() + " 阶段的岗位核心能力",
+                        "STAGE_" + state.stage().name()));
     }
 
     private ProbePlan planForDeferred(

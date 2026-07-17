@@ -17,6 +17,8 @@ import com.inin.aiinterviewer.agent.node.ProbePlannerNode;
 import com.inin.aiinterviewer.agent.node.PressureControllerNode;
 import com.inin.aiinterviewer.agent.node.ScenarioDirectorNode;
 import com.inin.aiinterviewer.agent.node.QuestionRendererNode;
+import com.inin.aiinterviewer.agent.node.CoverageUpdaterNode;
+import com.inin.aiinterviewer.agent.node.DecisionValidatorNode;
 import com.inin.aiinterviewer.agent.node.StageTransitionNode;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import org.bsc.langgraph4j.CompiledGraph;
@@ -44,6 +46,8 @@ public class InterviewGraph {
     private static final String CONTROL_PRESSURE = "pressure_controller";
     private static final String DIRECT_SCENARIO = "scenario_director";
     private static final String RENDER_QUESTION = "question_renderer";
+    private static final String UPDATE_COVERAGE = "coverage_updater";
+    private static final String VALIDATE_DECISION = "decision_validator";
 
     private final CompiledGraph<InterviewGraphState> graph;
     private final QuestionRendererNode questionRenderer;
@@ -54,6 +58,7 @@ public class InterviewGraph {
     private final LogicChainEvaluatorNode logicChainEvaluator;
     private final EvidenceCollectorNode evidenceCollector;
     private final ConsistencyCheckNode consistencyCheck;
+    private final DecisionValidatorNode decisionValidator;
 
     public InterviewGraph(
             ClaimExtractorNode claimExtractor,
@@ -66,7 +71,9 @@ public class InterviewGraph {
             ProbePlannerNode probePlanner,
             ScenarioDirectorNode scenarioDirector,
             PressureControllerNode pressureController,
-            QuestionRendererNode questionRenderer
+            QuestionRendererNode questionRenderer,
+            CoverageUpdaterNode coverageUpdater,
+            DecisionValidatorNode decisionValidator
     ) {
         this.questionRenderer = questionRenderer;
         this.claimExtractor = claimExtractor;
@@ -76,12 +83,14 @@ public class InterviewGraph {
         this.logicChainEvaluator = logicChainEvaluator;
         this.evidenceCollector = evidenceCollector;
         this.consistencyCheck = consistencyCheck;
+        this.decisionValidator = decisionValidator;
         try {
             this.graph = new StateGraph<>(InterviewGraphState::new)
                     .addNode(EXTRACT_CLAIMS, AsyncNodeAction.node_async(claimExtractor))
                     .addNode(EVALUATE_LOGIC, AsyncNodeAction.node_async(logicChainEvaluator))
                     .addNode(COLLECT_EVIDENCE, AsyncNodeAction.node_async(evidenceCollector))
                     .addNode(CHECK_CONSISTENCY, AsyncNodeAction.node_async(consistencyCheck))
+                    .addNode(UPDATE_COVERAGE, AsyncNodeAction.node_async(coverageUpdater))
                     .addNode(ANALYZE, AsyncNodeAction.node_async(answerAnalyzer))
                     .addNode(DECIDE, AsyncNodeAction.node_async(decisionNode))
                     .addNode(TRANSITION, AsyncNodeAction.node_async(transitionNode))
@@ -89,11 +98,13 @@ public class InterviewGraph {
                     .addNode(DIRECT_SCENARIO, AsyncNodeAction.node_async(scenarioDirector))
                     .addNode(CONTROL_PRESSURE, AsyncNodeAction.node_async(pressureController))
                     .addNode(RENDER_QUESTION, AsyncNodeAction.node_async(questionRenderer))
+                    .addNode(VALIDATE_DECISION, AsyncNodeAction.node_async(decisionValidator))
                     .addEdge(GraphDefinition.START, EXTRACT_CLAIMS)
                     .addEdge(EXTRACT_CLAIMS, EVALUATE_LOGIC)
                     .addEdge(EVALUATE_LOGIC, COLLECT_EVIDENCE)
                     .addEdge(COLLECT_EVIDENCE, CHECK_CONSISTENCY)
-                    .addEdge(CHECK_CONSISTENCY, ANALYZE)
+                    .addEdge(CHECK_CONSISTENCY, UPDATE_COVERAGE)
+                    .addEdge(UPDATE_COVERAGE, ANALYZE)
                     .addEdge(ANALYZE, DECIDE)
                     .addConditionalEdges(DECIDE,
                             AsyncEdgeAction.edge_async(state -> state.consistencyCheckResult()
@@ -104,7 +115,8 @@ public class InterviewGraph {
                     .addEdge(TRANSITION, PLAN_PROBE)
                     .addEdge(PLAN_PROBE, DIRECT_SCENARIO)
                     .addEdge(DIRECT_SCENARIO, CONTROL_PRESSURE)
-                    .addEdge(CONTROL_PRESSURE, RENDER_QUESTION)
+                    .addEdge(CONTROL_PRESSURE, VALIDATE_DECISION)
+                    .addEdge(VALIDATE_DECISION, RENDER_QUESTION)
                     .addEdge(RENDER_QUESTION, GraphDefinition.END)
                     .compile();
         } catch (GraphStateException exception) {
@@ -119,7 +131,7 @@ public class InterviewGraph {
                 state.analysis(), state.decision(), state.stage(), state.questionPrompt(),
                 state.claimExtraction(), state.logicChainResult(), state.evidenceCollectionResult(),
                 state.consistencyCheckResult(), state.probePlan(), state.pressureState(),
-                state.scenarioDirectionResult());
+                state.scenarioDirectionResult(), state.coverage(), state.strategy());
     }
 
     public String initialQuestionPrompt(InterviewTurnInput input) {
@@ -129,6 +141,7 @@ public class InterviewGraph {
             values.putAll(probePlanner.apply(state));
             values.putAll(scenarioDirector.apply(new InterviewGraphState(values)));
             values.putAll(pressureController.apply(new InterviewGraphState(values)));
+            values.putAll(decisionValidator.apply(new InterviewGraphState(values)));
             return (String) questionRenderer.apply(new InterviewGraphState(values))
                     .get(InterviewGraphState.QUESTION_PROMPT);
         } catch (Exception exception) {
@@ -205,6 +218,7 @@ public class InterviewGraph {
         values.put(InterviewGraphState.CONSISTENCY_CONTEXT, input.consistencyContext());
         values.put(InterviewGraphState.DEFERRED_PROBES, input.deferredProbes());
         values.put(InterviewGraphState.PRESSURE_STATE, input.pressureState());
+        values.put(InterviewGraphState.COVERAGE, input.coverage());
         if (input.activeScenario() != null) {
             values.put(InterviewGraphState.ACTIVE_SCENARIO, input.activeScenario());
         }

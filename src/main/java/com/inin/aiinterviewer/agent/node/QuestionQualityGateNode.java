@@ -104,6 +104,7 @@ public class QuestionQualityGateNode {
                 || context.probePlan().targetsLogicGap()
                 || context.probePlan().targetsConsistencyIssue()
                 || context.probePlan().targetsDeferredProbe()
+                || context.probePlan().targetsCompetency()
                 || context.probePlan().shouldInjectScenario();
     }
 

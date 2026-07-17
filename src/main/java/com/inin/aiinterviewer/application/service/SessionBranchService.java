@@ -193,7 +193,8 @@ public class SessionBranchService {
                 source.stage(), source.currentQuestion(), answer, session.planSnapshot(), messages,
                 source.summary(), "", profile, domainPack, source.claimLedger().toString(),
                 source.evidenceLedger().summaries().toString(), null, List.of(),
-                source.pressureState(), source.activeScenario(), null, null, null, null);
+                source.pressureState(), source.activeScenario(), null, null, null, null,
+                source.coverage());
     }
 
     private BranchComparison compare(SessionBranchEntity branch, BranchAnalysis analysis) {

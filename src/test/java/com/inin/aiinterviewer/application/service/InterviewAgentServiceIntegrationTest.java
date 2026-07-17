@@ -135,6 +135,14 @@ class InterviewAgentServiceIntegrationTest {
                     assertThat(state.evidenceLedger().evidence()).singleElement();
                     assertThat(state.logicChainResult().gaps()).singleElement();
                     assertThat(state.probePlan().targetsClaim()).isFalse();
+                    assertThat(state.coverage().competencies().get("PROBLEM_SOLVING"))
+                            .satisfies(coverage -> {
+                                assertThat(coverage.evidenceCount()).isEqualTo(1);
+                                assertThat(coverage.confidence()).isEqualTo(0.72);
+                                assertThat(coverage.needsVerification()).isTrue();
+                            });
+                    assertThat(state.strategy().objective()).isNotBlank();
+                    assertThat(state.strategy().remainingQuestions()).isEqualTo(9);
                     assertThat(state.pressureState().level())
                             .isEqualTo(com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED);
                 });

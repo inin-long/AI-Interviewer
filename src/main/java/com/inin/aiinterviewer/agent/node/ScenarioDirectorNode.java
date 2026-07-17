@@ -113,7 +113,8 @@ public class ScenarioDirectorNode implements NodeAction<InterviewGraphState> {
                 result.nextQuestion(), strategy, PressureLevel.STANDARD,
                 result.kickoff() ? "按方案场景比例进入结构化情境沙盘"
                         : "场景事件由候选人本轮决策触发：" + result.eventDescription(),
-                state.activeScenario().evaluatedCompetencies(), true);
+                state.activeScenario().evaluatedCompetencies(), true,
+                previous.targetCompetencyCode());
         return Map.of(
                 InterviewGraphState.SCENARIO_DIRECTION_RESULT, result,
                 InterviewGraphState.PROBE_PLAN, scenarioPlan);

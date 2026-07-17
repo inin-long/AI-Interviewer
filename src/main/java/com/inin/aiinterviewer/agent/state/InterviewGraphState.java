@@ -14,6 +14,8 @@ import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import com.inin.aiinterviewer.domain.model.PressureState;
 import com.inin.aiinterviewer.domain.model.ScenarioState;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
+import com.inin.aiinterviewer.domain.model.InterviewStrategy;
 import com.inin.aiinterviewer.agent.model.ScenarioDirectionResult;
 import org.bsc.langgraph4j.state.AgentState;
 
@@ -46,6 +48,8 @@ public class InterviewGraphState extends AgentState {
     public static final String PRESSURE_STATE = "pressureState";
     public static final String ACTIVE_SCENARIO = "activeScenario";
     public static final String SCENARIO_DIRECTION_RESULT = "scenarioDirectionResult";
+    public static final String COVERAGE = "coverage";
+    public static final String STRATEGY = "strategy";
 
     public InterviewGraphState(Map<String, Object> data) {
         super(data);
@@ -151,5 +155,13 @@ public class InterviewGraphState extends AgentState {
     public ScenarioDirectionResult scenarioDirectionResult() {
         return this.<ScenarioDirectionResult>value(SCENARIO_DIRECTION_RESULT)
                 .orElseGet(() -> ScenarioDirectionResult.skipped("not_directed"));
+    }
+
+    public InterviewCoverage coverage() {
+        return this.<InterviewCoverage>value(COVERAGE).orElseGet(InterviewCoverage::empty);
+    }
+
+    public InterviewStrategy strategy() {
+        return this.<InterviewStrategy>value(STRATEGY).orElseGet(InterviewStrategy::empty);
     }
 }

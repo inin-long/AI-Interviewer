@@ -12,6 +12,8 @@ import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.DeferredProbe;
 import com.inin.aiinterviewer.domain.model.PressureState;
 import com.inin.aiinterviewer.domain.model.ScenarioState;
+import com.inin.aiinterviewer.domain.model.InterviewCoverage;
+import com.inin.aiinterviewer.domain.model.InterviewStrategy;
 
 import java.util.List;
 import java.util.Map;
@@ -35,9 +37,38 @@ public record InterviewState(
         ProbePlan probePlan,
         List<DeferredProbe> deferredProbes,
         PressureState pressureState,
-        ScenarioState activeScenario
+        ScenarioState activeScenario,
+        InterviewCoverage coverage,
+        InterviewStrategy strategy
 ) {
-    public static final String CURRENT_VERSION = "2.8";
+    public static final String CURRENT_VERSION = "2.9";
+
+    public InterviewState(
+            String stateVersion,
+            long sessionId,
+            long userId,
+            InterviewStage stage,
+            List<Message> messages,
+            String currentQuestion,
+            String latestAnswer,
+            AnswerAnalysis analysis,
+            EvaluationResult evaluation,
+            CandidateProfile profile,
+            Map<String, Object> rules,
+            String summary,
+            ClaimLedger claimLedger,
+            EvidenceLedger evidenceLedger,
+            LogicChainResult logicChainResult,
+            ProbePlan probePlan,
+            List<DeferredProbe> deferredProbes,
+            PressureState pressureState,
+            ScenarioState activeScenario
+    ) {
+        this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
+                analysis, evaluation, profile, rules, summary, claimLedger, evidenceLedger,
+                logicChainResult, probePlan, deferredProbes, pressureState, activeScenario,
+                InterviewCoverage.empty(), InterviewStrategy.empty());
+    }
 
     public InterviewState(
             String stateVersion,
@@ -61,7 +92,8 @@ public record InterviewState(
     ) {
         this(stateVersion, sessionId, userId, stage, messages, currentQuestion, latestAnswer,
                 analysis, evaluation, profile, rules, summary, claimLedger, evidenceLedger,
-                logicChainResult, probePlan, deferredProbes, pressureState, null);
+                logicChainResult, probePlan, deferredProbes, pressureState, null,
+                InterviewCoverage.empty(), InterviewStrategy.empty());
     }
 
     public InterviewState(
@@ -181,5 +213,7 @@ public record InterviewState(
         logicChainResult = logicChainResult == null ? LogicChainResult.skippedResult() : logicChainResult;
         deferredProbes = deferredProbes == null ? List.of() : List.copyOf(deferredProbes);
         pressureState = pressureState == null ? PressureState.initial() : pressureState;
+        coverage = coverage == null ? InterviewCoverage.empty() : coverage;
+        strategy = strategy == null ? InterviewStrategy.empty() : strategy;
     }
 }
