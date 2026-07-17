@@ -19,6 +19,14 @@ public enum ErrorCode {
     TASK_FAILED("TASK_001", "后台任务执行失败"),
     VALIDATION_FAILED("BUSINESS_000", "请检查输入内容"),
     INVALID_STATE("BUSINESS_001", "当前状态不允许执行此操作"),
+    QUESTION_POSITION_NOT_FOUND("QUESTION_001", "岗位不存在"),
+    QUESTION_NOT_FOUND("QUESTION_001", "题目不存在"),
+    ASSESSMENT_NOT_FOUND("ASSESSMENT_001", "评估记录不存在"),
+    ASSESSMENT_INCOMPLETE("ASSESSMENT_002", "评估尚未完成"),
+    CAREER_PLAN_NOT_FOUND("CAREER_001", "职业规划不存在"),
+    RESUME_OPT_NOT_FOUND("RESUME_OPT_001", "简历优化记录不存在"),
+    SKILL_ARTICLE_NOT_FOUND("SKILL_001", "技能文章不存在"),
+    SKILL_ARTICLE_NOT_OWNER("SKILL_002", "无权操作此文章"),
     SYSTEM_ERROR("SYSTEM_001", "系统发生未知错误");
 
     private final String code;
