@@ -52,6 +52,12 @@ public class MainWindowController {
     @FXML private Button historyNavButton;
     @FXML private Button resumesNavButton;
     @FXML private Button knowledgeNavButton;
+    @FXML private Button questionBankNavButton;
+    @FXML private Button careerAssessmentNavButton;
+    @FXML private Button skillsLibraryNavButton;
+    @FXML private Button careerPlanningNavButton;
+    @FXML private Button profilesNavButton;
+    @FXML private Button tasksNavButton;
     @FXML private Button settingsNavButton;
     @FXML private Button userMenuButton;
     @FXML private HBox activityReceipt;
@@ -99,6 +105,10 @@ public class MainWindowController {
     @FXML private void showResumes() { showSection(Route.RESUME); }
     @FXML private void showProfiles() { showSection(Route.PROFILE); }
     @FXML private void showKnowledge() { showSection(Route.KNOWLEDGE); }
+    @FXML private void showQuestionBank() { showSection(Route.QUESTION_BANK); }
+    @FXML private void showCareerAssessment() { showSection(Route.CAREER_ASSESSMENT); }
+    @FXML private void showSkillsLibrary() { showSection(Route.SKILLS_LIBRARY); }
+    @FXML private void showCareerPlanning() { showSection(Route.CAREER_PLANNING); }
     @FXML private void showTasks() { showSection(Route.TASK); }
     @FXML private void showSettings() { showSection(Route.SETTING); }
 
@@ -134,7 +144,13 @@ public class MainWindowController {
         plansNavButton.pseudoClassStateChanged(SELECTED, route == Route.PLAN);
         historyNavButton.pseudoClassStateChanged(SELECTED, route == Route.HISTORY);
         resumesNavButton.pseudoClassStateChanged(SELECTED, route == Route.RESUME);
+        profilesNavButton.pseudoClassStateChanged(SELECTED, route == Route.PROFILE);
         knowledgeNavButton.pseudoClassStateChanged(SELECTED, route == Route.KNOWLEDGE);
+        questionBankNavButton.pseudoClassStateChanged(SELECTED, route == Route.QUESTION_BANK);
+        careerAssessmentNavButton.pseudoClassStateChanged(SELECTED, route == Route.CAREER_ASSESSMENT);
+        skillsLibraryNavButton.pseudoClassStateChanged(SELECTED, route == Route.SKILLS_LIBRARY);
+        careerPlanningNavButton.pseudoClassStateChanged(SELECTED, route == Route.CAREER_PLANNING);
+        tasksNavButton.pseudoClassStateChanged(SELECTED, route == Route.TASK);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
     }
 

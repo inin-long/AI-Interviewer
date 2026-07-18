@@ -20,12 +20,18 @@ import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
+import org.yaml.snakeyaml.Yaml;
 
 import java.awt.Desktop;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Component
 @Scope("prototype")
@@ -63,6 +69,7 @@ public class SettingsController {
     @FXML private Label connectionDetailLabel;
     @FXML private Button testConnectionButton;
     @FXML private Button saveConfigButton;
+    @FXML private Label saveStatusLabel;
 
     @FXML private TextField dataRootField;
     @FXML private Label databasePathLabel;
@@ -211,17 +218,25 @@ public class SettingsController {
 
     @FXML
     private void saveConfig() {
-        String baseUrl = baseUrlField.getText().trim();
-        String apiKey = apiKeyField.getText().trim();
-        String chatModel = chatModelField.getText().trim();
-        String embeddingModel = embeddingModelField.getText().trim();
+        String baseUrlRaw = baseUrlField.getText();
+        String apiKeyRaw = apiKeyField.getText();
+        String chatModelRaw = chatModelField.getText();
+        String embeddingModelRaw = embeddingModelField.getText();
+
+        String apiKey;
+        if ("configured-secret".equals(apiKeyRaw)) {
+            apiKey = llmProperties.apiKey() == null ? "" : llmProperties.apiKey();
+        } else {
+            apiKey = apiKeyRaw == null ? "" : apiKeyRaw.strip();
+        }
+        String chatModel = chatModelRaw == null ? "" : chatModelRaw.strip();
 
         if (apiKey.isBlank()) {
-            viewManager.showError("API Key 不能为空");
+            setSaveStatus("API Key 不能为空", true);
             return;
         }
         if (chatModel.isBlank()) {
-            viewManager.showError("Chat Model 不能为空");
+            setSaveStatus("Chat Model 不能为空", true);
             return;
         }
 
@@ -230,25 +245,55 @@ public class SettingsController {
             Files.createDirectories(configDir);
             Path configFile = configDir.resolve("application-local.yml");
 
-            StringBuilder yaml = new StringBuilder();
-            yaml.append("llm:\n");
-            if (!baseUrl.isBlank()) {
-                yaml.append("  base-url: ").append(baseUrl).append("\n");
+            // 保留文件中其它顶层配置（避免覆盖），仅替换 llm 段
+            Map<String, Object> root = loadOrEmpty(configFile);
+            Map<String, Object> llm = new LinkedHashMap<>();
+            llm.put("base-url", blankToNull(baseUrlRaw) == null ? "https://api.openai.com" : blankToNull(baseUrlRaw));
+            llm.put("api-key", apiKey);
+            llm.put("chat-model", chatModel);
+            llm.put("embedding-model", blankToNull(embeddingModelRaw) == null ? "" : blankToNull(embeddingModelRaw));
+            // 关键：沿用 master 已有的 300s / max-retries / max-tokens 配置，绝不硬编码 60s（develop 的雷）
+            llm.put("timeout", llmProperties.timeout() == null ? "300s" : llmProperties.timeout().toSeconds() + "s");
+            llm.put("max-retries", llmProperties.maxRetries() == null ? 0 : llmProperties.maxRetries());
+            llm.put("max-tokens", llmProperties.maxTokens() == null ? 2048 : llmProperties.maxTokens());
+            if (llmProperties.thinkingEnabled() != null) {
+                llm.put("thinking-enabled", llmProperties.thinkingEnabled());
             }
-            yaml.append("  api-key: ").append(apiKey).append("\n");
-            yaml.append("  chat-model: ").append(chatModel).append("\n");
-            if (!embeddingModel.isBlank()) {
-                yaml.append("  embedding-model: ").append(embeddingModel).append("\n");
-            }
-            yaml.append("  timeout: 300s\n");
-            yaml.append("  max-retries: 0\n");
-            yaml.append("  max-tokens: 2048\n");
+            root.put("llm", llm);
 
-            Files.writeString(configFile, yaml.toString());
-            viewManager.showInfo("配置已保存", "配置已保存到 " + configFile + "，请重启应用使配置生效。");
-        } catch (IOException exception) {
-            viewManager.showError("保存配置失败：" + exception.getMessage());
+            try (Writer writer = Files.newBufferedWriter(configFile, StandardCharsets.UTF_8)) {
+                new Yaml().dump(root, writer);
+            }
+
+            configurationSourceLabel.setText(configurationSource());
+            apiKeyField.setText("configured-secret");
+            apiKeyField.setPromptText("已配置（不会显示明文）");
+            testConnectionButton.setDisable(!llmProperties.isConfigured());
+
+            setSaveStatus("已保存到 " + configFile + "，重启应用后配置生效。", false);
+        } catch (Exception exception) {
+            setSaveStatus("保存失败：" + exception.getMessage(), true);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> loadOrEmpty(Path file) throws IOException {
+        if (!Files.exists(file)) return new LinkedHashMap<>();
+        try (InputStream in = Files.newInputStream(file)) {
+            Object loaded = new Yaml().load(in);
+            if (loaded instanceof Map) return (Map<String, Object>) loaded;
+        }
+        return new LinkedHashMap<>();
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    private void setSaveStatus(String text, boolean failed) {
+        saveStatusLabel.setText(text);
+        saveStatusLabel.getStyleClass().removeAll("secondary-text", "danger-text", "success-text");
+        saveStatusLabel.getStyleClass().add(failed ? "danger-text" : "success-text");
     }
 
     private void copy(String value) {

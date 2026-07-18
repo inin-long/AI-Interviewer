@@ -86,4 +86,23 @@ public interface KnowledgeDocumentMapper {
             WHERE document_id = #{documentId} AND user_id = #{userId}
             """)
     int deletePlanLinks(long documentId, long userId);
+
+    @Update("""
+            UPDATE document SET name = #{name}, category = #{category},
+                   update_time = CURRENT_TIMESTAMP
+            WHERE id = #{id} AND user_id = #{userId} AND deleted = 0
+            """)
+    int updateDocumentMeta(Long id, Long userId, String name, String category);
+
+    @Update("""
+            UPDATE document_chunk SET content = #{content}, token_count = #{tokenCount}
+            WHERE id = #{chunkId} AND user_id = #{userId} AND deleted = 0
+            """)
+    int updateChunkContent(Long chunkId, Long userId, String content, int tokenCount);
+
+    @Select("""
+            SELECT id, user_id, document_id, chunk_index, content, token_count, vector_id, metadata_json
+            FROM document_chunk WHERE id = #{chunkId} AND user_id = #{userId} AND deleted = 0 LIMIT 1
+            """)
+    List<DocumentChunkEntity> findChunksByChunkId(Long chunkId, long userId);
 }

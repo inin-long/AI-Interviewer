@@ -13,15 +13,15 @@
             fx:id="mainRoot"
             styleClass="app-root">
     <left>
-        <VBox fx:id="sidebar" minWidth="232" prefWidth="232" maxWidth="232" spacing="6" styleClass="sidebar">
-            <padding><Insets top="26" right="12" bottom="18" left="12"/></padding>
+        <VBox fx:id="sidebar" minWidth="232" prefWidth="232" maxWidth="232" spacing="5" styleClass="sidebar">
+            <padding><Insets top="22" right="12" bottom="14" left="12"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="12" styleClass="sidebar-brand">
                 <ImageView fitWidth="40" fitHeight="40" preserveRatio="true" smooth="true">
                     <image><Image url="@../images/home/app-icon.png"/></image>
                 </ImageView>
                 <Label text="AI Interviewer" styleClass="window-brand"/>
             </HBox>
-            <Region prefHeight="22"/>
+            <Region prefHeight="16"/>
             <Button fx:id="dashboardNavButton" text="首页" onAction="#showDashboard"
                     contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
                 <graphic><FontIcon iconLiteral="mdi2h-home-outline" iconSize="21"/></graphic>
@@ -38,9 +38,35 @@
                     contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
                 <graphic><FontIcon iconLiteral="mdi2f-file-account-outline" iconSize="21"/></graphic>
             </Button>
+            <Button fx:id="profilesNavButton" text="候选人画像" onAction="#showProfiles"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2a-account-outline" iconSize="21"/></graphic>
+            </Button>
             <Button fx:id="knowledgeNavButton" text="知识库" onAction="#showKnowledge"
                     contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
                 <graphic><FontIcon iconLiteral="mdi2b-book-open-variant" iconSize="21"/></graphic>
+            </Button>
+            <Separator styleClass="sidebar-divider"/>
+            <Button fx:id="questionBankNavButton" text="岗位题库" onAction="#showQuestionBank"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2f-file-question-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="careerAssessmentNavButton" text="职业测评" onAction="#showCareerAssessment"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2c-chart-line" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="skillsLibraryNavButton" text="面试技巧" onAction="#showSkillsLibrary"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2l-lightbulb-outline" iconSize="21"/></graphic>
+            </Button>
+            <Button fx:id="careerPlanningNavButton" text="职业规划" onAction="#showCareerPlanning"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2m-map-outline" iconSize="21"/></graphic>
+            </Button>
+            <Separator styleClass="sidebar-divider"/>
+            <Button fx:id="tasksNavButton" text="任务中心" onAction="#showTasks"
+                    contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">
+                <graphic><FontIcon iconLiteral="mdi2c-clipboard-outline" iconSize="21"/></graphic>
             </Button>
             <Button fx:id="settingsNavButton" text="设置" onAction="#showSettings"
                     contentDisplay="LEFT" graphicTextGap="15" maxWidth="Infinity" styleClass="nav-button">

@@ -74,6 +74,8 @@
                                styleClass="secondary-text" wrapText="true"/>
                         <Label text="岗位描述 / JD" styleClass="field-label"/>
                         <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责与要求" prefRowCount="7" wrapText="true"/>
+                        <Label fx:id="jdAutoFillHint" styleClass="secondary-text" wrapText="true"
+                               visible="false" managed="false"/>
                         <Separator/>
                         <Label text="3  面试规则" styleClass="module-title"/>
                         <Label text="岗位领域知识包" styleClass="field-label"/>

@@ -126,6 +126,8 @@
                                         styleClass="secondary-button"/>
                                 <Button fx:id="testConnectionButton" text="测试连接" onAction="#testConnection"
                                         styleClass="primary-button"/>
+                                <Label fx:id="saveStatusLabel" text="" wrapText="true"
+                                       HBox.hgrow="ALWAYS" styleClass="secondary-text"/>
                             </HBox>
                             <HBox alignment="CENTER_LEFT" spacing="12" styleClass="connection-status-row">
                                 <Label fx:id="connectionStatusLabel" text="● 未检测" styleClass="status-neutral"/>

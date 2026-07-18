@@ -19,6 +19,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 @Component
 @Scope("prototype")
@@ -46,8 +48,8 @@ public class QuestionBankController {
     @FXML private ComboBox<String> tagFilterCombo;
     @FXML private TableView<InterviewQuestionDto> questionTable;
     @FXML private TableColumn<InterviewQuestionDto, String> jobColumn;
-    @FXML private TableColumn<InterviewQuestionDto, String> categoryColumn;
-    @FXML private TableColumn<InterviewQuestionDto, String> difficultyColumn;
+    @FXML private TableColumn<InterviewQuestionDto, QuestionCategory> categoryColumn;
+    @FXML private TableColumn<InterviewQuestionDto, InterviewDifficulty> difficultyColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> titleColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> tagsColumn;
     @FXML private Button deleteQuestionButton;
@@ -91,10 +93,31 @@ public class QuestionBankController {
 
         jobColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
                 cell.getValue().jobTitle() == null ? "（未归类）" : cell.getValue().jobTitle()));
-        categoryColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().category().label()));
-        difficultyColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(difficultyText(cell.getValue().difficulty())));
+        categoryColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().category()));
+        difficultyColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().difficulty()));
         titleColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().title()));
         tagsColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(String.join("、", cell.getValue().tags())));
+
+        categoryColumn.setCellFactory(col -> coloredBadgeCell(
+                cat -> switch (cat) {
+                    case TECHNICAL -> "badge-tech";
+                    case BEHAVIORAL -> "badge-behavior";
+                    case SCENARIO -> "badge-scenario";
+                },
+                QuestionCategory::label));
+        difficultyColumn.setCellFactory(col -> coloredBadgeCell(
+                dif -> switch (dif) {
+                    case JUNIOR -> "badge-junior";
+                    case MEDIUM -> "badge-medium";
+                    case SENIOR -> "badge-senior";
+                    case EXPERT -> "badge-expert";
+                },
+                dif -> switch (dif) {
+                    case JUNIOR -> "初级";
+                    case MEDIUM -> "中级";
+                    case SENIOR -> "高级";
+                    case EXPERT -> "专家";
+                }));
 
         deleteJobButton.disableProperty().bind(jobListView.getSelectionModel().selectedItemProperty().isNull());
         deleteQuestionButton.disableProperty().bind(questionTable.getSelectionModel().selectedItemProperty().isNull());
@@ -224,12 +247,31 @@ public class QuestionBankController {
         questionTable.getItems().setAll(filtered);
     }
 
-    private String difficultyText(InterviewDifficulty difficulty) {
-        return switch (difficulty) {
-            case JUNIOR -> "初级";
-            case MEDIUM -> "中级";
-            case SENIOR -> "高级";
-            case EXPERT -> "专家";
+    /**
+     * 生成「圆角色块徽标」单元格：依据枚举值套用对应的 .badge-* 配色类。
+     */
+    private <T> TableCell<InterviewQuestionDto, T> coloredBadgeCell(
+            Function<T, String> badgeFn,
+            Function<T, String> labelFn) {
+        return new TableCell<>() {
+            private final Label label = new Label();
+            {
+                label.getStyleClass().add("badge");
+                setStyle("-fx-alignment: CENTER;");
+            }
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+                label.getStyleClass().setAll("badge", badgeFn.apply(item));
+                label.setText(labelFn.apply(item));
+                setGraphic(label);
+                setText(null);
+            }
         };
     }
 }

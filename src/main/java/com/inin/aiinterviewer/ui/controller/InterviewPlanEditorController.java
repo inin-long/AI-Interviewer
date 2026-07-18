@@ -13,6 +13,8 @@ import com.inin.aiinterviewer.application.service.ResumeService;
 import com.inin.aiinterviewer.application.service.CandidateProfileService;
 import com.inin.aiinterviewer.application.service.DomainPackService;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
+import com.inin.aiinterviewer.domain.entity.JobPositionEntity;
+import com.inin.aiinterviewer.infrastructure.database.mapper.JobPositionMapper;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewMode;
 import com.inin.aiinterviewer.domain.enums.InterviewerPersona;
@@ -37,6 +39,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import com.inin.aiinterviewer.application.dto.KnowledgeDocumentDto;
 
@@ -49,6 +52,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
     private final DomainPackService domainPackService;
+    private final JobPositionMapper jobPositionMapper;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -81,8 +85,13 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private Label summaryModeLabel;
     @FXML private Label summaryPressureLabel;
     @FXML private Label summaryScenarioRatioLabel;
+    @FXML private Label jdAutoFillHint;
 
     private Long editingPlanId;
+    private boolean suppressAutoFill = false;
+    private String lastAutoRole = null;
+    private List<JobPositionEntity> allPositions = new ArrayList<>();
+    private boolean jdUserEdited = false;
 
     public InterviewPlanEditorController(
             InterviewPlanService planService,
@@ -90,6 +99,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
             DomainPackService domainPackService,
+            JobPositionMapper jobPositionMapper,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -100,6 +110,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
         this.domainPackService = domainPackService;
+        this.jobPositionMapper = jobPositionMapper;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -161,8 +172,25 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                 setText(empty || document == null ? null : document.name() + " · " + document.category());
             }
         });
+        // 加载所有岗位用于 JD 自动匹配（develop 的岗位库自动填充能力）
+        allPositions = jobPositionMapper.findAllByUserId(sessionState.requireCurrentUser().id());
         nameField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
-        jobTitleField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
+        jobTitleField.textProperty().addListener((observable, oldValue, value) -> {
+            if (lastAutoRole != null && !value.equals(lastAutoRole)) {
+                lastAutoRole = null;
+            }
+            if (!suppressAutoFill && !jdUserEdited) {
+                tryAutoFillJobDescription(value);
+            }
+            refreshSummary();
+        });
+        // 用户手动编辑 JD 后标记，不再自动覆盖
+        jobDescriptionArea.textProperty().addListener((obs, old, val) -> {
+            if (!suppressAutoFill && val != null && !val.isBlank() && !val.equals(jobDescriptionArea.getPromptText())) {
+                jdUserEdited = true;
+                if (jdAutoFillHint != null) jdAutoFillHint.setVisible(false);
+            }
+        });
         difficultyBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         durationField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
         questionCountField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
@@ -179,17 +207,21 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         strictnessBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         scenarioRatioBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         profileBox.valueProperty().addListener((observable, oldValue, profile) -> {
+            if (suppressAutoFill) { refreshSummary(); return; }
             if (profile != null) {
                 resumeBox.getItems().stream().filter(resume -> resume.id().equals(profile.resumeId()))
                         .findFirst().ifPresent(resumeBox::setValue);
             }
+            applyTargetRole(profile);
             refreshSummary();
         });
         resumeBox.valueProperty().addListener((observable, oldValue, resume) -> {
+            if (suppressAutoFill) return;
             CandidateProfileListItemDto profile = profileBox.getValue();
             if (profile != null && (resume == null || !profile.resumeId().equals(resume.id()))) {
                 profileBox.setValue(null);
             }
+            applyTargetRole(resume);
         });
         knowledgeList.getSelectionModel().getSelectedItems()
                 .addListener((javafx.collections.ListChangeListener<KnowledgeDocumentDto>) change -> refreshSummary());
@@ -232,10 +264,16 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
 
     @FXML
     private void cancel() {
-        contentNavigator.back();
+        try {
+            contentNavigator.back();
+        } catch (Exception ex) {
+            viewManager.showError("返回失败：" + exceptionHandler.toUserMessage(ex));
+        }
     }
 
     private void populate(InterviewPlanDto plan) {
+        suppressAutoFill = true;
+        jdUserEdited = true; // 编辑已有方案时不自动覆盖 JD
         nameField.setText(plan.name());
         jobTitleField.setText(plan.jobTitle());
         jobDescriptionArea.setText(plan.jobDescription());
@@ -255,6 +293,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         applySettings(InterviewPlanSettings.fromRules(plan.rules()));
         domainPackBox.getItems().stream().filter(pack -> pack.id().equals(plan.domainPackId()))
                 .findFirst().ifPresent(domainPackBox::setValue);
+        suppressAutoFill = false;
+        lastAutoRole = jobTitleField.getText().isBlank() ? null : jobTitleField.getText();
     }
 
     private SaveInterviewPlanCommand commandFromForm() {
@@ -280,6 +320,71 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         } catch (NumberFormatException exception) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
+    }
+
+    /** 根据目标岗位名称模糊匹配 job_position 表，自动填充 JD（develop 岗位库自动填充能力） */
+    private void tryAutoFillJobDescription(String title) {
+        if (title == null || title.strip().length() < 2) return;
+        try {
+            doAutoFillJobDescription(title.strip());
+        } catch (Exception ignored) {
+            // 岗位匹配失败不应影响任何 UI 操作
+        }
+    }
+
+    private void doAutoFillJobDescription(String trimmed) {
+        String lower = trimmed.toLowerCase();
+        // 1. 精确匹配（忽略大小写）
+        for (JobPositionEntity pos : allPositions) {
+            if (pos.getTitle() != null && pos.getTitle().toLowerCase().equals(lower)
+                    && pos.getDescription() != null && !pos.getDescription().isBlank()) {
+                setJdFromPosition(pos);
+                return;
+            }
+        }
+        // 2. 包含匹配（标题包含输入 或 输入包含标题）
+        for (JobPositionEntity pos : allPositions) {
+            if (pos.getTitle() == null || pos.getTitle().isBlank()) continue;
+            String pt = pos.getTitle().toLowerCase();
+            if (lower.contains(pt) || pt.contains(lower)) {
+                if (pos.getDescription() != null && !pos.getDescription().isBlank()) {
+                    setJdFromPosition(pos);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void setJdFromPosition(JobPositionEntity pos) {
+        suppressAutoFill = true;
+        jobDescriptionArea.setText(pos.getDescription());
+        suppressAutoFill = false;
+        if (jdAutoFillHint != null) {
+            jdAutoFillHint.setText("已从岗位库「" + pos.getTitle() + "」自动加载描述，可直接编辑修改");
+            jdAutoFillHint.setVisible(true);
+            jdAutoFillHint.setManaged(true);
+        }
+        jdUserEdited = false;
+    }
+
+    private void applyTargetRole(CandidateProfileListItemDto profile) {
+        if (profile == null) return;
+        String role = profile.targetRole();
+        if (role == null || role.isBlank()) return;
+        role = role.strip();
+        String current = jobTitleField.getText();
+        if (current.isBlank() || current.equals(lastAutoRole)) {
+            jobTitleField.setText(role);
+            lastAutoRole = role;
+        }
+    }
+
+    private void applyTargetRole(ResumeDto resume) {
+        if (resume == null) return;
+        CandidateProfileListItemDto profile = profileBox.getItems().stream()
+                .filter(p -> resume.id().equals(p.resumeId()))
+                .findFirst().orElse(null);
+        applyTargetRole(profile);
     }
 
     private void refreshSummary() {

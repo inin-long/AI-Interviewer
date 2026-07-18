@@ -18,6 +18,18 @@
     -success-soft: #EAF7F0;
     -danger: #C53B46;
     -danger-soft: #FDECEE;
+    -info: #2F6BFF;
+    -info-soft: #EAF0FF;
+    -warning: #C9881E;
+    -warning-soft: #FBF1DF;
+    -accent-blue: #2F6BFF;
+    -accent-blue-soft: #EAF0FF;
+    -accent-green: #1F9D6B;
+    -accent-green-soft: #E6F6EE;
+    -accent-amber: #E08A1E;
+    -accent-amber-soft: #FBF0E0;
+    -accent-purple: #8B5CF6;
+    -accent-purple-soft: #F1ECFE;
 }
 
 .auth-root, .app-root, .content-scroll, .content-scroll > .viewport {
@@ -856,15 +868,15 @@
 
 .nav-button {
     -fx-alignment: center-left;
-    -fx-min-height: 50;
-    -fx-pref-height: 50;
+    -fx-min-height: 42;
+    -fx-pref-height: 42;
     -fx-background-color: transparent;
     -fx-background-radius: 8;
     -fx-border-radius: 8;
     -fx-border-color: transparent;
     -fx-border-width: 0 0 0 3;
-    -fx-padding: 0 18;
-    -fx-font-size: 15px;
+    -fx-padding: 0 14;
+    -fx-font-size: 13px;
     -fx-font-weight: 500;
     -fx-text-fill: #30374A;
 }
@@ -898,7 +910,7 @@
 }
 
 .sidebar-service-row {
-    -fx-padding: 10 10 4 10;
+    -fx-padding: 6 8 2 8;
 }
 
 .service-status-icon {
@@ -910,12 +922,13 @@
 }
 
 .sidebar-status-text {
-    -fx-font-size: 12px;
+    -fx-font-size: 11px;
     -fx-text-fill: #7A8292;
 }
 
 .sidebar-version {
-    -fx-padding: 3 10 0 10;
+    -fx-padding: 2 8 0 8;
+    -fx-font-size: 10px;
     -fx-text-fill: #9AA0AE;
 }
 
@@ -1399,6 +1412,24 @@
     -fx-font-size: 11px;
     -fx-text-fill: #8B92A0;
 }
+
+/* ---------- 通用徽标（圆角色块标签） ---------- */
+.badge {
+    -fx-background-radius: 999;
+    -fx-padding: 3 11;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+.badge-tech     { -fx-background-color: -accent-blue-soft;   -fx-text-fill: -accent-blue; }
+.badge-behavior  { -fx-background-color: -accent-green-soft;  -fx-text-fill: -accent-green; }
+.badge-scenario { -fx-background-color: -accent-amber-soft; -fx-text-fill: -accent-amber; }
+.badge-junior { -fx-background-color: -accent-blue-soft;   -fx-text-fill: -accent-blue; }
+.badge-medium { -fx-background-color: -accent-green-soft;  -fx-text-fill: -accent-green; }
+.badge-senior { -fx-background-color: -accent-amber-soft; -fx-text-fill: -accent-amber; }
+.badge-expert { -fx-background-color: -danger-soft;        -fx-text-fill: -danger; }
+.badge-info  { -fx-background-color: -info-soft;          -fx-text-fill: -info; }
+.badge-purple{ -fx-background-color: -accent-purple-soft; -fx-text-fill: -accent-purple; }
+.badge-neutral { -fx-background-color: -surface-muted; -fx-text-fill: -text-secondary; }
 
 /* Ikonli uses ikonli-font-icon as its runtime style class. */
 .nav-button .ikonli-font-icon {
