@@ -23,10 +23,35 @@ public record InterviewPlanDto(
         boolean defaultPlan,
         LocalDateTime createTime,
         LocalDateTime updateTime,
-        String domainPackId
+        String domainPackId,
+        List<String> knowledgeCategories
 ) implements Serializable {
     public InterviewPlanDto {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
+        knowledgeCategories = knowledgeCategories == null ? List.of() : List.copyOf(knowledgeCategories);
+    }
+
+    public InterviewPlanDto(
+            Long id,
+            String name,
+            String jobTitle,
+            String jobDescription,
+            InterviewDifficulty difficulty,
+            int durationMinutes,
+            int questionCount,
+            Long resumeId,
+            Long profileId,
+            List<Long> knowledgeDocumentIds,
+            Map<String, Object> rules,
+            List<String> stages,
+            boolean defaultPlan,
+            LocalDateTime createTime,
+            LocalDateTime updateTime,
+            String domainPackId
+    ) {
+        this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
+                resumeId, profileId, knowledgeDocumentIds, rules, stages, defaultPlan,
+                createTime, updateTime, domainPackId, List.of());
     }
 
     public InterviewPlanDto(
@@ -48,7 +73,7 @@ public record InterviewPlanDto(
     ) {
         this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
                 resumeId, profileId, knowledgeDocumentIds, rules, stages, defaultPlan,
-                createTime, updateTime, null);
+                createTime, updateTime, null, List.of());
     }
 
     public InterviewPlanDto(
@@ -67,7 +92,7 @@ public record InterviewPlanDto(
             LocalDateTime updateTime
     ) {
         this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, null, List.of(), rules, stages, defaultPlan, createTime, updateTime, null);
+                resumeId, null, List.of(), rules, stages, defaultPlan, createTime, updateTime, null, List.of());
     }
 
     public InterviewPlanDto(
@@ -87,6 +112,6 @@ public record InterviewPlanDto(
             LocalDateTime updateTime
     ) {
         this(id, name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, profileId, List.of(), rules, stages, defaultPlan, createTime, updateTime, null);
+                resumeId, profileId, List.of(), rules, stages, defaultPlan, createTime, updateTime, null, List.of());
     }
 }

@@ -130,7 +130,7 @@ public class InterviewSessionService {
         CandidateProfileDto profileSnapshot = plan.profileId() == null
                 ? null : profileService.requireConfirmed(userId, plan.profileId());
         List<KnowledgeDocumentSnapshotDto> knowledgeSnapshot = knowledgeService
-                .requireReadyAll(userId, plan.knowledgeDocumentIds()).stream()
+                .listReadyByCategories(userId, plan.knowledgeCategories()).stream()
                 .map(KnowledgeDocumentSnapshotDto::from)
                 .toList();
         DomainPackSnapshot domainPackSnapshot = domainPackService.snapshot(plan.domainPackId());

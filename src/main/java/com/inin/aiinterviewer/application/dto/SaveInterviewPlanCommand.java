@@ -17,10 +17,30 @@ public record SaveInterviewPlanCommand(
         List<Long> knowledgeDocumentIds,
         Map<String, Object> rules,
         List<String> stages,
-        String domainPackId
+        String domainPackId,
+        List<String> knowledgeCategories
 ) {
     public SaveInterviewPlanCommand {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
+        knowledgeCategories = knowledgeCategories == null ? List.of() : List.copyOf(knowledgeCategories);
+    }
+
+    public SaveInterviewPlanCommand(
+            String name,
+            String jobTitle,
+            String jobDescription,
+            InterviewDifficulty difficulty,
+            int durationMinutes,
+            int questionCount,
+            Long resumeId,
+            Long profileId,
+            List<Long> knowledgeDocumentIds,
+            Map<String, Object> rules,
+            List<String> stages,
+            String domainPackId
+    ) {
+        this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
+                resumeId, profileId, knowledgeDocumentIds, rules, stages, domainPackId, List.of());
     }
 
     public SaveInterviewPlanCommand(
@@ -37,7 +57,7 @@ public record SaveInterviewPlanCommand(
             List<String> stages
     ) {
         this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, profileId, knowledgeDocumentIds, rules, stages, null);
+                resumeId, profileId, knowledgeDocumentIds, rules, stages, null, List.of());
     }
 
     public SaveInterviewPlanCommand(
@@ -52,7 +72,7 @@ public record SaveInterviewPlanCommand(
             List<String> stages
     ) {
         this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, null, List.of(), rules, stages, null);
+                resumeId, null, List.of(), rules, stages, null, List.of());
     }
 
     public SaveInterviewPlanCommand(
@@ -68,6 +88,6 @@ public record SaveInterviewPlanCommand(
             List<String> stages
     ) {
         this(name, jobTitle, jobDescription, difficulty, durationMinutes, questionCount,
-                resumeId, profileId, List.of(), rules, stages, null);
+                resumeId, profileId, List.of(), rules, stages, null, List.of());
     }
 }

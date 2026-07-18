@@ -76,8 +76,8 @@ public class InterviewPlanController {
         profileColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
                 cell.getValue().profileId() == null ? "未关联" : "已关联确认画像"));
         knowledgeColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
-                cell.getValue().knowledgeDocumentIds().isEmpty()
-                        ? "未选择" : cell.getValue().knowledgeDocumentIds().size() + " 个文档"));
+                cell.getValue().knowledgeCategories().isEmpty()
+                        ? "未选择" : cell.getValue().knowledgeCategories().size() + " 个分类"));
         updatedColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().updateTime()));
         updatedColumn.setCellFactory(column -> new javafx.scene.control.TableCell<>() {
             @Override protected void updateItem(LocalDateTime value, boolean empty) {

@@ -6,25 +6,25 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
-public interface InterviewPlanDocumentMapper {
+public interface InterviewPlanCategoryMapper {
 
     @Insert("""
-            INSERT INTO interview_plan_document(plan_id, document_id, user_id, create_time)
-            VALUES(#{planId}, #{documentId}, #{userId}, CURRENT_TIMESTAMP)
+            INSERT INTO interview_plan_category(plan_id, category, user_id, create_time)
+            VALUES(#{planId}, #{category}, #{userId}, CURRENT_TIMESTAMP)
             """)
-    int insert(long planId, long documentId, long userId);
+    int insert(long planId, String category, long userId);
 
     @Delete("""
-            DELETE FROM interview_plan_document
+            DELETE FROM interview_plan_category
             WHERE plan_id = #{planId} AND user_id = #{userId}
             """)
     int deleteByPlan(long planId, long userId);
 
     @Select("""
-            SELECT document_id
-            FROM interview_plan_document
+            SELECT category
+            FROM interview_plan_category
             WHERE plan_id = #{planId} AND user_id = #{userId}
-            ORDER BY create_time, document_id
+            ORDER BY create_time, category
             """)
-    List<Long> findDocumentIds(long planId, long userId);
+    List<String> findCategories(long planId, long userId);
 }

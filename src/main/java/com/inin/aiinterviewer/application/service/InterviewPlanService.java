@@ -10,7 +10,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanMapper;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
-import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanDocumentMapper;
+import com.inin.aiinterviewer.infrastructure.database.mapper.InterviewPlanCategoryMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,7 +33,7 @@ public class InterviewPlanService {
     private final ResumeMapper resumeMapper;
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
-    private final InterviewPlanDocumentMapper planDocumentMapper;
+    private final InterviewPlanCategoryMapper planCategoryMapper;
     private final DomainPackService domainPackService;
     private final ObjectMapper objectMapper;
 
@@ -42,7 +42,7 @@ public class InterviewPlanService {
             ResumeMapper resumeMapper,
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
-            InterviewPlanDocumentMapper planDocumentMapper,
+            InterviewPlanCategoryMapper planCategoryMapper,
             DomainPackService domainPackService,
             ObjectMapper objectMapper
     ) {
@@ -50,27 +50,29 @@ public class InterviewPlanService {
         this.resumeMapper = resumeMapper;
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
-        this.planDocumentMapper = planDocumentMapper;
+        this.planCategoryMapper = planCategoryMapper;
         this.domainPackService = domainPackService;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public InterviewPlanDto create(long userId, SaveInterviewPlanCommand command) {
+        List<String> categories = resolveKnowledgeCategories(userId, command);
         InterviewPlanEntity entity = toEntity(null, userId, command);
         planMapper.insert(entity);
-        replaceDocuments(entity.getId(), userId, command.knowledgeDocumentIds());
+        replaceCategories(entity.getId(), userId, categories);
         return require(entity.getId(), userId);
     }
 
     @Transactional
     public InterviewPlanDto update(long userId, long planId, SaveInterviewPlanCommand command) {
         require(planId, userId);
+        List<String> categories = resolveKnowledgeCategories(userId, command);
         InterviewPlanEntity entity = toEntity(planId, userId, command);
         if (planMapper.update(entity) != 1) {
             throw new BusinessException(ErrorCode.PLAN_NOT_FOUND);
         }
-        replaceDocuments(planId, userId, command.knowledgeDocumentIds());
+        replaceCategories(planId, userId, categories);
         return require(planId, userId);
     }
 
@@ -80,7 +82,7 @@ public class InterviewPlanService {
         SaveInterviewPlanCommand copy = new SaveInterviewPlanCommand(
                 source.name() + " 副本", source.jobTitle(), source.jobDescription(), source.difficulty(),
                 source.durationMinutes(), source.questionCount(), source.resumeId(), source.profileId(),
-                source.knowledgeDocumentIds(), source.rules(), source.stages(), source.domainPackId());
+                List.of(), source.rules(), source.stages(), source.domainPackId(), source.knowledgeCategories());
         return create(userId, copy);
     }
 
@@ -122,9 +124,6 @@ public class InterviewPlanService {
         if (resumeId != null && resumeMapper.findByIdAndUserId(resumeId, userId).isEmpty()) {
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
-        List<Long> documentIds = normalizedDocumentIds(command.knowledgeDocumentIds());
-        knowledgeService.requireReadyAll(userId, documentIds);
-
         InterviewPlanEntity entity = new InterviewPlanEntity();
         entity.setId(id);
         entity.setUserId(userId);
@@ -150,20 +149,32 @@ public class InterviewPlanService {
     }
 
     private InterviewPlanDto toDto(InterviewPlanEntity entity) {
+        List<String> categories = planCategoryMapper.findCategories(entity.getId(), entity.getUserId());
+        List<Long> readyDocumentIds = knowledgeService.listReadyByCategories(entity.getUserId(), categories).stream()
+                .map(document -> document.id())
+                .toList();
         return new InterviewPlanDto(entity.getId(), entity.getName(), entity.getJobTitle(),
                 entity.getJobDescription(), entity.getDifficulty(), entity.getDurationMinutes(),
                 entity.getQuestionCount(), entity.getResumeId(), entity.getProfileId(),
-                planDocumentMapper.findDocumentIds(entity.getId(), entity.getUserId()), readMap(entity.getRulesJson()),
+                readyDocumentIds, readMap(entity.getRulesJson()),
                 readList(entity.getStagesJson()), entity.isDefaultPlan(), entity.getCreateTime(), entity.getUpdateTime(),
-                entity.getDomainPackId());
+                entity.getDomainPackId(), categories);
     }
 
-    private void replaceDocuments(long planId, long userId, List<Long> documentIds) {
-        List<Long> normalized = normalizedDocumentIds(documentIds);
-        planDocumentMapper.deleteByPlan(planId, userId);
-        for (Long documentId : normalized) {
-            planDocumentMapper.insert(planId, documentId, userId);
+    private void replaceCategories(long planId, long userId, List<String> categories) {
+        planCategoryMapper.deleteByPlan(planId, userId);
+        for (String category : categories) {
+            planCategoryMapper.insert(planId, category, userId);
         }
+    }
+
+    private List<String> resolveKnowledgeCategories(long userId, SaveInterviewPlanCommand command) {
+        LinkedHashSet<String> categories = new LinkedHashSet<>();
+        categories.addAll(knowledgeService.requireCategories(userId, command.knowledgeCategories()));
+        List<Long> documentIds = normalizedDocumentIds(command.knowledgeDocumentIds());
+        categories.addAll(knowledgeService.categoriesForReadyDocuments(userId, documentIds));
+        if (categories.size() > 20) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        return List.copyOf(categories);
     }
 
     private List<Long> normalizedDocumentIds(List<Long> documentIds) {

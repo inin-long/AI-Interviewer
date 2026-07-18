@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.application.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.application.dto.KnowledgeDetailDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeCategoryDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeDocumentDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeSearchResultDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.Collection;
 
 @Service
@@ -77,6 +79,8 @@ public class KnowledgeDocumentService {
     }
 
     public KnowledgeDocumentDto upload(long userId, Path source, String category) {
+        String normalizedCategory = normalizeCategory(category);
+        mapper.insertCategory(userId, normalizedCategory);
         StoredFile stored = fileStorageService.store(userId, StorageCategory.DOCUMENTS, source);
         if (stored.size() > MAX_FILE_SIZE) {
             fileStorageService.delete(userId, StorageCategory.DOCUMENTS, stored.storageName());
@@ -90,7 +94,7 @@ public class KnowledgeDocumentService {
         entity.setStoragePath(stored.path().toString());
         entity.setFileType(extension(stored.originalName()));
         entity.setFileSize(stored.size());
-        entity.setCategory(category == null || category.isBlank() ? "技术资料" : category.strip());
+        entity.setCategory(normalizedCategory);
         entity.setStatus(KnowledgeStatus.UPLOADED);
         try {
             mapper.insert(entity);
@@ -162,6 +166,54 @@ public class KnowledgeDocumentService {
         return list(userId).stream().filter(document -> document.status() == KnowledgeStatus.READY).toList();
     }
 
+    @Transactional
+    public KnowledgeCategoryDto createCategory(long userId, String name) {
+        String normalized = normalizeCategory(name);
+        mapper.insertCategory(userId, normalized);
+        return listCategories(userId).stream()
+                .filter(category -> category.name().equals(normalized))
+                .findFirst()
+                .orElse(new KnowledgeCategoryDto(normalized, 0, 0));
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeCategoryDto> listCategories(long userId) {
+        return mapper.findCategories(userId).stream()
+                .map(category -> new KnowledgeCategoryDto(category.getName(),
+                        category.getDocumentCount(), category.getReadyCount()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeDocumentDto> listReadyByCategories(long userId, Collection<String> categories) {
+        Set<String> normalized = normalizeCategories(categories);
+        if (normalized.isEmpty()) return List.of();
+        requireCategories(userId, normalized);
+        return listReady(userId).stream()
+                .filter(document -> normalized.contains(document.category()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> categoriesForReadyDocuments(long userId, Collection<Long> documentIds) {
+        if (documentIds == null || documentIds.isEmpty()) return List.of();
+        return requireReadyAll(userId, List.copyOf(documentIds)).stream()
+                .map(KnowledgeDocumentDto::category)
+                .distinct()
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> requireCategories(long userId, Collection<String> categories) {
+        Set<String> normalized = normalizeCategories(categories);
+        for (String category : normalized) {
+            if (mapper.countCategory(userId, category) != 1) {
+                throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+            }
+        }
+        return List.copyOf(normalized);
+    }
+
     @Transactional(readOnly = true)
     public KnowledgeDocumentDto requireReady(long userId, long documentId) {
         KnowledgeDocumentDto document = require(userId, documentId);
@@ -223,7 +275,6 @@ public class KnowledgeDocumentService {
                 .map(DocumentChunkEntity::getVectorId).toList();
         vectorStore.delete(userId, vectorIds);
         mapper.deleteChunks(documentId, userId);
-        mapper.deletePlanLinks(documentId, userId);
         if (mapper.logicalDelete(documentId, userId) != 1) {
             throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
         }
@@ -249,6 +300,25 @@ public class KnowledgeDocumentService {
     private String baseName(String name) {
         int dot = name.lastIndexOf('.');
         return dot <= 0 ? name : name.substring(0, dot);
+    }
+
+    private String normalizeCategory(String category) {
+        if (category == null || category.isBlank()) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        String normalized = category.strip();
+        if (normalized.length() > 64) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        }
+        return normalized;
+    }
+
+    private Set<String> normalizeCategories(Collection<String> categories) {
+        if (categories == null || categories.isEmpty()) return Set.of();
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String category : categories) normalized.add(normalizeCategory(category));
+        if (normalized.size() > 20) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        return normalized;
     }
 
     private String writeJson(Object value) {

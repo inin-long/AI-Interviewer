@@ -59,7 +59,7 @@ class FlywayMigrationIntegrationTest {
                 .load();
         latest.migrate();
 
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("27");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("28");
         try (var connection = DriverManager.getConnection(url);
              var statement = connection.createStatement();
              var result = statement.executeQuery("""
@@ -67,10 +67,11 @@ class FlywayMigrationIntegrationTest {
                      FROM sqlite_master
                      WHERE type = 'table'
                        AND name IN ('domain_pack', 'session_branch', 'interview_question',
-                                    'assessment_result', 'skill_article', 'career_plan')
+                                    'assessment_result', 'skill_article', 'career_plan',
+                                    'knowledge_category', 'interview_plan_category')
                      """)) {
             assertThat(result.next()).isTrue();
-            assertThat(result.getInt(1)).isEqualTo(6);
+            assertThat(result.getInt(1)).isEqualTo(8);
         }
     }
 }

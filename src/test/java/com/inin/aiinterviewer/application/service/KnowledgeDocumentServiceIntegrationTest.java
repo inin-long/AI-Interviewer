@@ -172,6 +172,38 @@ class KnowledgeDocumentServiceIntegrationTest {
         assertThat(knowledgeService.search(owner.id(), "虚拟线程", 3)).isNotEmpty();
     }
 
+    @Test
+    void requiresDocumentCategoryAndResolvesPlanScopeByCategoryAtSessionStart() throws Exception {
+        var owner = userService.register("knowledge-category-owner", "Category Owner", "safe-password");
+        Path firstSource = applicationHome.resolve("category-first.md");
+        Path secondSource = applicationHome.resolve("category-second.md");
+        Path otherSource = applicationHome.resolve("category-other.md");
+        Files.writeString(firstSource, "Spring 事务传播与隔离级别。\n".repeat(8));
+        Files.writeString(secondSource, "Redis 缓存一致性与补偿任务。\n".repeat(8));
+        Files.writeString(otherSource, "产品需求分析与用户访谈。\n".repeat(8));
+
+        assertThatThrownBy(() -> knowledgeService.upload(owner.id(), firstSource, "  "))
+                .isInstanceOf(BusinessException.class);
+
+        var first = knowledgeService.uploadAndIndex(owner.id(), firstSource, "技术资料");
+        knowledgeService.createCategory(owner.id(), "项目文档");
+        var plan = planService.create(owner.id(), new SaveInterviewPlanCommand(
+                "分类知识范围", "Java 工程师", "", InterviewDifficulty.MEDIUM,
+                30, 5, null, null, List.of(), Map.of(), null, null,
+                List.of("技术资料")));
+
+        var second = knowledgeService.uploadAndIndex(owner.id(), secondSource, "技术资料");
+        knowledgeService.uploadAndIndex(owner.id(), otherSource, "项目文档");
+        var session = sessionService.create(owner.id(), plan.id());
+
+        assertThat(plan.knowledgeCategories()).containsExactly("技术资料");
+        assertThat(knowledgeService.listCategories(owner.id()))
+                .extracting(category -> category.name())
+                .containsExactly("技术资料", "项目文档");
+        assertThat(session.knowledgeSnapshot()).extracting(snapshot -> snapshot.id())
+                .containsExactlyInAnyOrder(first.id(), second.id());
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class FakeEmbeddingConfiguration {
         @Bean

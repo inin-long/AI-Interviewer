@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
+import com.inin.aiinterviewer.ui.component.DrawerPane;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.Route;
@@ -294,6 +295,34 @@ class JavaFxFxmlLoadTest {
                     name.getHeight() == resume.getHeight(),
                     name.getHeight() == profile.getHeight(),
                     knowledge.getSelectionModel().getSelectionMode() == SelectionMode.MULTIPLE
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void knowledgeLibraryUsesCategoryNavigationDocumentRowsAndReusableDrawer() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "knowledge-layout-user", "知识库用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/knowledge-view.fxml");
+            Scene scene = new Scene(root, 1200, 760);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            DrawerPane drawer = (DrawerPane) root.lookup("#documentDrawer");
+            drawer.open("通用抽屉", new Label("可复用内容"));
+            return new boolean[]{
+                    root.lookup("#categoryList") instanceof ListView,
+                    root.lookup("#documentList") instanceof ListView,
+                    root.lookup("#documentTable") == null,
+                    root.lookup("#searchResultArea") == null,
+                    drawer.isOpen(),
+                    Math.abs(drawer.getDrawerWidth() - 442) < 0.5,
+                    root.lookupAll(".knowledge-stat-card").size() == 1,
+                    root.lookupAll(".knowledge-stat-segment").size() == 4
             };
         });
         Platform.runLater(task);

@@ -2,12 +2,12 @@ package com.inin.aiinterviewer.infrastructure.database.mapper;
 
 import com.inin.aiinterviewer.domain.entity.DocumentChunkEntity;
 import com.inin.aiinterviewer.domain.entity.KnowledgeDocumentEntity;
+import com.inin.aiinterviewer.domain.entity.KnowledgeCategoryEntity;
 import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Options;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
-import org.apache.ibatis.annotations.Delete;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +37,33 @@ public interface KnowledgeDocumentMapper {
             ORDER BY update_time DESC, id DESC
             """)
     List<KnowledgeDocumentEntity> findAll(long userId);
+
+    @Insert("""
+            INSERT INTO knowledge_category(user_id, name, create_time)
+            VALUES(#{userId}, #{name}, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id, name) DO NOTHING
+            """)
+    int insertCategory(long userId, String name);
+
+    @Select("""
+            SELECT category.name,
+                   COUNT(document.id) AS document_count,
+                   COALESCE(SUM(CASE WHEN document.status = 'READY' THEN 1 ELSE 0 END), 0) AS ready_count
+            FROM knowledge_category category
+            LEFT JOIN document ON document.user_id = category.user_id
+                 AND document.category = category.name AND document.deleted = 0
+            WHERE category.user_id = #{userId}
+            GROUP BY category.id, category.name, category.create_time
+            ORDER BY document_count DESC, category.create_time, category.name
+            """)
+    List<KnowledgeCategoryEntity> findCategories(long userId);
+
+    @Select("""
+            SELECT COUNT(*)
+            FROM knowledge_category
+            WHERE user_id = #{userId} AND name = #{name}
+            """)
+    int countCategory(long userId, String name);
 
     @Update("""
             UPDATE document SET status = #{status}, error_message = #{errorMessage},
@@ -81,9 +108,4 @@ public interface KnowledgeDocumentMapper {
             """)
     int logicalDelete(long id, long userId);
 
-    @Delete("""
-            DELETE FROM interview_plan_document
-            WHERE document_id = #{documentId} AND user_id = #{userId}
-            """)
-    int deletePlanLinks(long documentId, long userId);
 }

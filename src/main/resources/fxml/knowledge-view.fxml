@@ -1,52 +1,134 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.DrawerPane?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.inin.aiinterviewer.ui.controller.KnowledgeController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
-            <Label text="知识库" styleClass="page-title"/>
-            <Label text="上传文档后自动解析、切片并建立用户私有向量索引" styleClass="secondary-text"/>
-        </VBox>
-        <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="summaryLabel" text="共 0 个文档" styleClass="secondary-text"/>
-        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
-        <Button fx:id="uploadButton" text="上传文档" onAction="#upload" styleClass="primary-button"/>
-    </HBox>
-    <SplitPane orientation="VERTICAL" dividerPositions="0.62" VBox.vgrow="ALWAYS" styleClass="workspace-split">
-        <items>
-            <VBox spacing="12" styleClass="content-card">
-                <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-                <TableView fx:id="documentTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-                    <placeholder><Label text="暂无知识文档" styleClass="secondary-text"/></placeholder>
-                    <columns>
-                        <TableColumn fx:id="nameColumn" text="文档名称" prefWidth="300"/>
-                        <TableColumn fx:id="categoryColumn" text="分类" prefWidth="140"/>
-                        <TableColumn fx:id="typeColumn" text="类型" prefWidth="90"/>
-                        <TableColumn fx:id="statusColumn" text="索引状态" prefWidth="130"/>
-                        <TableColumn fx:id="sizeColumn" text="大小" prefWidth="110"/>
-                    </columns>
-                </TableView>
-                <HBox alignment="CENTER_RIGHT" spacing="10">
-                    <Button fx:id="deleteButton" text="删除" onAction="#deleteSelected" styleClass="danger-button"/>
-                    <Button fx:id="viewButton" text="查看详情" onAction="#viewSelected" styleClass="secondary-button"/>
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.inin.aiinterviewer.ui.controller.KnowledgeController"
+           styleClass="page-content,knowledge-page">
+    <fx:define>
+        <ToggleGroup fx:id="statusToggleGroup"/>
+    </fx:define>
+    <VBox spacing="16">
+        <padding><Insets top="22" right="24" bottom="22" left="24"/></padding>
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <VBox spacing="4">
+                <Label text="知识库" styleClass="page-title"/>
+                <Label text="管理技术资料、项目文档与学习笔记，供面试过程按分类检索" styleClass="secondary-text"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="uploadButton" text="上传文档" onAction="#upload" styleClass="primary-button,knowledge-primary-button">
+                <graphic><FontIcon iconLiteral="mdi2u-upload-outline" iconSize="18"/></graphic>
+            </Button>
+            <Button text="新建分类" onAction="#createCategory" styleClass="knowledge-outline-button">
+                <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="17"/></graphic>
+            </Button>
+            <Button onAction="#refresh" styleClass="knowledge-icon-button" accessibleText="刷新知识库">
+                <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="19"/></graphic>
+                <tooltip><Tooltip text="刷新"/></tooltip>
+            </Button>
+        </HBox>
+
+        <HBox spacing="10" styleClass="knowledge-stats-row">
+            <VBox spacing="8" minWidth="185" prefWidth="245" maxWidth="270" styleClass="knowledge-stat-card">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="文档总数" styleClass="knowledge-stat-label"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <FontIcon iconLiteral="mdi2f-folder-outline" iconSize="22" styleClass="knowledge-stat-icon,primary"/>
+                </HBox>
+                <Label fx:id="totalCountLabel" text="0" styleClass="knowledge-stat-value"/>
+                <Label fx:id="totalHintLabel" text="全部资料" styleClass="knowledge-stat-hint"/>
+            </VBox>
+            <HBox HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="knowledge-stat-group">
+                <VBox spacing="8" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="knowledge-stat-segment">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="已完成索引" styleClass="knowledge-stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <FontIcon iconLiteral="mdi2c-check-circle-outline" iconSize="22" styleClass="knowledge-stat-icon,success"/>
+                    </HBox>
+                    <Label fx:id="readyCountLabel" text="0" styleClass="knowledge-stat-value"/>
+                    <Label fx:id="readyHintLabel" text="占比 0%" styleClass="knowledge-stat-hint"/>
+                </VBox>
+                <Separator orientation="VERTICAL"/>
+                <VBox spacing="8" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="knowledge-stat-segment">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="文档分类" styleClass="knowledge-stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <FontIcon iconLiteral="mdi2t-tag-multiple-outline" iconSize="22" styleClass="knowledge-stat-icon,info"/>
+                    </HBox>
+                    <Label fx:id="categoryCountLabel" text="0" styleClass="knowledge-stat-value"/>
+                    <Label text="可供面试方案选择" styleClass="knowledge-stat-hint"/>
+                </VBox>
+                <Separator orientation="VERTICAL"/>
+                <VBox spacing="8" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="knowledge-stat-segment">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="处理中" styleClass="knowledge-stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <FontIcon iconLiteral="mdi2p-progress-clock" iconSize="22" styleClass="knowledge-stat-icon,warning"/>
+                    </HBox>
+                    <Label fx:id="processingCountLabel" text="0" styleClass="knowledge-stat-value"/>
+                    <Label text="解析或向量化" styleClass="knowledge-stat-hint"/>
+                </VBox>
+                <Separator orientation="VERTICAL"/>
+                <VBox spacing="8" HBox.hgrow="ALWAYS" maxWidth="Infinity" styleClass="knowledge-stat-segment">
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="处理失败" styleClass="knowledge-stat-label"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <FontIcon iconLiteral="mdi2a-alert-circle-outline" iconSize="22" styleClass="knowledge-stat-icon,danger"/>
+                    </HBox>
+                    <Label fx:id="failedCountLabel" text="0" styleClass="knowledge-stat-value"/>
+                    <Label text="可删除后重新上传" styleClass="knowledge-stat-hint"/>
+                </VBox>
+            </HBox>
+        </HBox>
+
+        <HBox spacing="14" VBox.vgrow="ALWAYS">
+            <VBox minWidth="205" prefWidth="205" maxWidth="205" spacing="10" styleClass="knowledge-category-panel">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="分类 / 筛选" styleClass="knowledge-panel-title"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button onAction="#createCategory" styleClass="knowledge-inline-icon-button" accessibleText="新建分类">
+                        <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="17"/></graphic>
+                    </Button>
+                </HBox>
+                <TextField fx:id="categorySearchField" promptText="搜索分类" styleClass="knowledge-search-field"/>
+                <ListView fx:id="categoryList" VBox.vgrow="ALWAYS" styleClass="knowledge-category-list"/>
+            </VBox>
+
+            <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="knowledge-document-panel">
+                <HBox alignment="CENTER_LEFT" spacing="8" styleClass="knowledge-document-toolbar">
+                    <ToggleButton fx:id="allStatusButton" text="全部文档" selected="true"
+                                  toggleGroup="$statusToggleGroup" styleClass="knowledge-filter-toggle"/>
+                    <ToggleButton fx:id="readyStatusButton" text="已就绪"
+                                  toggleGroup="$statusToggleGroup" styleClass="knowledge-filter-toggle"/>
+                    <ToggleButton fx:id="processingStatusButton" text="处理中"
+                                  toggleGroup="$statusToggleGroup" styleClass="knowledge-filter-toggle"/>
+                    <ToggleButton fx:id="failedStatusButton" text="失败"
+                                  toggleGroup="$statusToggleGroup" styleClass="knowledge-filter-toggle"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="documentSearchField" promptText="搜索文档" prefWidth="205" styleClass="knowledge-search-field"/>
+                    <ComboBox fx:id="sortBox" prefWidth="120" styleClass="knowledge-sort-box"/>
+                </HBox>
+                <Separator/>
+                <ListView fx:id="documentList" VBox.vgrow="ALWAYS" styleClass="knowledge-document-list">
+                    <placeholder>
+                        <VBox alignment="CENTER" spacing="10">
+                            <FontIcon iconLiteral="mdi2f-file-search-outline" iconSize="34" styleClass="knowledge-empty-icon"/>
+                            <Label text="暂无符合条件的文档" styleClass="secondary-text"/>
+                        </VBox>
+                    </placeholder>
+                </ListView>
+                <HBox alignment="CENTER_LEFT" styleClass="knowledge-list-footer">
+                    <Label fx:id="summaryLabel" text="共 0 个文档" styleClass="secondary-text"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="点击列表项查看文档" styleClass="knowledge-footer-hint"/>
                 </HBox>
             </VBox>
-            <VBox spacing="12" styleClass="content-card">
-                <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-                <Label text="语义检索验证" styleClass="module-title"/>
-                <HBox spacing="10">
-                    <TextField fx:id="searchField" promptText="输入问题或技术关键词" HBox.hgrow="ALWAYS"/>
-                    <Button fx:id="searchButton" text="检索" onAction="#search" styleClass="primary-button"/>
-                </HBox>
-                <TextArea fx:id="searchResultArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
-                          promptText="检索结果将显示在这里"/>
-            </VBox>
-        </items>
-    </SplitPane>
-</VBox>
+        </HBox>
+    </VBox>
+    <DrawerPane fx:id="documentDrawer" drawerWidth="442"/>
+</StackPane>
