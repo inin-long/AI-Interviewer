@@ -1465,25 +1465,25 @@
 }
 
 .auth-brand-title {
-    -fx-font-size: 40px;
+    -fx-font-size: 34px;
     -fx-font-weight: 800;
     -fx-text-fill: #121B2D;
 }
 
 .auth-brand-subtitle {
-    -fx-font-size: 17px;
+    -fx-font-size: 15px;
     -fx-font-weight: 500;
     -fx-text-fill: #667188;
 }
 
 .auth-hero-title {
-    -fx-font-size: 38px;
+    -fx-font-size: 32px;
     -fx-font-weight: 800;
     -fx-text-fill: #17233B;
 }
 
 .auth-hero-subtitle {
-    -fx-font-size: 17px;
+    -fx-font-size: 15px;
     -fx-font-weight: 500;
     -fx-text-fill: #5D6980;
 }
@@ -1503,13 +1503,13 @@
 }
 
 .auth-feature-title {
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-font-weight: 700;
     -fx-text-fill: #16223B;
 }
 
 .auth-feature-copy {
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-fill: #667188;
 }
 
@@ -1528,13 +1528,13 @@
 }
 
 .auth-security-title {
-    -fx-font-size: 15px;
+    -fx-font-size: 14px;
     -fx-font-weight: 700;
     -fx-text-fill: #23304A;
 }
 
 .auth-security-copy {
-    -fx-font-size: 13px;
+    -fx-font-size: 12px;
     -fx-text-fill: #5D6980;
 }
 
@@ -1552,52 +1552,52 @@
 }
 
 .auth-form-title {
-    -fx-font-size: 26px;
+    -fx-font-size: 24px;
     -fx-font-weight: 800;
     -fx-text-fill: #111827;
 }
 
 .auth-form-subtitle {
-    -fx-font-size: 15px;
+    -fx-font-size: 14px;
     -fx-text-fill: #7A8498;
 }
 
 .auth-field-label {
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: 700;
     -fx-text-fill: #171A21;
 }
 
 .auth-input-wrap {
-    -fx-min-height: 52;
-    -fx-pref-height: 52;
-    -fx-max-height: 52;
-}
-
-.auth-input-compact-wrap {
     -fx-min-height: 46;
     -fx-pref-height: 46;
     -fx-max-height: 46;
 }
 
+.auth-input-compact-wrap {
+    -fx-min-height: 42;
+    -fx-pref-height: 42;
+    -fx-max-height: 42;
+}
+
 .auth-screen .auth-input {
-    -fx-min-height: 52;
-    -fx-pref-height: 52;
-    -fx-max-height: 52;
+    -fx-min-height: 46;
+    -fx-pref-height: 46;
+    -fx-max-height: 46;
     -fx-background-color: #FFFFFF;
     -fx-border-color: #CDD4E0;
     -fx-border-width: 1;
     -fx-border-radius: 7;
     -fx-background-radius: 7;
-    -fx-font-size: 15px;
+    -fx-font-size: 14px;
     -fx-text-fill: #20283A;
     -fx-prompt-text-fill: #9AA3B5;
 }
 
 .auth-screen .auth-input-compact {
-    -fx-min-height: 46;
-    -fx-pref-height: 46;
-    -fx-max-height: 46;
+    -fx-min-height: 42;
+    -fx-pref-height: 42;
+    -fx-max-height: 42;
 }
 
 .auth-screen .auth-input-leading {
@@ -1640,7 +1640,7 @@
 }
 
 .auth-checkbox {
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-fill: #30384A;
 }
 
@@ -1669,7 +1669,7 @@
     -fx-padding: 4 0;
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-font-weight: 600;
     -fx-text-fill: #5268F4;
 }
@@ -1688,7 +1688,7 @@
     -fx-background-color: #5265F4;
     -fx-background-radius: 6;
     -fx-border-color: transparent;
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-font-weight: 700;
     -fx-text-fill: #FFFFFF;
 }
@@ -1707,7 +1707,7 @@
     -fx-border-color: #6073F4;
     -fx-border-width: 1;
     -fx-border-radius: 6;
-    -fx-font-size: 16px;
+    -fx-font-size: 15px;
     -fx-font-weight: 700;
     -fx-text-fill: #5268F4;
 }
@@ -1726,7 +1726,7 @@
 }
 
 .auth-divider-text {
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-fill: #7D8799;
 }
 
@@ -1740,11 +1740,11 @@
 }
 
 .auth-card-note-text {
-    -fx-font-size: 13px;
+    -fx-font-size: 12px;
     -fx-text-fill: #758095;
 }
 
 .auth-footer {
-    -fx-font-size: 14px;
+    -fx-font-size: 13px;
     -fx-text-fill: #66728A;
 }

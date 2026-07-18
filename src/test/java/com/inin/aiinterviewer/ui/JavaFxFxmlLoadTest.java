@@ -4,11 +4,14 @@ import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.UserDto;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
+import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
+import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import javafx.application.Platform;
@@ -29,6 +32,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.css.PseudoClass;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -68,6 +72,9 @@ class JavaFxFxmlLoadTest {
     @Autowired
     private TaskNotificationCenter taskNotificationCenter;
 
+    @Autowired
+    private GlobalExceptionHandler exceptionHandler;
+
     @DynamicPropertySource
     static void applicationProperties(DynamicPropertyRegistry registry) {
         registry.add("ai.interviewer.home", () -> applicationHome.toString());
@@ -94,7 +101,7 @@ class JavaFxFxmlLoadTest {
     void authenticationScreensUseReferenceLayoutAndInteractivePasswordControls() throws Exception {
         FutureTask<boolean[]> task = new FutureTask<>(() -> {
             Parent login = load("/fxml/login.fxml");
-            Scene loginScene = new Scene(login, 1672, 901);
+            Scene loginScene = new Scene(login, 1440, 820);
             loginScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
             login.applyCss();
             login.layout();
@@ -108,18 +115,29 @@ class JavaFxFxmlLoadTest {
             visibilityButton.fire();
 
             Parent register = load("/fxml/register.fxml");
-            Scene registerScene = new Scene(register, 1672, 901);
+            Scene registerScene = new Scene(register, 1440, 820);
             registerScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
             register.applyCss();
             register.layout();
             VBox registerCard = (VBox) register.lookup(".register-form-card");
             CheckBox agreement = (CheckBox) register.lookup("#agreementCheckBox");
+            HBox registerMain = (HBox) register.lookup(".auth-main");
+            AnchorPane registerShowcase = (AnchorPane) register.lookup(".auth-showcase");
+            VBox featureList = (VBox) register.lookup("#authFeatureList");
+            HBox securityNote = (HBox) register.lookup("#authSecurityNote");
+            double securityGap = securityNote.getLayoutY()
+                    - featureList.getLayoutY() - featureList.getHeight();
 
             return new boolean[]{
-                    Math.abs(loginCard.getWidth() - 582) < 0.5,
-                    Math.abs(loginCard.getHeight() - 684) < 0.5,
-                    Math.abs(registerCard.getWidth() - 588) < 0.5,
-                    Math.abs(registerCard.getHeight() - 724) < 0.5,
+                    Math.abs(loginCard.getWidth() - 480) < 0.5,
+                    Math.abs(loginCard.getHeight() - 590) < 0.5,
+                    Math.abs(registerCard.getWidth() - 480) < 0.5,
+                    Math.abs(registerCard.getHeight() - 620) < 0.5,
+                    registerShowcase.getLayoutX() >= 71.5,
+                    registerMain.getWidth() - registerCard.getLayoutX() - registerCard.getWidth() >= 71.5,
+                    registerCard.getLayoutX() - registerShowcase.getLayoutX()
+                            - registerShowcase.getWidth() >= 35.5,
+                    securityGap >= 13.5 && securityGap <= 14.5,
                     illustration != null && illustration.getImage() != null,
                     !password.isVisible() && visiblePassword.isVisible(),
                     "local-secret".equals(visiblePassword.getText()),
@@ -130,6 +148,23 @@ class JavaFxFxmlLoadTest {
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void applicationStartsWithCompactDesktopWindowDimensions() throws Exception {
+        FutureTask<double[]> task = new FutureTask<>(() -> {
+            JavaFxViewManager compactViewManager = new JavaFxViewManager(
+                    applicationContext, sessionState, exceptionHandler);
+            Stage stage = new Stage();
+            compactViewManager.attachStage(stage);
+            compactViewManager.switchView(Route.LOGIN);
+            double[] dimensions = {stage.getScene().getWidth(), stage.getScene().getHeight()};
+            stage.close();
+            return dimensions;
+        });
+        Platform.runLater(task);
+
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsExactly(1440.0, 820.0);
     }
 
     @Test

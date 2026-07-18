@@ -10,37 +10,38 @@
             fx:controller="com.inin.aiinterviewer.ui.controller.RegisterController"
             styleClass="auth-root, auth-screen">
     <top>
-        <Region minHeight="52" prefHeight="52" maxHeight="52"/>
+        <Region minHeight="40" prefHeight="40" maxHeight="40"/>
     </top>
     <center>
-        <HBox alignment="CENTER" spacing="40" styleClass="auth-main">
+        <HBox alignment="CENTER" spacing="0" styleClass="auth-main">
             <padding><Insets right="72" left="72"/></padding>
             <fx:include fx:id="authShowcase" source="auth-showcase.fxml"/>
+            <Region minWidth="36" prefWidth="36" maxWidth="160" HBox.hgrow="ALWAYS"/>
 
-            <VBox minWidth="540" prefWidth="588" maxWidth="588"
-                  minHeight="724" prefHeight="724" maxHeight="724"
+            <VBox minWidth="480" prefWidth="480" maxWidth="480"
+                  minHeight="620" prefHeight="620" maxHeight="620"
                   spacing="0" styleClass="auth-form-card, register-form-card">
-                <padding><Insets top="28" right="40" bottom="26" left="40"/></padding>
+                <padding><Insets top="22" right="32" bottom="18" left="32"/></padding>
                 <Label text="创建账号" styleClass="auth-form-title"/>
                 <Label text="创建一个新的本地账号，开始你的 AI 模拟面试" styleClass="auth-form-subtitle">
-                    <VBox.margin><Insets top="6" bottom="24"/></VBox.margin>
+                    <VBox.margin><Insets top="5" bottom="16"/></VBox.margin>
                 </Label>
 
-                <Label text="用户名" styleClass="auth-field-label"><VBox.margin><Insets bottom="6"/></VBox.margin></Label>
+                <Label text="用户名" styleClass="auth-field-label"><VBox.margin><Insets bottom="5"/></VBox.margin></Label>
                 <StackPane styleClass="auth-input-wrap, auth-input-compact-wrap">
                     <TextField fx:id="usernameField" promptText="请输入用户名" styleClass="auth-input, auth-input-leading, auth-input-compact"/>
                     <FontIcon iconLiteral="mdi2a-account-outline" iconSize="21" mouseTransparent="true"
                               StackPane.alignment="CENTER_LEFT" styleClass="auth-input-icon"><StackPane.margin><Insets left="16"/></StackPane.margin></FontIcon>
                 </StackPane>
 
-                <Label text="昵称" styleClass="auth-field-label"><VBox.margin><Insets top="18" bottom="6"/></VBox.margin></Label>
+                <Label text="昵称" styleClass="auth-field-label"><VBox.margin><Insets top="12" bottom="5"/></VBox.margin></Label>
                 <StackPane styleClass="auth-input-wrap, auth-input-compact-wrap">
                     <TextField fx:id="nicknameField" promptText="请输入昵称" styleClass="auth-input, auth-input-leading, auth-input-compact"/>
                     <FontIcon iconLiteral="mdi2a-account" iconSize="21" mouseTransparent="true"
                               StackPane.alignment="CENTER_LEFT" styleClass="auth-input-icon"><StackPane.margin><Insets left="16"/></StackPane.margin></FontIcon>
                 </StackPane>
 
-                <Label text="密码" styleClass="auth-field-label"><VBox.margin><Insets top="18" bottom="6"/></VBox.margin></Label>
+                <Label text="密码" styleClass="auth-field-label"><VBox.margin><Insets top="12" bottom="5"/></VBox.margin></Label>
                 <StackPane styleClass="auth-input-wrap, auth-input-compact-wrap">
                     <PasswordField fx:id="passwordField" promptText="请输入密码" styleClass="auth-input, auth-input-both, auth-input-compact"/>
                     <TextField fx:id="visiblePasswordField" promptText="请输入密码" visible="false" managed="false"
@@ -54,7 +55,7 @@
                     </Button>
                 </StackPane>
 
-                <Label text="确认密码" styleClass="auth-field-label"><VBox.margin><Insets top="18" bottom="6"/></VBox.margin></Label>
+                <Label text="确认密码" styleClass="auth-field-label"><VBox.margin><Insets top="12" bottom="5"/></VBox.margin></Label>
                 <StackPane styleClass="auth-input-wrap, auth-input-compact-wrap">
                     <PasswordField fx:id="confirmPasswordField" promptText="请再次输入密码" onAction="#handleRegister"
                                    styleClass="auth-input, auth-input-both, auth-input-compact"/>
@@ -69,7 +70,7 @@
                     </Button>
                 </StackPane>
 
-                <HBox alignment="CENTER_LEFT" minHeight="54" prefHeight="54">
+                <HBox alignment="CENTER_LEFT" minHeight="42" prefHeight="42">
                     <CheckBox fx:id="agreementCheckBox" text="我已阅读并同意" selected="true" styleClass="auth-checkbox"/>
                     <Button text="本地使用说明" onAction="#showLocalUsage" styleClass="auth-inline-link-button"/>
                     <Region HBox.hgrow="ALWAYS"/>
@@ -77,23 +78,23 @@
                 </HBox>
 
                 <Label fx:id="errorLabel" wrapText="true" maxWidth="Infinity" styleClass="form-error">
-                    <VBox.margin><Insets bottom="8"/></VBox.margin>
+                    <VBox.margin><Insets bottom="6"/></VBox.margin>
                 </Label>
                 <Button fx:id="registerButton" text="创建账号" onAction="#handleRegister" defaultButton="true"
-                        maxWidth="Infinity" minHeight="50" prefHeight="50" styleClass="auth-primary-button"/>
+                        maxWidth="Infinity" minHeight="44" prefHeight="44" styleClass="auth-primary-button"/>
 
-                <HBox alignment="CENTER" spacing="16" minHeight="48" prefHeight="48">
+                <HBox alignment="CENTER" spacing="14" minHeight="40" prefHeight="40">
                     <Separator HBox.hgrow="ALWAYS"/>
                     <Label text="或" styleClass="auth-divider-text"/>
                     <Separator HBox.hgrow="ALWAYS"/>
                 </HBox>
 
-                <Button text="返回登录" onAction="#showLogin" maxWidth="Infinity" minHeight="50" prefHeight="50"
+                <Button text="返回登录" onAction="#showLogin" maxWidth="Infinity" minHeight="44" prefHeight="44"
                         contentDisplay="LEFT" graphicTextGap="10" styleClass="auth-secondary-button">
                     <graphic><FontIcon iconLiteral="mdi2a-account-outline" iconSize="23"/></graphic>
                 </Button>
 
-                <HBox alignment="CENTER_LEFT" spacing="10" minHeight="48" prefHeight="48" styleClass="auth-card-note">
+                <HBox alignment="CENTER_LEFT" spacing="8" minHeight="40" prefHeight="40" styleClass="auth-card-note">
                     <FontIcon iconLiteral="mdi2i-information-outline" iconSize="19"/>
                     <Label text="创建的是本地账号，所有数据仅保存在本机。" styleClass="auth-card-note-text"/>
                 </HBox>
@@ -101,7 +102,7 @@
         </HBox>
     </center>
     <bottom>
-        <HBox alignment="CENTER" minHeight="45" prefHeight="45" maxHeight="45">
+        <HBox alignment="CENTER" minHeight="40" prefHeight="40" maxHeight="40">
             <Label text="AI Interviewer   v1.0.0   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
         </HBox>
     </bottom>

@@ -14,12 +14,12 @@
 
 <AnchorPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
-            minWidth="880" prefWidth="900" maxWidth="900"
-            minHeight="700" prefHeight="700" maxHeight="700"
+            minWidth="760" prefWidth="760" maxWidth="760"
+            minHeight="620" prefHeight="620" maxHeight="620"
             styleClass="auth-showcase">
     <children>
-        <HBox layoutX="0" layoutY="16" alignment="CENTER_LEFT" spacing="18">
-            <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
+        <HBox layoutX="0" layoutY="12" alignment="CENTER_LEFT" spacing="15">
+            <ImageView fitWidth="72" fitHeight="72" preserveRatio="true" smooth="true">
                 <image><Image url="@../images/home/app-icon.png"/></image>
             </ImageView>
             <VBox alignment="CENTER_LEFT" spacing="3">
@@ -28,39 +28,39 @@
             </VBox>
         </HBox>
 
-        <VBox layoutX="0" layoutY="156" spacing="14">
+        <VBox layoutX="0" layoutY="136" spacing="12">
             <Label text="开始你的 AI 模拟面试" styleClass="auth-hero-title"/>
             <Label text="简历解析 · 智能提问 · 深入追问 · 评估反馈 · 报告生成"
                    styleClass="auth-hero-subtitle"/>
         </VBox>
-        <Region layoutX="0" layoutY="252" minWidth="48" prefWidth="48" minHeight="3" prefHeight="3"
+        <Region layoutX="0" layoutY="219" minWidth="44" prefWidth="44" minHeight="3" prefHeight="3"
                 styleClass="auth-title-accent"/>
 
-        <VBox layoutX="0" layoutY="292" spacing="22">
-            <HBox alignment="CENTER_LEFT" spacing="22">
-                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
-                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
-                    <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="28"/>
+        <VBox fx:id="authFeatureList" layoutX="0" layoutY="252" spacing="18">
+            <HBox alignment="CENTER_LEFT" spacing="18">
+                <StackPane minWidth="56" prefWidth="56" maxWidth="56"
+                           minHeight="56" prefHeight="56" maxHeight="56" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="25"/>
                 </StackPane>
                 <VBox spacing="6">
                     <Label text="理解你的简历与项目经验" styleClass="auth-feature-title"/>
                     <Label text="本地解析简历与技能画像，构建专属知识库" styleClass="auth-feature-copy"/>
                 </VBox>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="22">
-                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
-                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
-                    <FontIcon iconLiteral="mdi2m-message-text-outline" iconSize="28"/>
+            <HBox alignment="CENTER_LEFT" spacing="18">
+                <StackPane minWidth="56" prefWidth="56" maxWidth="56"
+                           minHeight="56" prefHeight="56" maxHeight="56" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2m-message-text-outline" iconSize="25"/>
                 </StackPane>
                 <VBox spacing="6">
                     <Label text="智能生成个性化面试问题" styleClass="auth-feature-title"/>
                     <Label text="结合岗位要求与技术栈，生成高质量提问与追问" styleClass="auth-feature-copy"/>
                 </VBox>
             </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="22">
-                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
-                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
-                    <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="28"/>
+            <HBox alignment="CENTER_LEFT" spacing="18">
+                <StackPane minWidth="56" prefWidth="56" maxWidth="56"
+                           minHeight="56" prefHeight="56" maxHeight="56" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="25"/>
                 </StackPane>
                 <VBox spacing="6">
                     <Label text="全面评估与结构化报告" styleClass="auth-feature-title"/>
@@ -69,27 +69,27 @@
             </HBox>
         </VBox>
 
-        <StackPane fx:id="authIllustrationStage" layoutX="462" layoutY="214"
-                   minWidth="430" prefWidth="430" maxWidth="430"
-                   minHeight="470" prefHeight="470" maxHeight="470"
+        <StackPane fx:id="authIllustrationStage" layoutX="380" layoutY="186"
+                   minWidth="372" prefWidth="372" maxWidth="372"
+                   minHeight="420" prefHeight="420" maxHeight="420"
                    styleClass="auth-illustration-stage">
-            <ImageView fx:id="authIllustration" fitWidth="430" fitHeight="470"
+            <ImageView fx:id="authIllustration" fitWidth="372" fitHeight="420"
                        preserveRatio="false" smooth="true" styleClass="auth-illustration">
                 <viewport><Rectangle2D minX="20" minY="0" width="440" height="480"/></viewport>
                 <image><Image url="@../images/auth/auth-illustration-fallback.png"/></image>
             </ImageView>
         </StackPane>
 
-        <HBox layoutX="0" layoutY="620" alignment="CENTER_LEFT" spacing="18"
-              minWidth="500" prefWidth="500" maxWidth="500"
-              minHeight="82" prefHeight="82" maxHeight="82" styleClass="auth-security-note">
-            <padding><Insets top="14" right="20" bottom="14" left="22"/></padding>
-            <FontIcon iconLiteral="mdi2s-shield-check-outline" iconSize="30" styleClass="auth-security-icon"/>
+        <HBox fx:id="authSecurityNote" layoutX="0" layoutY="470" alignment="CENTER_LEFT" spacing="14"
+              minWidth="440" prefWidth="440" maxWidth="440"
+              minHeight="72" prefHeight="72" maxHeight="72" styleClass="auth-security-note">
+            <padding><Insets top="12" right="16" bottom="12" left="18"/></padding>
+            <FontIcon iconLiteral="mdi2s-shield-check-outline" iconSize="27" styleClass="auth-security-icon"/>
             <VBox alignment="CENTER_LEFT" spacing="5">
                 <Label text="数据安全 · 完全本地存储" styleClass="auth-security-title"/>
                 <Label text="所有数据仅保存在本机，不会上传到任何云端服务" styleClass="auth-security-copy"/>
             </VBox>
-            <FontIcon iconLiteral="mdi2l-lock" iconSize="16" styleClass="auth-security-lock"/>
+            <FontIcon iconLiteral="mdi2l-lock" iconSize="14" styleClass="auth-security-lock"/>
         </HBox>
     </children>
 </AnchorPane>
