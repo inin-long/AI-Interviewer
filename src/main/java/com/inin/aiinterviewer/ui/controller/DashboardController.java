@@ -295,18 +295,6 @@ public class DashboardController {
 
     @FXML private void showHistory() { contentNavigator.showRoute(Route.HISTORY); }
     @FXML private void showPlans() { contentNavigator.showRoute(Route.PLAN); }
-    @FXML private void showResumes() { contentNavigator.showRoute(Route.RESUME); }
-    @FXML private void showKnowledge() { contentNavigator.showRoute(Route.KNOWLEDGE); }
-    @FXML private void showSettings() { contentNavigator.showRoute(Route.SETTING); }
-
-    @FXML
-    private void openReportCenter() {
-        interviewHistory.stream().filter(InterviewHistoryItemDto::reportAvailable).findFirst()
-                .ifPresentOrElse(
-                        item -> contentNavigator.showSubPage(
-                                "/fxml/report-detail-view.fxml", "面试报告", item.sessionId()),
-                        () -> contentNavigator.showRoute(Route.HISTORY));
-    }
 
     private void openInterview(InterviewHistoryItemDto item) {
         if (isActive(item)) {

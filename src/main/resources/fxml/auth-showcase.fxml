@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Rectangle2D?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            minWidth="880" prefWidth="900" maxWidth="900"
+            minHeight="700" prefHeight="700" maxHeight="700"
+            styleClass="auth-showcase">
+    <children>
+        <HBox layoutX="0" layoutY="16" alignment="CENTER_LEFT" spacing="18">
+            <ImageView fitWidth="80" fitHeight="80" preserveRatio="true" smooth="true">
+                <image><Image url="@../images/home/app-icon.png"/></image>
+            </ImageView>
+            <VBox alignment="CENTER_LEFT" spacing="3">
+                <Label text="AI Interviewer" styleClass="auth-brand-title"/>
+                <Label text="本地 AI 技术面试助手" styleClass="auth-brand-subtitle"/>
+            </VBox>
+        </HBox>
+
+        <VBox layoutX="0" layoutY="156" spacing="14">
+            <Label text="开始你的 AI 模拟面试" styleClass="auth-hero-title"/>
+            <Label text="简历解析 · 智能提问 · 深入追问 · 评估反馈 · 报告生成"
+                   styleClass="auth-hero-subtitle"/>
+        </VBox>
+        <Region layoutX="0" layoutY="252" minWidth="48" prefWidth="48" minHeight="3" prefHeight="3"
+                styleClass="auth-title-accent"/>
+
+        <VBox layoutX="0" layoutY="292" spacing="22">
+            <HBox alignment="CENTER_LEFT" spacing="22">
+                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
+                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="28"/>
+                </StackPane>
+                <VBox spacing="6">
+                    <Label text="理解你的简历与项目经验" styleClass="auth-feature-title"/>
+                    <Label text="本地解析简历与技能画像，构建专属知识库" styleClass="auth-feature-copy"/>
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="22">
+                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
+                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2m-message-text-outline" iconSize="28"/>
+                </StackPane>
+                <VBox spacing="6">
+                    <Label text="智能生成个性化面试问题" styleClass="auth-feature-title"/>
+                    <Label text="结合岗位要求与技术栈，生成高质量提问与追问" styleClass="auth-feature-copy"/>
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="22">
+                <StackPane minWidth="62" prefWidth="62" maxWidth="62"
+                           minHeight="62" prefHeight="62" maxHeight="62" styleClass="auth-feature-icon">
+                    <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="28"/>
+                </StackPane>
+                <VBox spacing="6">
+                    <Label text="全面评估与结构化报告" styleClass="auth-feature-title"/>
+                    <Label text="多维度评估表现，生成可视化面试报告与建议" styleClass="auth-feature-copy"/>
+                </VBox>
+            </HBox>
+        </VBox>
+
+        <StackPane fx:id="authIllustrationStage" layoutX="462" layoutY="214"
+                   minWidth="430" prefWidth="430" maxWidth="430"
+                   minHeight="470" prefHeight="470" maxHeight="470"
+                   styleClass="auth-illustration-stage">
+            <ImageView fx:id="authIllustration" fitWidth="430" fitHeight="470"
+                       preserveRatio="false" smooth="true" styleClass="auth-illustration">
+                <viewport><Rectangle2D minX="20" minY="0" width="440" height="480"/></viewport>
+                <image><Image url="@../images/auth/auth-illustration-fallback.png"/></image>
+            </ImageView>
+        </StackPane>
+
+        <HBox layoutX="0" layoutY="620" alignment="CENTER_LEFT" spacing="18"
+              minWidth="500" prefWidth="500" maxWidth="500"
+              minHeight="82" prefHeight="82" maxHeight="82" styleClass="auth-security-note">
+            <padding><Insets top="14" right="20" bottom="14" left="22"/></padding>
+            <FontIcon iconLiteral="mdi2s-shield-check-outline" iconSize="30" styleClass="auth-security-icon"/>
+            <VBox alignment="CENTER_LEFT" spacing="5">
+                <Label text="数据安全 · 完全本地存储" styleClass="auth-security-title"/>
+                <Label text="所有数据仅保存在本机，不会上传到任何云端服务" styleClass="auth-security-copy"/>
+            </VBox>
+            <FontIcon iconLiteral="mdi2l-lock" iconSize="16" styleClass="auth-security-lock"/>
+        </HBox>
+    </children>
+</AnchorPane>

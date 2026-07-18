@@ -3,71 +3,94 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.LoginController"
-            styleClass="auth-root">
+            styleClass="auth-root, auth-screen">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="window-header">
-            <padding><Insets top="14" right="24" bottom="14" left="24"/></padding>
-            <Label text="AI" styleClass="brand-mark-small"/>
-            <Label text="AI Interviewer" styleClass="window-brand"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Label text="●  本地模式" styleClass="status-success"/>
-        </HBox>
+        <Region minHeight="66" prefHeight="66" maxHeight="66"/>
     </top>
     <center>
-        <HBox alignment="CENTER" spacing="64" styleClass="auth-content">
-            <padding><Insets top="44" right="64" bottom="44" left="64"/></padding>
-            <VBox spacing="24" prefWidth="560" maxWidth="620" styleClass="auth-intro">
-                <HBox alignment="CENTER_LEFT" spacing="18">
-                    <Label text="AI" styleClass="brand-mark-large"/>
-                    <VBox spacing="3">
-                        <Label text="AI Interviewer" styleClass="brand-title"/>
-                        <Label text="本地 AI 技术面试助手" styleClass="secondary-text"/>
-                    </VBox>
+        <HBox alignment="CENTER" spacing="40" styleClass="auth-main">
+            <padding><Insets right="72" left="72"/></padding>
+            <fx:include fx:id="authShowcase" source="auth-showcase.fxml"/>
+
+            <VBox minWidth="540" prefWidth="582" maxWidth="582"
+                  minHeight="684" prefHeight="684" maxHeight="684"
+                  translateY="13" spacing="0" styleClass="auth-form-card, login-form-card">
+                <padding><Insets top="38" right="40" bottom="34" left="40"/></padding>
+                <Label text="登录账户" styleClass="auth-form-title"/>
+                <Label text="欢迎回来，请登录你的本地账号" styleClass="auth-form-subtitle">
+                    <VBox.margin><Insets top="7" bottom="36"/></VBox.margin>
+                </Label>
+
+                <Label text="用户名" styleClass="auth-field-label">
+                    <VBox.margin><Insets bottom="12"/></VBox.margin>
+                </Label>
+                <StackPane styleClass="auth-input-wrap">
+                    <TextField fx:id="usernameField" promptText="请输入用户名" onAction="#handleLogin"
+                               styleClass="auth-input, auth-input-leading"/>
+                    <FontIcon iconLiteral="mdi2a-account-outline" iconSize="22" mouseTransparent="true"
+                              StackPane.alignment="CENTER_LEFT" styleClass="auth-input-icon">
+                        <StackPane.margin><Insets left="16"/></StackPane.margin>
+                    </FontIcon>
+                </StackPane>
+
+                <Label text="密码" styleClass="auth-field-label">
+                    <VBox.margin><Insets top="38" bottom="8"/></VBox.margin>
+                </Label>
+                <StackPane styleClass="auth-input-wrap">
+                    <PasswordField fx:id="passwordField" promptText="请输入密码" onAction="#handleLogin"
+                                   styleClass="auth-input, auth-input-both"/>
+                    <TextField fx:id="visiblePasswordField" promptText="请输入密码" onAction="#handleLogin"
+                               visible="false" managed="false" styleClass="auth-input, auth-input-both"/>
+                    <FontIcon iconLiteral="mdi2l-lock-outline" iconSize="22" mouseTransparent="true"
+                              StackPane.alignment="CENTER_LEFT" styleClass="auth-input-icon">
+                        <StackPane.margin><Insets left="16"/></StackPane.margin>
+                    </FontIcon>
+                    <Button fx:id="passwordVisibilityButton" onAction="#togglePasswordVisibility"
+                            accessibleText="显示密码" StackPane.alignment="CENTER_RIGHT" styleClass="auth-eye-button">
+                        <StackPane.margin><Insets right="8"/></StackPane.margin>
+                        <graphic><FontIcon fx:id="passwordVisibilityIcon" iconLiteral="mdi2e-eye-off-outline" iconSize="21"/></graphic>
+                    </Button>
+                </StackPane>
+
+                <HBox alignment="CENTER_LEFT" minHeight="64" prefHeight="64">
+                    <CheckBox fx:id="rememberCheckBox" text="记住我" selected="true" styleClass="auth-checkbox"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Button text="忘记密码？" onAction="#showPasswordHelp" styleClass="auth-link-button"/>
                 </HBox>
-                <Region prefHeight="20"/>
-                <Label text="开始你的 AI 模拟面试" styleClass="hero-title"/>
-                <Label text="简历解析 · 智能提问 · 深入追问 · 评估反馈 · 报告生成"
-                       styleClass="hero-subtitle" wrapText="true"/>
-                <Region prefHeight="8"/>
-                <VBox spacing="18">
-                    <VBox spacing="4" styleClass="feature-row">
-                        <Label text="理解你的简历与项目经验" styleClass="feature-title"/>
-                        <Label text="本地解析简历与技能画像，为面试建立可靠上下文" styleClass="secondary-text"/>
-                    </VBox>
-                    <VBox spacing="4" styleClass="feature-row">
-                        <Label text="生成有依据的个性化问题" styleClass="feature-title"/>
-                        <Label text="结合岗位、技术栈和项目经历进行提问与追问" styleClass="secondary-text"/>
-                    </VBox>
-                    <VBox spacing="4" styleClass="feature-row">
-                        <Label text="形成结构化评估报告" styleClass="feature-title"/>
-                        <Label text="从多个维度分析表现，并给出可执行的改进建议" styleClass="secondary-text"/>
-                    </VBox>
-                </VBox>
-                <Region prefHeight="10"/>
-                <Label text="数据安全 · 账户和业务数据默认保存在本机"
-                       styleClass="local-data-note" wrapText="true"/>
-            </VBox>
-            <VBox spacing="18" prefWidth="440" maxWidth="460" styleClass="form-card">
-                <Label text="登录账户" styleClass="form-title"/>
-                <Label text="欢迎回来，请登录你的本地账户" styleClass="secondary-text"/>
-                <Region prefHeight="8"/>
-                <Label text="用户名" styleClass="field-label"/>
-                <TextField fx:id="usernameField" promptText="请输入用户名" onAction="#handleLogin"/>
-                <Label text="密码" styleClass="field-label"/>
-                <PasswordField fx:id="passwordField" promptText="请输入密码" onAction="#handleLogin"/>
-                <Label fx:id="errorLabel" wrapText="true" styleClass="form-error"/>
+
+                <Label fx:id="errorLabel" wrapText="true" maxWidth="Infinity" styleClass="form-error">
+                    <VBox.margin><Insets bottom="10"/></VBox.margin>
+                </Label>
                 <Button fx:id="loginButton" text="登录" onAction="#handleLogin" defaultButton="true"
-                        maxWidth="Infinity" styleClass="primary-button"/>
-                <Separator/>
-                <Button fx:id="showRegisterButton" text="创建本地账户" onAction="#showRegister"
-                        maxWidth="Infinity" styleClass="secondary-button"/>
-                <Label text="所有数据仅保存在本机；AI 调用需要单独配置服务。"
-                       styleClass="fine-print" wrapText="true"/>
+                        maxWidth="Infinity" minHeight="52" prefHeight="52" styleClass="auth-primary-button"/>
+
+                <HBox alignment="CENTER" spacing="16" minHeight="72" prefHeight="72">
+                    <Separator HBox.hgrow="ALWAYS"/>
+                    <Label text="或" styleClass="auth-divider-text"/>
+                    <Separator HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <Button fx:id="showRegisterButton" text="创建账号" onAction="#showRegister"
+                        maxWidth="Infinity" minHeight="52" prefHeight="52"
+                        contentDisplay="LEFT" graphicTextGap="10" styleClass="auth-secondary-button">
+                    <graphic><FontIcon iconLiteral="mdi2a-account-plus-outline" iconSize="23"/></graphic>
+                </Button>
+
+                <HBox alignment="CENTER_LEFT" spacing="10" minHeight="58" prefHeight="58" styleClass="auth-card-note">
+                    <FontIcon iconLiteral="mdi2i-information-outline" iconSize="19"/>
+                    <Label text="使用本地账号登录，所有数据仅保存在本机。" styleClass="auth-card-note-text"/>
+                </HBox>
             </VBox>
         </HBox>
     </center>
+    <bottom>
+        <HBox alignment="CENTER" minHeight="55" prefHeight="55" maxHeight="55">
+            <Label text="AI Interviewer   v1.0.0   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
+        </HBox>
+    </bottom>
 </BorderPane>

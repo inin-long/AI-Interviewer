@@ -6,26 +6,30 @@ import com.inin.aiinterviewer.application.dto.UserDto;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import javafx.application.Platform;
+import javafx.animation.Animation;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.css.PseudoClass;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -72,19 +76,76 @@ class JavaFxFxmlLoadTest {
     @BeforeAll
     static void startJavaFxToolkit() throws InterruptedException {
         CountDownLatch started = new CountDownLatch(1);
-        Platform.startup(started::countDown);
+        try {
+            Platform.startup(started::countDown);
+        } catch (IllegalStateException alreadyStarted) {
+            started.countDown();
+        }
         assertThat(started.await(10, TimeUnit.SECONDS)).isTrue();
-    }
-
-    @AfterAll
-    static void stopJavaFxToolkit() {
-        Platform.exit();
     }
 
     @Test
     void loadsPublicAuthenticationViewsWithSpringControllers() throws Exception {
         assertThat(loadOnFxThread("/fxml/login.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/register.fxml")).isNotNull();
+    }
+
+    @Test
+    void authenticationScreensUseReferenceLayoutAndInteractivePasswordControls() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent login = load("/fxml/login.fxml");
+            Scene loginScene = new Scene(login, 1672, 901);
+            loginScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            login.applyCss();
+            login.layout();
+
+            VBox loginCard = (VBox) login.lookup(".login-form-card");
+            ImageView illustration = (ImageView) login.lookup("#authIllustration");
+            PasswordField password = (PasswordField) login.lookup("#passwordField");
+            TextField visiblePassword = (TextField) login.lookup("#visiblePasswordField");
+            Button visibilityButton = (Button) login.lookup("#passwordVisibilityButton");
+            password.setText("local-secret");
+            visibilityButton.fire();
+
+            Parent register = load("/fxml/register.fxml");
+            Scene registerScene = new Scene(register, 1672, 901);
+            registerScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            register.applyCss();
+            register.layout();
+            VBox registerCard = (VBox) register.lookup(".register-form-card");
+            CheckBox agreement = (CheckBox) register.lookup("#agreementCheckBox");
+
+            return new boolean[]{
+                    Math.abs(loginCard.getWidth() - 582) < 0.5,
+                    Math.abs(loginCard.getHeight() - 684) < 0.5,
+                    Math.abs(registerCard.getWidth() - 588) < 0.5,
+                    Math.abs(registerCard.getHeight() - 724) < 0.5,
+                    illustration != null && illustration.getImage() != null,
+                    !password.isVisible() && visiblePassword.isVisible(),
+                    "local-secret".equals(visiblePassword.getText()),
+                    agreement.isSelected(),
+                    login.lookup(".window-header") == null,
+                    register.lookup(".window-header") == null
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void authenticationIllustrationStartsItsNativeMotionLoop() throws Exception {
+        FutureTask<Boolean> task = new FutureTask<>(() -> {
+            ImageView illustration = new ImageView();
+            illustration.setId("authIllustration");
+            AnchorPane showcase = new AnchorPane(illustration);
+            Animation motion = AuthIllustrationMotion.start(showcase);
+            boolean running = motion.getStatus() == Animation.Status.RUNNING
+                    && motion.getCycleCount() == 1;
+            motion.stop();
+            return running;
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).isTrue();
     }
 
     @Test

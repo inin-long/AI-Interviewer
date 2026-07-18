@@ -56,7 +56,7 @@ public class JavaFxViewManager implements ViewManager {
             Parent root = load(route);
             Scene scene = primaryStage.getScene();
             if (scene == null) {
-                scene = new Scene(root, 1366, 820);
+                scene = new Scene(root, 1672, 901);
                 URL stylesheet = getClass().getResource("/css/app.css");
                 if (stylesheet != null) {
                     scene.getStylesheets().add(stylesheet.toExternalForm());
