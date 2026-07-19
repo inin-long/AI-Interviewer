@@ -18,7 +18,7 @@ class OpenAiChatServiceTest {
     @Test
     void startsWithoutAiConfigurationAndFailsOnlyWhenCalled() {
         OpenAiChatService service = assertDoesNotThrow(() -> new OpenAiChatService(
-                new LlmProperties("https://example.invalid/v1", "", "", "", Duration.ofSeconds(30), 0, 2048, null)));
+                new LlmProperties("https://example.invalid/v1", "", "", "", Duration.ofSeconds(30), 0, 2048, null, null)));
 
         assertThrows(AIException.class, () -> service.chat("hello"));
     }
@@ -26,7 +26,7 @@ class OpenAiChatServiceTest {
     @Test
     void buildsAnOpenAiCompatibleClientWhenConfigured() {
         OpenAiChatService service = assertDoesNotThrow(() -> new OpenAiChatService(new LlmProperties(
-                "https://example.invalid/v1", "test-key", "test-model", "", Duration.ofSeconds(30), 0, 1234, null)));
+                "https://example.invalid/v1", "test-key", "test-model", "", Duration.ofSeconds(30), 0, 1234, null, null)));
 
         OpenAiChatOptions options = (OpenAiChatOptions) ReflectionTestUtils.getField(service, "defaultOptions");
         assertThat(options).isNotNull();
@@ -39,7 +39,7 @@ class OpenAiChatServiceTest {
     void disablesThinkingForSiliconFlowDeepSeekV4UnlessExplicitlyOverridden() {
         OpenAiChatService service = new OpenAiChatService(new LlmProperties(
                 "https://api.siliconflow.cn/v1", "test-key", "deepseek-ai/DeepSeek-V4-Pro", "",
-                Duration.ofMinutes(5), 0, 2048, null));
+                Duration.ofMinutes(5), 0, 2048, null, null));
 
         OpenAiChatOptions options = (OpenAiChatOptions) ReflectionTestUtils.getField(service, "defaultOptions");
         assertThat(options.getExtraBody()).containsEntry("enable_thinking", false);

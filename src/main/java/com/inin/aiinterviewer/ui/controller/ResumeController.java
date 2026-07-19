@@ -26,6 +26,9 @@ import javafx.scene.control.TableView;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.awt.Desktop;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -56,6 +59,7 @@ public class ResumeController {
     @FXML private Button uploadButton;
     @FXML private Button deleteButton;
     @FXML private Button viewButton;
+    @FXML private Button openFileButton;
     private Timeline statusWatcher;
 
     public ResumeController(
@@ -94,6 +98,7 @@ public class ResumeController {
         });
         deleteButton.disableProperty().bind(resumeTable.getSelectionModel().selectedItemProperty().isNull());
         viewButton.disableProperty().bind(resumeTable.getSelectionModel().selectedItemProperty().isNull());
+        openFileButton.disableProperty().bind(resumeTable.getSelectionModel().selectedItemProperty().isNull());
         resumeTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && resumeTable.getSelectionModel().getSelectedItem() != null) {
                 viewSelected();
@@ -187,6 +192,30 @@ public class ResumeController {
                     "/fxml/resume-detail-view.fxml",
                     "候选人画像",
                     selected.id());
+        }
+    }
+
+    @FXML
+    private void openOriginalFile() {
+        ResumeDto selected = resumeTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            return;
+        }
+        try {
+            Path file = resumeService.resolveOriginalFile(
+                    sessionState.requireCurrentUser().id(), selected.id());
+            if (file == null || !Files.exists(file)) {
+                viewManager.showError("原始文件不存在，可能已被移动或删除。");
+                return;
+            }
+            if (!Desktop.isDesktopSupported()) {
+                viewManager.showError("当前系统不支持打开文件。");
+                return;
+            }
+            Desktop.getDesktop().open(file.toFile());
+            taskLabel.setText("已用系统默认程序打开：" + selected.originalName());
+        } catch (IOException | RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
         }
     }
 

@@ -23,6 +23,7 @@
         <Label fx:id="taskLabel" text="文件和解析结果仅保存在本机" styleClass="secondary-text"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="deleteButton" text="删除所选" onAction="#deleteSelected" styleClass="danger-button"/>
+        <Button fx:id="openFileButton" text="查看原文" onAction="#openOriginalFile" styleClass="secondary-button"/>
         <Button fx:id="viewButton" text="查看 / 编辑画像" onAction="#viewSelected" styleClass="primary-button"/>
     </HBox>
     <TableView fx:id="resumeTable" VBox.vgrow="ALWAYS" styleClass="data-table">

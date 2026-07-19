@@ -27,7 +27,7 @@ import java.util.concurrent.*;
 public class CareerPlanningService {
 
     private static final Logger log = LoggerFactory.getLogger(CareerPlanningService.class);
-    private static final Duration AI_TIMEOUT = Duration.ofSeconds(15);
+    private static final Duration AI_TIMEOUT = Duration.ofSeconds(305);
 
     private final ChatService chatService;
     private final CareerPlanMapper careerPlanMapper;

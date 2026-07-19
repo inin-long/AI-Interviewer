@@ -6,6 +6,8 @@ import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.config.properties.TaskProperties;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import com.inin.aiinterviewer.infrastructure.ai.EmbeddingService;
+import com.inin.aiinterviewer.infrastructure.ai.OpenAiChatService;
+import com.inin.aiinterviewer.infrastructure.ai.OpenAiEmbeddingService;
 import com.inin.aiinterviewer.infrastructure.file.PathService;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import javafx.css.PseudoClass;
@@ -116,7 +118,7 @@ public class SettingsController {
         timeoutLabel.setText(llmProperties.timeout() == null ? "—" : llmProperties.timeout().toSeconds() + " 秒");
         configurationSourceLabel.setText(configurationSource());
         setConnectionState("未检测", "点击“测试连接”验证对话和 Embedding 能力。", "status-neutral");
-        testConnectionButton.setDisable(!llmProperties.isConfigured());
+        testConnectionButton.setDisable(false);
 
         Path root = pathService.applicationRoot();
         dataRootField.setText(root.toString());
@@ -138,24 +140,34 @@ public class SettingsController {
 
     @FXML
     private void testConnection() {
-        if (!llmProperties.isConfigured()) {
-            setConnectionState("未配置", "请先通过环境变量或外部 application-local.yml 配置 AI。", "status-failed");
+        String apiKey = readApiKey();
+        String chatModel = chatModelField.getText();
+        if (apiKey.isBlank() || (chatModel == null || chatModel.isBlank())) {
+            setConnectionState("未配置", "请输入 API Key 和 Chat Model 后再测试。", "status-failed");
             return;
         }
         testConnectionButton.setDisable(true);
         setConnectionState("检测中", "正在验证同步对话和 Embedding 接口…", "status-neutral");
+
+        LlmProperties fieldProperties = buildLlmPropertiesFromFields();
         Task<ConnectionTestResult> task = new Task<>() {
             @Override
             protected ConnectionTestResult call() {
+                ChatService tempChat = new OpenAiChatService(fieldProperties);
+                EmbeddingService tempEmbedding = new OpenAiEmbeddingService(fieldProperties);
+
                 long chatStarted = System.nanoTime();
-                String response = chatService.chat("只回复两个字：正常");
+                String response = tempChat.chat("只回复两个字：正常");
                 long chatMillis = Duration.ofNanos(System.nanoTime() - chatStarted).toMillis();
-                if (response == null || response.isBlank()) throw new IllegalStateException("对话模型返回空内容");
-                if (!llmProperties.isEmbeddingConfigured()) {
+                if (response == null || response.isBlank()) {
+                    throw new IllegalStateException("对话模型返回空内容");
+                }
+
+                if (!fieldProperties.isEmbeddingConfigured()) {
                     return new ConnectionTestResult(chatMillis, 0, 0, false);
                 }
                 long embeddingStarted = System.nanoTime();
-                float[] embedding = embeddingService.embed("AI Interviewer 设置页连接测试");
+                float[] embedding = tempEmbedding.embed("AI Interviewer 设置页连接测试");
                 long embeddingMillis = Duration.ofNanos(System.nanoTime() - embeddingStarted).toMillis();
                 return new ConnectionTestResult(chatMillis, embeddingMillis, embedding.length, true);
             }
@@ -268,9 +280,9 @@ public class SettingsController {
             configurationSourceLabel.setText(configurationSource());
             apiKeyField.setText("configured-secret");
             apiKeyField.setPromptText("已配置（不会显示明文）");
-            testConnectionButton.setDisable(!llmProperties.isConfigured());
+            testConnectionButton.setDisable(false);
 
-            setSaveStatus("已保存到 " + configFile + "，重启应用后配置生效。", false);
+            setSaveStatus("已保存到 " + configFile + "，下次启动时自动生效。", false);
         } catch (Exception exception) {
             setSaveStatus("保存失败：" + exception.getMessage(), true);
         }
@@ -325,6 +337,35 @@ public class SettingsController {
     }
 
     private String valueOrEmpty(String value) { return value == null ? "" : value; }
+
+    private LlmProperties buildLlmPropertiesFromFields() {
+        String baseUrl = baseUrlField.getText();
+        String apiKey = readApiKey();
+        String chatModel = chatModelField.getText();
+        String embeddingModel = embeddingModelField.getText();
+
+        return new LlmProperties(
+                baseUrl == null || baseUrl.isBlank() ? "https://api.openai.com" : baseUrl.strip(),
+                apiKey,
+                chatModel == null ? "" : chatModel.strip(),
+                embeddingModel == null ? "" : embeddingModel.strip(),
+                llmProperties.timeout(),
+                llmProperties.maxRetries(),
+                llmProperties.maxTokens(),
+                llmProperties.thinkingEnabled(),
+                llmProperties.temperature()
+        );
+    }
+
+    private String readApiKey() {
+        String raw = apiKeyField.getText();
+        if ("configured-secret".equals(raw)) {
+            String saved = llmProperties.apiKey();
+            return saved == null ? "" : saved;
+        }
+        return raw == null ? "" : raw.strip();
+    }
+
 
     private record ConnectionTestResult(
             long chatMillis,
