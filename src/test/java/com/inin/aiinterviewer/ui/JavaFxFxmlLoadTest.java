@@ -20,6 +20,7 @@ import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import javafx.application.Platform;
 import javafx.animation.Animation;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
@@ -30,6 +31,9 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.ScrollBar;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -37,6 +41,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.css.PseudoClass;
@@ -399,6 +404,57 @@ class JavaFxFxmlLoadTest {
                     escapeDialogOpened,
                     escapeActionClosed
             };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void globalScrollbarsUseSlimProductSkinWithoutArrowButtons() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            ListView<String> list = new ListView<>();
+            for (int index = 1; index <= 40; index++) {
+                list.getItems().add("第 " + index + " 条较长的滚动内容，用于验证横向与纵向滚动轴");
+            }
+            list.setPrefSize(250, 150);
+
+            TextArea textArea = new TextArea("滚动内容\n".repeat(30)
+                    + "这是一行用于触发横向滚动轴的较长文本内容".repeat(8));
+            textArea.setWrapText(false);
+            textArea.setPrefSize(250, 150);
+
+            ScrollPane scrollPane = new ScrollPane(new VBox(12,
+                    new Label("滚动区域"), new VBox(320), new Label("底部内容")));
+            scrollPane.setPrefSize(210, 150);
+            HBox root = new HBox(18, list, textArea, scrollPane);
+            Scene scene = new Scene(root, 760, 190);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+
+            List<ScrollBar> bars = root.lookupAll(".scroll-bar").stream()
+                    .filter(ScrollBar.class::isInstance)
+                    .map(ScrollBar.class::cast)
+                    .toList();
+            List<ScrollBar> visible = bars.stream().filter(ScrollBar::isVisible).toList();
+            boolean slim = visible.stream().allMatch(bar ->
+                    bar.getOrientation() == javafx.geometry.Orientation.VERTICAL
+                            ? bar.prefWidth(-1) <= 10.5
+                            : bar.prefHeight(-1) <= 10.5);
+            boolean arrowsCollapsed = visible.stream().allMatch(bar -> {
+                Node increment = bar.lookup(".increment-button");
+                Node decrement = bar.lookup(".decrement-button");
+                if (!(increment instanceof Region incrementRegion)
+                        || !(decrement instanceof Region decrementRegion)) return false;
+                return bar.getOrientation() == javafx.geometry.Orientation.VERTICAL
+                        ? incrementRegion.prefHeight(-1) <= 0.5 && decrementRegion.prefHeight(-1) <= 0.5
+                        : incrementRegion.prefWidth(-1) <= 0.5 && decrementRegion.prefWidth(-1) <= 0.5;
+            });
+            boolean styledThumbs = visible.stream().allMatch(bar -> {
+                Node thumb = bar.lookup(".thumb");
+                return thumb instanceof Region region && !region.getBackground().getFills().isEmpty();
+            });
+            return new boolean[]{bars.size() >= 5, visible.size() >= 3, slim, arrowsCollapsed, styledThumbs};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);

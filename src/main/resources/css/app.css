@@ -18,6 +18,89 @@
     -success-soft: #EAF7F0;
     -danger: #C53B46;
     -danger-soft: #FDECEE;
+    -scroll-thumb: #C7CEDA;
+    -scroll-thumb-hover: #AEB8C8;
+    -scroll-thumb-pressed: #7484E8;
+}
+
+/* Global product scrollbar ----------------------------------------------- */
+.scroll-bar {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 1;
+}
+
+.scroll-bar:vertical {
+    -fx-pref-width: 10;
+    -fx-min-width: 10;
+    -fx-max-width: 10;
+}
+
+.scroll-bar:horizontal {
+    -fx-pref-height: 10;
+    -fx-min-height: 10;
+    -fx-max-height: 10;
+}
+
+.scroll-bar > .track,
+.scroll-bar > .track-background {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-background-radius: 999;
+}
+
+.scroll-bar > .thumb {
+    -fx-background-color: -scroll-thumb;
+    -fx-background-insets: 2;
+    -fx-background-radius: 999;
+}
+
+.scroll-bar > .thumb:hover {
+    -fx-background-color: -scroll-thumb-hover;
+}
+
+.scroll-bar > .thumb:pressed {
+    -fx-background-color: -scroll-thumb-pressed;
+}
+
+.scroll-bar > .increment-button,
+.scroll-bar > .decrement-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-bar:vertical > .increment-button,
+.scroll-bar:vertical > .decrement-button {
+    -fx-min-height: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+}
+
+.scroll-bar:horizontal > .increment-button,
+.scroll-bar:horizontal > .decrement-button {
+    -fx-min-width: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+}
+
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-shape: "";
+}
+
+.scroll-pane > .corner,
+.list-view > .virtual-flow > .corner,
+.table-view > .virtual-flow > .corner,
+.tree-view > .virtual-flow > .corner,
+.tree-table-view > .virtual-flow > .corner {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
 }
 
 .auth-root, .app-root, .content-scroll, .content-scroll > .viewport {
