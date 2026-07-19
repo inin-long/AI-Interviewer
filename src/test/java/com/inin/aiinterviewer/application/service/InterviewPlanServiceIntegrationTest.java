@@ -53,11 +53,11 @@ class InterviewPlanServiceIntegrationTest {
         assertThat(created.rules()).containsEntry("focus", "Spring, 数据库");
         assertThat(created.rules())
                 .containsEntry(InterviewPlanSettings.MODE_KEY, "FORMAL_SIMULATION")
-                .containsEntry(InterviewPlanSettings.PERSONA_KEY, "PROFESSIONAL_INTERVIEWER")
+                .containsEntry(InterviewPlanSettings.PERSONA_KEY, "FRIENDLY")
                 .containsEntry(InterviewPlanSettings.PRESSURE_KEY, "STANDARD")
                 .containsEntry(InterviewPlanSettings.STRICTNESS_KEY, "STANDARD")
                 .containsEntry(InterviewPlanSettings.SCENARIO_RATIO_KEY, 0);
-        assertThat(created.domainPackId()).isEqualTo("java-backend-1.0.0");
+        assertThat(created.domainPackId()).isEqualTo("none");
         assertThat(planService.list(other.id())).isEmpty();
         assertThatThrownBy(() -> planService.require(created.id(), other.id()))
                 .isInstanceOf(BusinessException.class);

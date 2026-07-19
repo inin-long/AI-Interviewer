@@ -14,10 +14,11 @@
             fx:controller="com.inin.aiinterviewer.ui.controller.DashboardController"
             fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll, dashboard-scroll">
     <content>
-        <VBox spacing="16" styleClass="dashboard-page">
-            <padding><Insets top="20" right="22" bottom="6" left="22"/></padding>
+        <VBox spacing="14" styleClass="dashboard-page">
+            <padding><Insets top="18" right="90" bottom="6" left="16"/></padding>
 
-            <StackPane minHeight="114" prefHeight="114" maxHeight="114" styleClass="dashboard-hero-card">
+            <StackPane minHeight="104" prefHeight="104" maxHeight="104" styleClass="dashboard-hero-card">
+                <VBox.margin><Insets right="32"/></VBox.margin>
                 <ImageView fitWidth="570" fitHeight="112" preserveRatio="false" smooth="true" opacity="0.82"
                            StackPane.alignment="CENTER_RIGHT">
                     <image><Image url="@../images/home/dashboard-hero.png"/></image>
@@ -40,8 +41,9 @@
                 </HBox>
             </StackPane>
 
-            <HBox spacing="16">
-                <HBox minHeight="102" prefHeight="102" maxWidth="Infinity" alignment="CENTER_LEFT" spacing="18"
+            <HBox spacing="14">
+                <VBox.margin><Insets right="32"/></VBox.margin>
+                <HBox minHeight="96" prefHeight="96" maxWidth="Infinity" alignment="CENTER_LEFT" spacing="18"
                       HBox.hgrow="ALWAYS" styleClass="dashboard-summary-card">
                     <padding><Insets top="16" right="20" bottom="16" left="18"/></padding>
                     <StackPane minWidth="58" minHeight="58" maxWidth="58" maxHeight="58" styleClass="summary-icon, summary-icon-blue">
@@ -103,19 +105,19 @@
                 </HBox>
             </HBox>
 
-            <GridPane hgap="0" vgap="16">
+            <GridPane hgap="0" vgap="14">
                 <columnConstraints>
-                    <ColumnConstraints percentWidth="61"/>
-                    <ColumnConstraints percentWidth="39"/>
+                    <ColumnConstraints percentWidth="63"/>
+                    <ColumnConstraints percentWidth="34"/>
                 </columnConstraints>
                 <rowConstraints>
-                    <RowConstraints minHeight="312" prefHeight="312"/>
-                    <RowConstraints minHeight="220" prefHeight="220"/>
+                    <RowConstraints minHeight="296" prefHeight="296"/>
+                    <RowConstraints minHeight="204" prefHeight="204"/>
                 </rowConstraints>
 
-                <VBox minHeight="312" prefHeight="312" maxHeight="312" styleClass="dashboard-panel"
+                <VBox minHeight="296" prefHeight="296" maxHeight="296" styleClass="dashboard-panel"
                       GridPane.columnIndex="0" GridPane.rowIndex="0">
-                    <GridPane.margin><Insets right="12"/></GridPane.margin>
+                    <GridPane.margin><Insets right="20"/></GridPane.margin>
                     <HBox alignment="CENTER_LEFT" minHeight="48" prefHeight="48" styleClass="dashboard-panel-header">
                         <padding><Insets left="20" right="16"/></padding>
                         <Label text="最近面试" styleClass="dashboard-panel-title"/>
@@ -133,16 +135,17 @@
                     </HBox>
                 </VBox>
 
-                <StackPane minHeight="220" prefHeight="220" styleClass="dashboard-panel, dashboard-score-panel"
+                <StackPane minHeight="204" prefHeight="204" styleClass="dashboard-panel, dashboard-score-panel"
                            GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.columnSpan="2">
-                    <ImageView fitWidth="500" fitHeight="215" preserveRatio="false" opacity="0.62"
+                    <GridPane.margin><Insets right="16"/></GridPane.margin>
+                    <ImageView fitWidth="500" fitHeight="200" preserveRatio="false" opacity="0.62"
                                StackPane.alignment="CENTER_RIGHT">
                         <image><Image url="@../images/home/dashboard-score.png"/></image>
                     </ImageView>
                     <VBox spacing="10">
                         <padding><Insets top="14" right="20" bottom="18" left="20"/></padding>
                         <Label text="最近一次面试结果" styleClass="dashboard-panel-title"/>
-                        <HBox alignment="CENTER_LEFT" spacing="48" VBox.vgrow="ALWAYS">
+                        <HBox alignment="CENTER_LEFT" spacing="32" VBox.vgrow="ALWAYS">
                             <StackPane minWidth="184" prefWidth="184">
                                 <Circle radius="66" fill="TRANSPARENT" stroke="#E4E7F7" strokeWidth="7"/>
                                 <Arc fx:id="scoreArc" radiusX="66" radiusY="66" startAngle="90" length="0"
@@ -152,31 +155,31 @@
                                     <Label text="/100" styleClass="dashboard-score-unit"/>
                                 </VBox>
                             </StackPane>
-                            <VBox fx:id="dimensionList" spacing="9" minWidth="330" prefWidth="350"/>
+                            <VBox fx:id="dimensionList" spacing="9" minWidth="300" prefWidth="320"/>
                             <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="dashboard-score-copy">
                                 <padding><Insets top="48"/></padding>
                                 <Label text="综合评语" styleClass="dashboard-score-kicker"/>
                                 <Label fx:id="scoreHeadlineLabel" text="完成一次面试后生成能力分析"
                                        wrapText="true" styleClass="dashboard-score-headline"/>
                                 <Label fx:id="scoreSummaryLabel" text="系统会结合回答质量、项目经验和沟通表现给出结构化评估。"
-                                       wrapText="true" maxWidth="470" styleClass="dashboard-score-summary"/>
+                                       wrapText="true" maxWidth="360" styleClass="dashboard-score-summary"/>
                             </VBox>
                         </HBox>
                     </VBox>
                 </StackPane>
 
-                <VBox minHeight="312" prefHeight="312" maxHeight="312"
+                <VBox minHeight="296" prefHeight="296" maxHeight="296"
                       styleClass="dashboard-panel, dashboard-side-panel"
                       GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.valignment="TOP">
-                    <GridPane.margin><Insets left="0"/></GridPane.margin>
+                    <GridPane.margin><Insets left="0" right="16"/></GridPane.margin>
                     <HBox alignment="CENTER_LEFT" minHeight="48" prefHeight="48" styleClass="dashboard-panel-header">
-                        <padding><Insets left="20" right="14"/></padding>
+                        <padding><Insets left="20" right="16"/></padding>
                         <Label text="最近使用的面试方案" styleClass="dashboard-panel-title"/>
                         <Region HBox.hgrow="ALWAYS"/>
                         <Button text="查看全部" onAction="#showPlans" styleClass="dashboard-link-button"/>
                     </HBox>
                     <VBox fx:id="recentPlanList" spacing="0" VBox.vgrow="ALWAYS" styleClass="dashboard-plan-list">
-                        <padding><Insets right="12" bottom="8" left="12"/></padding>
+                        <padding><Insets right="16" bottom="8" left="12"/></padding>
                     </VBox>
                 </VBox>
             </GridPane>

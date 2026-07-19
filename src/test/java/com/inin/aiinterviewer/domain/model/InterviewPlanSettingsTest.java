@@ -22,7 +22,7 @@ class InterviewPlanSettingsTest {
         assertThat(settings.mergeInto(Map.of("focus", "数据库与故障处理")))
                 .containsEntry("focus", "数据库与故障处理")
                 .containsEntry(InterviewPlanSettings.MODE_KEY, "FORMAL_SIMULATION")
-                .containsEntry(InterviewPlanSettings.PERSONA_KEY, "PROFESSIONAL_INTERVIEWER")
+                .containsEntry(InterviewPlanSettings.PERSONA_KEY, "FRIENDLY")
                 .containsEntry(InterviewPlanSettings.PRESSURE_KEY, "STANDARD")
                 .containsEntry(InterviewPlanSettings.STRICTNESS_KEY, "STANDARD")
                 .containsEntry(InterviewPlanSettings.SCENARIO_RATIO_KEY, 0);
@@ -32,13 +32,13 @@ class InterviewPlanSettingsTest {
     void parsesTypedPlanControlsAndRejectsUnsupportedValues() {
         InterviewPlanSettings settings = InterviewPlanSettings.fromRules(Map.of(
                 InterviewPlanSettings.MODE_KEY, "scenario_simulation",
-                InterviewPlanSettings.PERSONA_KEY, "incident_commander",
+                InterviewPlanSettings.PERSONA_KEY, "pressure",
                 InterviewPlanSettings.PRESSURE_KEY, "challenging",
                 InterviewPlanSettings.STRICTNESS_KEY, "strict",
                 InterviewPlanSettings.SCENARIO_RATIO_KEY, "30"));
 
         assertThat(settings.mode()).isEqualTo(InterviewMode.SCENARIO_SIMULATION);
-        assertThat(settings.persona()).isEqualTo(InterviewerPersona.INCIDENT_COMMANDER);
+        assertThat(settings.persona()).isEqualTo(InterviewerPersona.PRESSURE);
         assertThat(settings.pressureLevel()).isEqualTo(PressureLevel.CHALLENGING);
         assertThat(settings.strictness()).isEqualTo(VerificationStrictness.STRICT);
         assertThat(settings.scenarioRatio()).isEqualTo(30);

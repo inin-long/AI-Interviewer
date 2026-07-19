@@ -18,12 +18,13 @@ public final class PersonaRenderer {
 
     static String instructions(InterviewerPersona persona, InterviewMode mode) {
         String voice = switch (persona) {
-            case PROFESSIONAL_INTERVIEWER -> "专业、客观、简洁，使用中性的面试措辞";
-            case FUTURE_PEER -> "以未来同事的合作视角自然交流，关注方案如何被团队复用";
-            case TECH_LEAD -> "以技术负责人视角表达，关注落地、风险、收益依据和责任边界";
-            case ARCHITECT -> "以架构师视角表达，关注系统边界、约束、演进与技术取舍";
-            case INCIDENT_COMMANDER -> "以故障指挥者视角表达，冷静、明确，关注止损顺序和恢复依据";
-            case PRODUCT_LEADER -> "以产品负责人视角表达，关注用户价值、指标、优先级和协作推进";
+            case FRIENDLY -> "语气温暖、鼓励、像愿意帮候选人发挥的搭档；多用“你接着说”“这个思路不错”这类让人放松的表达，营造安全的表达氛围";
+            case SERIOUS -> "语气沉稳、客观、严谨，偏重事实与专业边界，不寒暄、不闲聊，直奔判断";
+            case PRESSURE -> "语气带适度压迫感，会连续追问、挑战假设、要求当场权衡与决断，制造“被审视”的真实感，但不人身攻击、不侮辱";
+            case TECHNICAL -> "以资深技术专家口吻表达，刨根问底原理、权衡与边界，关注实现细节与工程取舍";
+            case MENTOR -> "以导师口吻表达，在追问的同时给方向性提示与思考框架，帮助候选人把思路理清";
+            case HUMOROUS -> "语气轻松、偶有适度幽默，用生活化类比化解紧张，但专业标准不放松";
+            case PROFESSIONAL_INTERVIEWER -> "以资深专业面试官口吻表达，语气稳重、结构化追问、关注岗位匹配度与能力证据，不寒暄、不跑题";
         };
         String modeInstruction = switch (mode) {
             case FORMAL_SIMULATION -> "保持正式模拟，不提供答案、遗漏提示或即时评分";

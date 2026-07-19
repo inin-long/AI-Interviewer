@@ -3,6 +3,9 @@ package com.inin.aiinterviewer.domain.entity;
 import java.time.LocalDateTime;
 
 public class DomainPackEntity {
+    public static final String SOURCE_BUILTIN = "BUILTIN";
+    public static final String SOURCE_USER = "USER";
+
     private String id;
     private String roleCode;
     private String industryCode;
@@ -10,6 +13,7 @@ public class DomainPackEntity {
     private String version;
     private String contentJson;
     private boolean enabled;
+    private String source;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -27,6 +31,8 @@ public class DomainPackEntity {
     public void setContentJson(String contentJson) { this.contentJson = contentJson; }
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public LocalDateTime getUpdateTime() { return updateTime; }

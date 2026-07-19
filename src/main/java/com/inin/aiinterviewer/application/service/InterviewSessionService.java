@@ -133,7 +133,13 @@ public class InterviewSessionService {
                 .requireReadyAll(userId, plan.knowledgeDocumentIds()).stream()
                 .map(KnowledgeDocumentSnapshotDto::from)
                 .toList();
-        DomainPackSnapshot domainPackSnapshot = domainPackService.snapshot(plan.domainPackId());
+        DomainPackSnapshot domainPackSnapshot;
+        if (plan.domainPackId() == null || DomainPackSnapshot.NONE_PACK_ID.equals(plan.domainPackId())
+                || !domainPackService.exists(plan.domainPackId())) {
+            domainPackSnapshot = DomainPackSnapshot.none();
+        } else {
+            domainPackSnapshot = domainPackService.snapshot(plan.domainPackId());
+        }
         InterviewStage initialStage = initialStage(plan.stages());
 
         InterviewSessionEntity entity = new InterviewSessionEntity();
@@ -322,6 +328,20 @@ public class InterviewSessionService {
     public InterviewSessionDto resume(long userId, long sessionId) {
         InterviewSessionEntity session = requireEntity(userId, sessionId);
         resumeInternal(userId, session);
+        return require(userId, sessionId);
+    }
+
+    @Transactional
+    public InterviewSessionDto endInterview(long userId, long sessionId) {
+        InterviewSessionEntity session = requireEntity(userId, sessionId);
+        if (session.getStatus() != InterviewStatus.RUNNING
+                && session.getStatus() != InterviewStatus.PAUSED) {
+            throw new BusinessException(ErrorCode.INVALID_STATE);
+        }
+        InterviewState state = loadLatestStateInternal(userId, sessionId)
+                .orElseGet(() -> baseState(session));
+        sessionMapper.complete(sessionId, userId);
+        saveCheckpointInternal(userId, sessionId, "session_ended", state);
         return require(userId, sessionId);
     }
 
@@ -593,14 +613,17 @@ public class InterviewSessionService {
 
     private DomainPackDto domainPackDto(InterviewSessionEntity entity) {
         DomainPackSnapshot snapshot = readDomainPackSnapshot(entity.getDomainPackSnapshotJson());
+        if (snapshot != null && DomainPackSnapshot.NONE_PACK_ID.equals(snapshot.id())) {
+            return new DomainPackDto(DomainPackSnapshot.NONE_PACK_ID, "", null, "", "无知识包", "");
+        }
         if (snapshot != null && snapshot.content() != null) {
             var pack = snapshot.content();
             return new DomainPackDto(pack.id(), pack.roleCode(), pack.industryCode(),
-                    snapshot.version(), pack.displayName());
+                    snapshot.version(), pack.displayName(), "");
         }
         if (entity.getDomainPackId() == null || entity.getDomainPackId().isBlank()) return null;
         return new DomainPackDto(entity.getDomainPackId(), "legacy", null,
-                entity.getDomainPackVersion(), entity.getDomainPackId());
+                entity.getDomainPackVersion(), entity.getDomainPackId(), "legacy");
     }
 
     private InterviewMessageDto toMessageDto(InterviewMessageEntity entity) {

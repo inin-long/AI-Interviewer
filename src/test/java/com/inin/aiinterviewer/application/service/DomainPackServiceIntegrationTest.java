@@ -31,14 +31,14 @@ class DomainPackServiceIntegrationTest {
     void loadsPersistsIndexesAndSnapshotsBuiltInDomainPacks() {
         assertThat(domainPackService.list())
                 .extracting(pack -> pack.roleCode())
-                .contains("java-backend", "full-stack", "product-manager");
+                .contains("test-role");
 
-        assertThat(domainPackService.search("Redis 缓存故障", 10))
+        assertThat(domainPackService.search("Redis", 10))
                 .extracting(pack -> pack.id())
-                .contains("java-backend-1.0.0");
+                .contains("test-pack-1.0.0");
 
-        var snapshot = domainPackService.snapshot("java-backend-1.0.0");
-        assertThat(snapshot.id()).isEqualTo("java-backend-1.0.0");
+        var snapshot = domainPackService.snapshot("test-pack-1.0.0");
+        assertThat(snapshot.id()).isEqualTo("test-pack-1.0.0");
         assertThat(snapshot.version()).isEqualTo("1.0.0");
         assertThat(snapshot.content().competencies()).isNotEmpty();
         assertThat(snapshot.content().failurePatterns()).isNotEmpty();

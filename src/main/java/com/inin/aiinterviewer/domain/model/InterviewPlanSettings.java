@@ -5,6 +5,9 @@ import com.inin.aiinterviewer.domain.enums.InterviewerPersona;
 import com.inin.aiinterviewer.domain.enums.PressureLevel;
 import com.inin.aiinterviewer.domain.enums.VerificationStrictness;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.Serializable;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -19,16 +22,20 @@ public record InterviewPlanSettings(
         int scenarioRatio
 ) implements Serializable {
 
+    private static final Logger log = LoggerFactory.getLogger(InterviewPlanSettings.class);
+
     public static final String MODE_KEY = "interviewMode";
     public static final String PERSONA_KEY = "interviewerPersona";
     public static final String PRESSURE_KEY = "pressureLevel";
     public static final String STRICTNESS_KEY = "verificationStrictness";
     public static final String SCENARIO_RATIO_KEY = "scenarioRatio";
+    public static final String SCENARIO_KEY = "scenario";
+    public static final String ANSWER_TIME_LIMIT_KEY = "answerTimeLimitSeconds";
     public static final Set<Integer> ALLOWED_SCENARIO_RATIOS = Set.of(0, 20, 30, 50);
 
     public InterviewPlanSettings {
         mode = mode == null ? InterviewMode.FORMAL_SIMULATION : mode;
-        persona = persona == null ? InterviewerPersona.PROFESSIONAL_INTERVIEWER : persona;
+        persona = persona == null ? InterviewerPersona.FRIENDLY : persona;
         pressureLevel = pressureLevel == null ? PressureLevel.STANDARD : pressureLevel;
         strictness = strictness == null ? VerificationStrictness.STANDARD : strictness;
         if (!ALLOWED_SCENARIO_RATIOS.contains(scenarioRatio)) {
@@ -39,7 +46,7 @@ public record InterviewPlanSettings(
     public static InterviewPlanSettings defaults() {
         return new InterviewPlanSettings(
                 InterviewMode.FORMAL_SIMULATION,
-                InterviewerPersona.PROFESSIONAL_INTERVIEWER,
+                InterviewerPersona.FRIENDLY,
                 PressureLevel.STANDARD,
                 VerificationStrictness.STANDARD,
                 0);
@@ -67,6 +74,24 @@ public record InterviewPlanSettings(
         return Map.copyOf(normalized);
     }
 
+    public static String scenarioOf(Map<String, Object> rules) {
+        Object value = rules == null ? null : rules.get(SCENARIO_KEY);
+        return value == null ? "" : String.valueOf(value).strip();
+    }
+
+    public static Integer answerTimeLimitSecondsOf(Map<String, Object> rules) {
+        Object value = rules == null ? null : rules.get(ANSWER_TIME_LIMIT_KEY);
+        if (value == null || String.valueOf(value).isBlank()) return null;
+        try {
+            int seconds = value instanceof Number
+                    ? ((Number) value).intValue()
+                    : Integer.parseInt(String.valueOf(value).strip());
+            return seconds <= 0 ? null : seconds;
+        } catch (NumberFormatException exception) {
+            return null;
+        }
+    }
+
     private static <E extends Enum<E>> E enumValue(
             Map<String, Object> rules,
             String key,
@@ -75,7 +100,13 @@ public record InterviewPlanSettings(
     ) {
         Object value = rules.get(key);
         if (value == null || String.valueOf(value).isBlank()) return defaultValue;
-        return Enum.valueOf(type, String.valueOf(value).strip().toUpperCase(Locale.ROOT));
+        try {
+            return Enum.valueOf(type, String.valueOf(value).strip().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            log.warn("Unknown {} value '{}' in plan rules, fallback to default {}.",
+                    type.getSimpleName(), value, defaultValue);
+            return defaultValue;
+        }
     }
 
     private static int intValue(Map<String, Object> rules, String key, int defaultValue) {

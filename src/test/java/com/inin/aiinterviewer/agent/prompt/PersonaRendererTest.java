@@ -21,26 +21,26 @@ class PersonaRendererTest {
     @Test
     void changesOnlyQuestionVoiceForTheSameProbeObjective() {
         ProbePlan probe = ProbePlan.stageOpening("验证 Redis 收益归因");
-        String peerPrompt = AgentPrompts.question(
-                state(plan(InterviewerPersona.FUTURE_PEER), probe), JsonMapper.builder().build());
-        String leadPrompt = AgentPrompts.question(
-                state(plan(InterviewerPersona.TECH_LEAD), probe), JsonMapper.builder().build());
+        String friendlyPrompt = AgentPrompts.question(
+                state(plan(InterviewerPersona.FRIENDLY), probe), JsonMapper.builder().build());
+        String technicalPrompt = AgentPrompts.question(
+                state(plan(InterviewerPersona.TECHNICAL), probe), JsonMapper.builder().build());
 
-        assertThat(peerPrompt)
-                .contains("验证 Redis 收益归因", "未来同事", "团队复用", "只控制表达方式");
-        assertThat(leadPrompt)
-                .contains("验证 Redis 收益归因", "技术负责人", "收益依据", "只控制表达方式");
-        assertThat(peerPrompt).isNotEqualTo(leadPrompt);
+        assertThat(friendlyPrompt)
+                .contains("验证 Redis 收益归因", "放松", "只控制表达方式");
+        assertThat(technicalPrompt)
+                .contains("验证 Redis 收益归因", "原理", "只控制表达方式");
+        assertThat(friendlyPrompt).isNotEqualTo(technicalPrompt);
     }
 
     @Test
     void personaNeverEntersEvidenceEvaluationPrompt() {
-        String peer = AgentPrompts.evidenceCollection(
-                state(plan(InterviewerPersona.FUTURE_PEER), ProbePlan.stageOpening("目标")));
-        String commander = AgentPrompts.evidenceCollection(
-                state(plan(InterviewerPersona.INCIDENT_COMMANDER), ProbePlan.stageOpening("目标")));
+        String friendly = AgentPrompts.evidenceCollection(
+                state(plan(InterviewerPersona.FRIENDLY), ProbePlan.stageOpening("目标")));
+        String pressure = AgentPrompts.evidenceCollection(
+                state(plan(InterviewerPersona.PRESSURE), ProbePlan.stageOpening("目标")));
 
-        assertThat(peer).isEqualTo(commander)
+        assertThat(friendly).isEqualTo(pressure)
                 .contains("Persona 只影响问题表达，不得影响证据提取");
     }
 

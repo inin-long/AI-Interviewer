@@ -71,7 +71,7 @@ class TrainingRecommendationServiceIntegrationTest {
                 "高级 Java 面试", "Java 后端工程师", "负责高并发核心服务",
                 InterviewDifficulty.SENIOR, 45, 8, null, null, List.of(document.id()),
                 Map.of("focus", "系统设计"),
-                List.of("INTRODUCTION", "SYSTEM_DESIGN", "SUMMARY"), "java-backend-1.0.0"));
+                List.of("INTRODUCTION", "SYSTEM_DESIGN", "SUMMARY"), "test-pack-1.0.0"));
         var session = sessionService.create(owner.id(), sourcePlan.id());
         sessionService.saveAssistantOutput(
                 owner.id(), session.id(), "你如何验证容量方案？", null, false);

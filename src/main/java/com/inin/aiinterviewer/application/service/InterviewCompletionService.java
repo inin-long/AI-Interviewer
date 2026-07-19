@@ -80,17 +80,19 @@ public class InterviewCompletionService {
         List<InterviewMessageDto> messages = sessionService.messages(userId, sessionId);
         var reportState = resultService.state(userId, sessionId);
         return new InterviewCompletionStateDto(
-                finalAnswerSaved(session.planSnapshot().questionCount(), messages),
+                finalAnswerSaved(session.planSnapshot().questionCount(), messages, session.status()),
                 reportState.status(), reportState.failureMessage());
     }
 
     private InterviewReportDto completeInternal(long userId, long sessionId) {
         var session = sessionService.require(userId, sessionId);
-        if (session.status() != InterviewStatus.RUNNING && session.status() != InterviewStatus.PAUSED) {
+        if (session.status() != InterviewStatus.RUNNING
+                && session.status() != InterviewStatus.PAUSED
+                && session.status() != InterviewStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
         List<InterviewMessageDto> messages = sessionService.messages(userId, sessionId);
-        if (!finalAnswerSaved(session.planSnapshot().questionCount(), messages)) {
+        if (!finalAnswerSaved(session.planSnapshot().questionCount(), messages, session.status())) {
             throw new BusinessException(ErrorCode.INVALID_STATE);
         }
         var previous = sessionService.loadLatestState(userId, sessionId)
@@ -122,12 +124,15 @@ public class InterviewCompletionService {
         }
     }
 
-    private boolean finalAnswerSaved(int questionLimit, List<InterviewMessageDto> messages) {
-        long questions = messages.stream()
+    private boolean finalAnswerSaved(int questionLimit, List<InterviewMessageDto> messages, InterviewStatus status) {
+        if (messages.isEmpty()) return false;
+        boolean answeredAll = messages.stream()
                 .filter(message -> message.role() == Message.Role.ASSISTANT)
-                .count();
-        return questions >= questionLimit && !messages.isEmpty()
+                .count() >= questionLimit
                 && messages.getLast().role() == Message.Role.USER;
+        boolean endedEarly = status == InterviewStatus.COMPLETED
+                && messages.stream().anyMatch(message -> message.role() == Message.Role.USER);
+        return answeredAll || endedEarly;
     }
 
     private String failureMessage(Throwable throwable) {
@@ -150,8 +155,10 @@ public class InterviewCompletionService {
                 你是技术面试证据摘要助手，不负责评分。分数将由程序根据逐轮证据确定。
                 只能概括下面的证据账本和一致性结果，不得补充对话中未形成证据的能力结论，
                 不得把 INSUFFICIENT（证据不足）描述成 NEGATIVE（能力较弱）。
-                必须只返回 JSON，不要 Markdown，不要返回任何分数字段：
-                {"summary":"基于证据的综合评价；明确区分已观察结论与证据不足"}
+                必须只返回 JSON，不要 Markdown，不要返回任何分数字段。
+                注意：summary 字段必须是一个普通字符串（用双引号包裹），不能是嵌套对象或数组。
+                正确示例：{"summary":"基于证据，候选人在技术基础方面表现扎实，项目经验描述较充分，但沟通表达上证据不足，需进一步验证。"}
+                错误示例：{"summary":{"overall":"..."}} 或 {"summary":["..."]}
 
                 目标岗位：%s
                 能力证据汇总：%s
@@ -350,19 +357,13 @@ public class InterviewCompletionService {
             Map<Long, Integer> questionNumbers
     ) {
         if (trace.evidenceIds().isEmpty()) return "无——不作能力结论";
-        Map<String, EvaluationEvidence> byId = ledger.evidence().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        EvaluationEvidence::id, value -> value, (left, right) -> left));
-        return trace.evidenceIds().stream().limit(5).map(id -> {
-            EvaluationEvidence evidence = byId.get(id);
-            if (evidence == null) return "`" + id + "`";
-            String claims = evidence.relatedClaimIds().isEmpty() ? ""
-                    : " / 主张 " + evidence.relatedClaimIds().stream()
-                            .map(claimId -> "`" + claimId + "`")
-                            .collect(java.util.stream.Collectors.joining("、"));
-            return "`" + id + "` / Q" + questionNumbers.getOrDefault(evidence.messageId(), 0)
-                    + " / 消息 `" + evidence.messageId() + "`" + claims;
-        }).collect(java.util.stream.Collectors.joining("<br>"));
+        java.util.LinkedHashSet<Integer> questions = trace.evidenceIds().stream()
+                .flatMap(id -> ledger.evidence().stream().filter(item -> item.id().equals(id)))
+                .map(evidence -> questionNumbers.getOrDefault(evidence.messageId(), 0))
+                .filter(value -> value > 0)
+                .collect(java.util.LinkedHashSet::new, java.util.LinkedHashSet::add, java.util.LinkedHashSet::addAll);
+        if (questions.isEmpty()) return "未关联到具体题目";
+        return "Q" + questions.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining("、Q"));
     }
 
     private String confidenceLevel(double value) {
@@ -372,7 +373,31 @@ public class InterviewCompletionService {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record EvaluationNarrativePayload(String summary) {
+    private static final class EvaluationNarrativePayload {
+        private String summary;
+
+        public String summary() {
+            return summary;
+        }
+
+        @com.fasterxml.jackson.annotation.JsonSetter("summary")
+        public void setSummary(Object value) {
+            if (value == null) {
+                this.summary = null;
+            } else if (value instanceof String s) {
+                this.summary = s;
+            } else if (value instanceof java.util.Map<?, ?> map) {
+                this.summary = map.values().stream()
+                        .map(Object::toString)
+                        .collect(java.util.stream.Collectors.joining("\n"));
+            } else if (value instanceof java.util.Collection<?> collection) {
+                this.summary = collection.stream()
+                        .map(Object::toString)
+                        .collect(java.util.stream.Collectors.joining("\n"));
+            } else {
+                this.summary = value.toString();
+            }
+        }
     }
 
     String evidenceMarkdown(EvidenceLedger ledger) {
@@ -688,7 +713,9 @@ public class InterviewCompletionService {
     private String inline(String value, int maxLength) {
         String normalized = value == null ? "" : value.replaceAll("\\s+", " ").strip();
         if (normalized.length() > maxLength) normalized = normalized.substring(0, maxLength) + "…";
-        return normalized.replace("\\", "\\\\")
+        return normalized.replace("&", "&amp;")
+                .replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\\", "\\\\")
                 .replace("*", "\\*").replace("_", "\\_")
                 .replace("[", "\\[").replace("]", "\\]")
                 .replace("#", "\\#").replace("|", "\\|");

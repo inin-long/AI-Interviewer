@@ -21,11 +21,15 @@ import com.inin.aiinterviewer.domain.enums.InterviewerPersona;
 import com.inin.aiinterviewer.domain.enums.PressureLevel;
 import com.inin.aiinterviewer.domain.enums.VerificationStrictness;
 import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
+import com.inin.aiinterviewer.domain.model.DomainPackSnapshot;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -33,10 +37,16 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.SelectionMode;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.stage.Window;
 import javafx.util.StringConverter;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
+import java.net.URL;
 import java.util.Map;
 import java.util.List;
 import java.util.ArrayList;
@@ -57,6 +67,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
     private final GlobalExceptionHandler exceptionHandler;
+    private final ApplicationContext applicationContext;
 
     @FXML private TextField nameField;
     @FXML private TextField jobTitleField;
@@ -85,6 +96,11 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private Label summaryModeLabel;
     @FXML private Label summaryPressureLabel;
     @FXML private Label summaryScenarioRatioLabel;
+    @FXML private TextField scenarioField;
+    @FXML private ComboBox<String> answerTimeBox;
+    @FXML private TextField customTimeField;
+    @FXML private Label summaryScenarioLabel;
+    @FXML private Label summaryTimeLimitLabel;
     @FXML private Label jdAutoFillHint;
 
     private Long editingPlanId;
@@ -103,7 +119,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
-            GlobalExceptionHandler exceptionHandler
+            GlobalExceptionHandler exceptionHandler,
+            ApplicationContext applicationContext
     ) {
         this.planService = planService;
         this.resumeService = resumeService;
@@ -115,6 +132,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
         this.exceptionHandler = exceptionHandler;
+        this.applicationContext = applicationContext;
     }
 
     @FXML
@@ -137,6 +155,18 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             @Override public String toString(Integer value) { return value == null ? "" : value + "%"; }
             @Override public Integer fromString(String value) { return null; }
         });
+        answerTimeBox.getItems().setAll("不限时", "3 分钟", "5 分钟", "10 分钟", "自定义");
+        answerTimeBox.setValue("不限时");
+        customTimeField.setDisable(true);
+        customTimeField.setPromptText("自定义分钟");
+        answerTimeBox.valueProperty().addListener((observable, oldValue, value) -> {
+            boolean custom = "自定义".equals(value);
+            customTimeField.setDisable(!custom);
+            if (!custom) customTimeField.clear();
+            refreshSummary();
+        });
+        customTimeField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
+        scenarioField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
         resumeBox.setConverter(new StringConverter<>() {
             @Override public String toString(ResumeDto value) { return value == null ? "不关联简历" : value.originalName(); }
             @Override public ResumeDto fromString(String value) { return null; }
@@ -156,11 +186,17 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         domainPackBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(DomainPackDto value) {
-                return value == null ? "请选择岗位知识包" : value.displayName() + " · v" + value.version();
+                if (value == null) return "请选择岗位知识包";
+                if (DomainPackSnapshot.NONE_PACK_ID.equals(value.id())) return "无知识包（不使用领域包）";
+                return value.displayName() + " · v" + value.version();
             }
             @Override public DomainPackDto fromString(String value) { return null; }
         });
-        domainPackBox.getItems().setAll(domainPackService.list());
+        // 选项里始终包含「无知识包」模式，并默认选中它
+        List<DomainPackDto> packItems = new ArrayList<>();
+        packItems.add(new DomainPackDto(DomainPackSnapshot.NONE_PACK_ID, "", null, "", "无知识包（不使用领域包）", ""));
+        packItems.addAll(domainPackService.list());
+        domainPackBox.getItems().setAll(packItems);
         resumeBox.getItems().setAll(resumeService.list(sessionState.requireCurrentUser().id()));
         profileBox.getItems().setAll(profileService.listConfirmed(sessionState.requireCurrentUser().id()));
         knowledgeList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
@@ -237,13 +273,53 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             questionCountField.setText("15");
             applySettings(InterviewPlanSettings.defaults());
             domainPackBox.getItems().stream()
-                    .filter(pack -> DomainPackService.DEFAULT_PACK_ID.equals(pack.id()))
+                    .filter(pack -> DomainPackSnapshot.NONE_PACK_ID.equals(pack.id()))
                     .findFirst().ifPresent(domainPackBox::setValue);
         } else {
             pageHeadingLabel.setText("编辑面试方案");
             populate(planService.require(planId, sessionState.requireCurrentUser().id()));
         }
         refreshSummary();
+    }
+
+    @FXML
+    private void onManagePacks() {
+        try {
+            URL location = getClass().getResource("/fxml/domain-pack-manager-view.fxml");
+            FXMLLoader loader = new FXMLLoader(location);
+            loader.setControllerFactory(applicationContext::getBean);
+            Parent root = (Parent) loader.load();
+            DomainPackManagerController controller = loader.getController();
+            controller.prefill(jobDescriptionArea.getText());
+            Stage stage = new Stage();
+            stage.setTitle("管理岗位知识包");
+            stage.initModality(Modality.WINDOW_MODAL);
+            Window owner = domainPackBox.getScene() == null ? null : domainPackBox.getScene().getWindow();
+            if (owner != null) stage.initOwner(owner);
+            Scene scene = new Scene(root, 800, 720);
+            URL stylesheet = getClass().getResource("/css/app.css");
+            if (stylesheet != null) scene.getStylesheets().add(stylesheet.toExternalForm());
+            stage.setScene(scene);
+            stage.showAndWait();
+            refreshDomainPackBox();
+        } catch (IOException exception) {
+            viewManager.showError("无法打开知识包管理：" + exception.getMessage());
+        }
+    }
+
+    private void refreshDomainPackBox() {
+        List<DomainPackDto> packItems = new ArrayList<>();
+        packItems.add(new DomainPackDto(DomainPackSnapshot.NONE_PACK_ID, "", null, "", "无知识包（不使用领域包）", ""));
+        packItems.addAll(domainPackService.list());
+        DomainPackDto current = domainPackBox.getValue();
+        domainPackBox.getItems().setAll(packItems);
+        if (current != null && current.id() != null) {
+            packItems.stream().filter(pack -> current.id().equals(pack.id()))
+                    .findFirst().ifPresent(domainPackBox::setValue);
+        } else {
+            packItems.stream().filter(pack -> DomainPackSnapshot.NONE_PACK_ID.equals(pack.id()))
+                    .findFirst().ifPresent(domainPackBox::setValue);
+        }
     }
 
     @FXML
@@ -291,6 +367,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         }
         focusField.setText(String.valueOf(plan.rules().getOrDefault("focus", "")));
         applySettings(InterviewPlanSettings.fromRules(plan.rules()));
+        scenarioField.setText(InterviewPlanSettings.scenarioOf(plan.rules()));
+        setAnswerTimeLimitUi(InterviewPlanSettings.answerTimeLimitSecondsOf(plan.rules()));
         domainPackBox.getItems().stream().filter(pack -> pack.id().equals(plan.domainPackId()))
                 .findFirst().ifPresent(domainPackBox::setValue);
         suppressAutoFill = false;
@@ -307,6 +385,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                     .map(KnowledgeDocumentDto::id).toList();
             LinkedHashMap<String, Object> baseRules = new LinkedHashMap<>();
             if (!focusField.getText().isBlank()) baseRules.put("focus", focusField.getText().trim());
+            if (!scenarioField.getText().isBlank()) baseRules.put("scenario", scenarioField.getText().trim());
+            baseRules.put("answerTimeLimitSeconds", answerTimeLimitSecondsFromForm());
             InterviewPlanSettings settings = new InterviewPlanSettings(
                     modeBox.getValue(), personaBox.getValue(), pressureBox.getValue(),
                     strictnessBox.getValue(), scenarioRatioBox.getValue() == null
@@ -403,7 +483,13 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         }
         if (summaryDomainPackLabel != null && domainPackBox != null) {
             DomainPackDto pack = domainPackBox.getValue();
-            summaryDomainPackLabel.setText(pack == null ? "待选择" : pack.displayName() + " · v" + pack.version());
+            if (pack == null) {
+                summaryDomainPackLabel.setText("待选择");
+            } else if (DomainPackSnapshot.NONE_PACK_ID.equals(pack.id())) {
+                summaryDomainPackLabel.setText("无知识包");
+            } else {
+                summaryDomainPackLabel.setText(pack.displayName() + " · v" + pack.version());
+            }
         }
         if (summaryModeLabel != null) {
             summaryModeLabel.setText(modeBox.getValue() == null ? "待选择" : modeText(modeBox.getValue()));
@@ -415,6 +501,14 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         if (summaryScenarioRatioLabel != null) {
             Integer ratio = scenarioRatioBox.getValue();
             summaryScenarioRatioLabel.setText(ratio == null ? "待选择" : ratio + "%");
+        }
+        if (summaryScenarioLabel != null) {
+            String sc = scenarioField.getText() == null ? "" : scenarioField.getText().strip();
+            summaryScenarioLabel.setText(sc.isBlank() ? "未设置" : sc);
+        }
+        if (summaryTimeLimitLabel != null) {
+            Integer secs = answerTimeLimitSecondsFromForm();
+            summaryTimeLimitLabel.setText(secs == null ? "不限时" : (secs / 60) + " 分钟");
         }
     }
 
@@ -433,6 +527,45 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         pressureBox.setValue(settings.pressureLevel());
         strictnessBox.setValue(settings.strictness());
         scenarioRatioBox.setValue(settings.scenarioRatio());
+        scenarioField.setText("");
+        setAnswerTimeLimitUi(null);
+    }
+
+    private Integer answerTimeLimitSecondsFromForm() {
+        String selection = answerTimeBox.getValue();
+        if (selection == null || "不限时".equals(selection)) return null;
+        if ("自定义".equals(selection)) {
+            String text = customTimeField.getText();
+            if (text == null || text.strip().isBlank()) return null;
+            try {
+                int minutes = Integer.parseInt(text.strip());
+                if (minutes <= 0) return null;
+                return Math.min(minutes, 60) * 60;
+            } catch (NumberFormatException exception) {
+                return null;
+            }
+        }
+        int minutes = Integer.parseInt(selection.replaceAll("\\D", ""));
+        return minutes * 60;
+    }
+
+    private void setAnswerTimeLimitUi(Integer seconds) {
+        if (seconds == null || seconds <= 0) {
+            answerTimeBox.setValue("不限时");
+            customTimeField.clear();
+            customTimeField.setDisable(true);
+            return;
+        }
+        int minutes = seconds / 60;
+        if (minutes == 3 || minutes == 5 || minutes == 10) {
+            answerTimeBox.setValue(minutes + " 分钟");
+            customTimeField.clear();
+            customTimeField.setDisable(true);
+        } else {
+            answerTimeBox.setValue("自定义");
+            customTimeField.setText(String.valueOf(minutes));
+            customTimeField.setDisable(false);
+        }
     }
 
     private String modeText(InterviewMode mode) {
@@ -445,12 +578,13 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
 
     private String personaText(InterviewerPersona persona) {
         return switch (persona) {
+            case FRIENDLY -> "友好型";
+            case SERIOUS -> "严肃型";
+            case PRESSURE -> "压力型";
+            case TECHNICAL -> "技术性";
+            case MENTOR -> "导师型";
+            case HUMOROUS -> "幽默型";
             case PROFESSIONAL_INTERVIEWER -> "专业面试官";
-            case FUTURE_PEER -> "未来同事";
-            case TECH_LEAD -> "技术负责人";
-            case ARCHITECT -> "架构师";
-            case INCIDENT_COMMANDER -> "事故指挥者";
-            case PRODUCT_LEADER -> "产品负责人";
         };
     }
 

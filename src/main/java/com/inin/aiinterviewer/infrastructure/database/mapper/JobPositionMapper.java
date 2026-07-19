@@ -29,7 +29,7 @@ public interface JobPositionMapper {
     @Select("""
             SELECT id, user_id, title, department, description, create_time, update_time, deleted
             FROM job_position
-            WHERE user_id = #{userId} AND deleted = 0
+            WHERE (user_id = #{userId} OR user_id = 1) AND deleted = 0
             ORDER BY update_time DESC, id DESC
             """)
     List<JobPositionEntity> findAllByUserId(long userId);

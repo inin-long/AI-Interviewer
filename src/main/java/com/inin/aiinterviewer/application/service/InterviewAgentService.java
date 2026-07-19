@@ -430,6 +430,7 @@ public class InterviewAgentService {
 
     private String domainPackContext(long userId, long sessionId) {
         return sessionService.domainPackSnapshot(userId, sessionId)
+                .filter(snapshot -> snapshot.content() != null)
                 .map(snapshot -> {
                     var pack = snapshot.content();
                     return Map.of(

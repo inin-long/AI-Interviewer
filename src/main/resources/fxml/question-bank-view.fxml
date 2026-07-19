@@ -38,6 +38,7 @@
                 <ComboBox fx:id="categoryFilterCombo" prefWidth="120"/>
                 <ComboBox fx:id="tagFilterCombo" prefWidth="150"/>
                 <Button fx:id="newQuestionButton" text="新建题目" onAction="#newQuestion" styleClass="primary-button"/>
+                <Button fx:id="practiceButton" text="练习答题" onAction="#practiceSelectedQuestion" styleClass="secondary-button"/>
                 <Button fx:id="deleteQuestionButton" text="删除所选" onAction="#deleteSelectedQuestion" styleClass="danger-button"/>
             </HBox>
             <TableView fx:id="questionTable" VBox.vgrow="ALWAYS" styleClass="data-table">

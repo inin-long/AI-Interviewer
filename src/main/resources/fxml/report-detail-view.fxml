@@ -28,8 +28,12 @@
     <center>
         <HBox spacing="20" styleClass="editor-page">
             <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
-            <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="content-card report-directory">
-                <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                        minWidth="320" prefWidth="320" maxWidth="360"
+                        maxHeight="Infinity" HBox.hgrow="NEVER"
+                        styleClass="content-card report-directory-scroll">
+                <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="report-directory">
+                    <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
                 <Label text="报告目录" styleClass="module-title"/>
                 <Button text="报告首页" onAction="#scrollHome" maxWidth="Infinity" styleClass="report-directory-button"/>
                 <Button text="能力评分" onAction="#scrollScores" maxWidth="Infinity" styleClass="report-directory-button"/>
@@ -72,14 +76,15 @@
                 <Button fx:id="trainingPlanButton" text="创建专项训练方案" onAction="#createTrainingPlan"
                         maxWidth="Infinity" styleClass="primary-button"/>
                 <Separator/>
-                <Label text="引用定位" styleClass="summary-label"/>
-                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="130" maxHeight="160"
-                            VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
-                    <content>
-                        <VBox fx:id="citationNavigationContainer" spacing="6" fillWidth="true"/>
-                    </content>
-                </ScrollPane>
-            </VBox>
+                    <Label text="引用定位" styleClass="summary-label"/>
+                    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="130" maxHeight="160"
+                                VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
+                        <content>
+                            <VBox fx:id="citationNavigationContainer" spacing="6" fillWidth="true"/>
+                        </content>
+                    </ScrollPane>
+                </VBox>
+            </ScrollPane>
             <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="content-card report-document">
                 <MarkdownView fx:id="reportView" VBox.vgrow="ALWAYS"/>
             </VBox>

@@ -29,7 +29,7 @@ public interface QuestionTagMapper {
     @Select("""
             SELECT id, user_id, name, create_time, deleted
             FROM question_tag
-            WHERE user_id = #{userId} AND deleted = 0
+            WHERE (user_id = #{userId} OR user_id = 1) AND deleted = 0
             ORDER BY name ASC, id ASC
             """)
     List<QuestionTagEntity> findAllByUserId(long userId);

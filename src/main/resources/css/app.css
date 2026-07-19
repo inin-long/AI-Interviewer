@@ -705,8 +705,16 @@
 }
 
 .report-citation-scroll,
-.report-citation-scroll > .viewport {
+.report-citation-scroll > .viewport,
+.report-directory-scroll,
+.report-directory-scroll > .viewport {
     -fx-background-color: transparent;
+}
+
+.report-directory-scroll {
+    -fx-padding: 0;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
 }
 
 .report-question-link {
@@ -1356,7 +1364,7 @@
 
 .dashboard-dimension-bar {
     -fx-accent: #5969F4;
-    -fx-pref-width: 210;
+    -fx-pref-width: 180;
     -fx-pref-height: 6;
     -fx-min-height: 6;
     -fx-max-height: 6;
@@ -1376,7 +1384,7 @@
 }
 
 .dashboard-score-copy {
-    -fx-padding: 0 160 0 0;
+    -fx-padding: 0 80 0 0;
 }
 
 .dashboard-score-kicker {
@@ -1778,4 +1786,54 @@
 .auth-footer {
     -fx-font-size: 13px;
     -fx-text-fill: #66728A;
+}
+
+/* ---------- 题目练习页样式（来自 develop 分支） ---------- */
+.badge-job { -fx-background-color: -accent-purple-soft; -fx-text-fill: -accent-purple; }
+
+.reference-content .markdown-view {
+    -fx-font-size: 14px;
+}
+
+.practice-question-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+.practice-question-content {
+    -fx-font-size: 14px;
+    -fx-text-fill: -text-secondary;
+    -fx-line-spacing: 3;
+}
+.tag-chip {
+    -fx-background-color: -accent-blue-soft;
+    -fx-text-fill: -accent-blue;
+    -fx-background-radius: 999;
+    -fx-padding: 1 5;
+    -fx-font-size: 11px;
+}
+.score-badge {
+    -fx-background-color: -accent-blue-soft;
+    -fx-background-radius: 16;
+    -fx-padding: 14 22;
+    -fx-min-width: 96;
+}
+.score-value {
+    -fx-font-size: 34px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -accent-blue;
+}
+.score-caption {
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-secondary;
+}
+.score-sidebar {
+    -fx-background-color: -surface;
+    -fx-background-radius: 12;
+    -fx-padding: 16;
+    -fx-border-color: -border;
+    -fx-border-radius: 12;
+}
+.score-sidebar .progress-bar {
+    -fx-pref-width: 100%;
 }

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.SystemException;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.Message;
 
 import java.util.List;
@@ -240,14 +241,50 @@ public final class AgentPrompts {
                 ? "严格按照结构化追问计划渲染下一题。上一轮分析："
                     + json(objectMapper, state.analysis())
                 : "这是本场面试的第一题。";
+        boolean isOpening = state.messages().isEmpty();
+        String scenario = InterviewPlanSettings.scenarioOf(state.plan().rules());
+        Integer answerTimeLimit = InterviewPlanSettings.answerTimeLimitSecondsOf(state.plan().rules());
+        String openingInstruction = isOpening
+                ? """
+                这是本场面试的第一题。请先用一两句话像真人一样自然开场：说一句欢迎、请对方坐下，并做一句真实的自我介绍
+                （你的身份与风格由上方 Persona 决定，例如"你好，欢迎来面试，我是今天负责 %s 岗位的面试官"）；
+                再简要说明本次面试的节奏与氛围（共 %d 题、约 %d 分钟；节奏比较轻松，你可以边想边说、可以停顿、可以反问，不会因为一时答不上来就被否定）；
+                不要先罗列流程清单。最后用一个自然的过渡（如"那我们直接从第一个问题开始吧"）抛出第一道问题。
+                """.formatted(state.plan().jobTitle(), state.plan().questionCount(), state.plan().durationMinutes())
+                : "";
+        String feedbackInstruction = isOpening ? "" :
+                """
+                在抛出本道题之前，先用一两句真实、有温度的话回应候选人【刚刚的回答】：
+                - 可以肯定亮点（例如"你这个专业知识很强呀，应变也不错"）；
+                - 可以自然点出想进一步了解的地方，或顺着话题延伸（例如聊聊期望薪资、到岗时间、职业规划等开放式话题）；
+                - 语气要像真人面试官，允许有情绪波动，不要机械；
+                - 回应的篇幅控制在 1-2 句，用换行与下一题分隔，不要让反馈喧宾夺主。
+                """ + data("候选人上一轮回答", state.answer());
+        String scenarioInstruction = scenario.isBlank() ? "" :
+                """
+                面试发生的具体场景是：%s。请在语气与举例上贴合这个场景，让对话更有真实感
+                （如场景是轻松环境可适度放松，如为正式场合则保持专业）。
+                """.formatted(data("面试场景", scenario));
+        String timeInstruction = answerTimeLimit == null ? "" :
+                """
+                每题候选人作答时限约为 %d 分钟，请在开场或提问时温和提醒对方时间有限、先给核心思路，
+                不要因此催促或打断对方思考。
+                """.formatted(answerTimeLimit / 60);
         return """
-                你是问题语言渲染器，不负责改变面试策略。一次只提出一个清晰的中文问题，不给答案，不输出 JSON。
+                你是这场技术面试的面试官，用中文像真实的人一样与候选人自然对话，不要表现得像在念题卡。
+                基于下方结构化追问计划与候选人之前的回答，灵活展开：可以在计划目标内根据对方刚才的回答即兴追问、延伸或换个角度，
+                也可以加入短暂的寒暄与过渡，让对话有呼吸感；但每一次仍然只抛出一个清晰的问题，避免一次堆出多个问题造成压迫。
+                不得使用参考答案、不得直接给答案、不得泄露内部 ID、评分、可信度或策略枚举。
                 当追问计划含 targetConsistencyIssueId 时，必须忠实使用 objective 中的中性澄清问题；
                 当含 targetDeferredProbeId 时，必须围绕延迟验证的 targetClaimId 和 expectedEvidence 提问，
                 当 shouldInjectScenario 为 true 时，必须忠实表达 objective 中的场景后果问题，不得另造事件或改变变量；
                 压力只能来自证据要求、假设挑战、资源约束或故障事件；无论压力等级如何，都禁止侮辱、嘲讽、人身攻击、敌意否定或故意制造不可回答的问题。
                 不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
+                %s
+                %s
+                %s
+                %s
                 %s
                 %s
 
@@ -267,7 +304,8 @@ public final class AgentPrompts {
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
-                """.formatted(PersonaRenderer.instructions(state.plan().rules()), intent,
+                """.formatted(openingInstruction, scenarioInstruction, timeInstruction,
+                PersonaRenderer.instructions(state.plan().rules()), feedbackInstruction, intent,
                 json(objectMapper, state.probePlan()),
                 json(objectMapper, state.pressureState()),
                 json(objectMapper, state.strategy()),
@@ -295,6 +333,27 @@ public final class AgentPrompts {
                 原问题渲染指令：
                 %s
                 """.formatted(issues, data("被拒绝草稿", rejectedQuestion), data("原渲染指令", originalPrompt));
+    }
+
+    public static String generateDomainPack(String jobDescription) {
+        return """
+                你是招聘岗位领域知识包生成器。根据岗位 JD 生成一份技术面试用的领域知识包。
+                只返回一个 JSON 对象，不要 Markdown 代码块，不要额外说明。
+                必须包含以下字段（列表为空时用 []）：
+                {
+                  "competencies":[{"code":"UPPER_SNAKE_CODE","name":"能力名","description":"该能力在岗位中的具体表现与考察点","importance":0.0到1.0,"indicators":["可观察信号"]}],
+                  "metrics":[{"code":"UPPER_SNAKE_CODE","name":"指标名","description":"指标含义与考察点"}],
+                  "failurePatterns":[{"code":"UPPER_SNAKE_CODE","name":"失效模式名","description":"描述","symptoms":["表象"],"probes":["追问方向"]}],
+                  "probePlaybooks":[{"code":"UPPER_SNAKE_CODE","objective":"追问目标","expectedEvidence":["期望证据"],"templates":["示例问题"]}],
+                  "rubrics":[{"competencyCode":"对应 competencies 里的 code","positiveSignals":["正面信号"],"negativeSignals":["负面信号"],"insufficientEvidenceSignals":["证据不足信号"]}]
+                }
+                要求：competencies 至少 3 条；所有 code 必须为大写下划线英文且全局唯一；
+                rubrics 的 competencyCode 必须引用已定义的 competency code；
+                不要返回 scenarios 字段（系统会忽略）；不要编造字段。
+                如果 JD 信息不足，基于岗位通用能力合理补充，不要返回空对象。
+
+                岗位 JD：%s
+                """.formatted(data("岗位描述", jobDescription));
     }
 
     private static Object publicScenario(InterviewGraphState state) {

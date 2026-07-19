@@ -40,6 +40,8 @@
             <Button fx:id="reportButton" text="查看报告" onAction="#openReport"
                     styleClass="primary-button" visible="false" managed="false"/>
             <Button fx:id="pauseButton" text="暂停面试" onAction="#togglePause" styleClass="secondary-button"/>
+            <Button fx:id="endButton" text="结束面试" onAction="#endInterview" styleClass="danger-button"
+                    visible="false" managed="false"/>
         </HBox>
     </top>
     <center>
@@ -57,6 +59,8 @@
                     <InterviewTranscriptView fx:id="transcriptView" VBox.vgrow="ALWAYS"/>
                     <Separator/>
                     <Label text="你的回答" styleClass="field-label"/>
+                    <Label fx:id="answerTimeLimitLabel" text="" styleClass="secondary-text" wrapText="true"
+                           visible="false" managed="false"/>
                     <TextArea fx:id="answerArea" promptText="输入你的回答，AI 将结合当前阶段和已关联资料继续提问"
                               wrapText="true" prefRowCount="5" prefColumnCount="80"
                               minHeight="132" prefHeight="156" maxWidth="Infinity"

@@ -3,10 +3,12 @@ package com.inin.aiinterviewer.ui.navigation;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -35,8 +37,8 @@ public class JavaFxViewManager implements ViewManager {
 
     public void attachStage(Stage stage) {
         this.primaryStage = Objects.requireNonNull(stage, "stage");
-        stage.setMinWidth(1024);
-        stage.setMinHeight(720);
+        stage.setMinWidth(900);
+        stage.setMinHeight(680);
         URL icon = getClass().getResource("/images/home/app-icon.png");
         if (icon != null) {
             stage.getIcons().setAll(new Image(icon.toExternalForm()));
@@ -54,17 +56,20 @@ public class JavaFxViewManager implements ViewManager {
 
         try {
             Parent root = load(route);
-            Scene scene = primaryStage.getScene();
-            if (scene == null) {
-                scene = new Scene(root, 1440, 820);
-                URL stylesheet = getClass().getResource("/css/app.css");
-                if (stylesheet != null) {
-                    scene.getStylesheets().add(stylesheet.toExternalForm());
-                }
-                primaryStage.setScene(scene);
-            } else {
-                scene.setRoot(root);
+            Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+            double scaleX = Screen.getPrimary().getOutputScaleX();
+            double maxWidth = Math.min(1440, screen.getWidth() * 0.95);
+            double maxHeight = (route == Route.LOGIN || route == Route.REGISTER) ? 760 : 820;
+            double width = maxWidth;
+            double height = Math.min(maxHeight, screen.getHeight() * 0.95);
+            Scene scene = new Scene(root, width, height);
+            URL stylesheet = getClass().getResource("/css/app.css");
+            if (stylesheet != null) {
+                scene.getStylesheets().add(stylesheet.toExternalForm());
             }
+            primaryStage.setScene(scene);
+            primaryStage.setWidth(width);
+            primaryStage.setHeight(height);
             primaryStage.setTitle("AI Interviewer");
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to load view: " + route, exception);

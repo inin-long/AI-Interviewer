@@ -16,6 +16,7 @@ public enum Route {
     // 新增模块路由
     QUESTION_BANK(null, "/fxml/question-bank-view.fxml", "题库"),
     QUESTION_EDITOR(null, "/fxml/question-editor-view.fxml", "题目编辑"),
+    QUESTION_PRACTICE(null, "/fxml/question-practice-view.fxml", "题目练习"),
     SKILLS_LIBRARY(null, "/fxml/skills-library-view.fxml", "面试技巧"),
     SKILL_ARTICLE_DETAIL(null, "/fxml/skill-article-detail-view.fxml", "技能文章详情"),
     SKILL_ARTICLE_EDITOR(null, "/fxml/skill-article-editor-view.fxml", "技能文章编辑"),

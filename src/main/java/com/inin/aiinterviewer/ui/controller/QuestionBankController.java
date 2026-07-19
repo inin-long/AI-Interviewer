@@ -9,6 +9,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.QuestionCategory;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.fxml.FXML;
@@ -53,6 +54,7 @@ public class QuestionBankController {
     @FXML private TableColumn<InterviewQuestionDto, String> titleColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> tagsColumn;
     @FXML private Button deleteQuestionButton;
+    @FXML private Button practiceButton;
 
     private List<InterviewQuestionDto> allQuestions = new ArrayList<>();
     private List<QuestionTagDto> allTags = new ArrayList<>();
@@ -121,6 +123,7 @@ public class QuestionBankController {
 
         deleteJobButton.disableProperty().bind(jobListView.getSelectionModel().selectedItemProperty().isNull());
         deleteQuestionButton.disableProperty().bind(questionTable.getSelectionModel().selectedItemProperty().isNull());
+        practiceButton.disableProperty().bind(questionTable.getSelectionModel().selectedItemProperty().isNull());
 
         questionTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && questionTable.getSelectionModel().getSelectedItem() != null) {
@@ -205,6 +208,16 @@ public class QuestionBankController {
     @FXML
     private void refresh() {
         loadAll();
+    }
+
+    @FXML
+    private void practiceSelectedQuestion() {
+        InterviewQuestionDto selected = questionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            viewManager.showError("请先在列表中选择一道题目");
+            return;
+        }
+        contentNavigator.showSubRoute(Route.QUESTION_PRACTICE, selected.id());
     }
 
     private void loadAll() {

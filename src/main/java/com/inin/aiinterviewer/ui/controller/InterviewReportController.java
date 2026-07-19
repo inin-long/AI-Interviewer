@@ -160,13 +160,12 @@ public class InterviewReportController implements ContextAwareController<Long> {
         evidence.stream()
                 .filter(item -> item.questionNumber() > 0)
                 .forEach(item -> {
-                    Button link = new Button("Q" + item.questionNumber() + " · "
-                            + evidenceSignalText(item.signal()) + " · " + item.competencyCode()
-                            + " · " + shortEvidenceId(item.id()));
+                    String detail = item.competencyCode() + " · " + shortEvidenceId(item.id());
+                    Button link = new Button("Q" + item.questionNumber() + " · " + evidenceSignalText(item.signal()));
                     link.setMaxWidth(Double.MAX_VALUE);
                     link.getStyleClass().add("report-question-link");
                     link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
-                    link.setTooltip(new Tooltip(preview(item.reason())));
+                    link.setTooltip(new Tooltip("定位到第 " + item.questionNumber() + " 题评分证据\n" + detail));
                     link.setOnAction(event -> openTranscriptAt(item.questionNumber()));
                     Button replay = new Button("重答");
                     replay.getStyleClass().add("secondary-button");

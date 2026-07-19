@@ -51,7 +51,7 @@ class SessionBranchServiceIntegrationTest {
                 "缓存专项面试", "Java 工程师", "负责高并发服务设计",
                 InterviewDifficulty.MEDIUM, 45, 6, null, null, List.of(), Map.of(),
                 List.of("INTRODUCTION", "TECHNICAL_DEEP_DIVE", "SUMMARY"),
-                "java-backend-1.0.0"));
+                "test-pack-1.0.0"));
         var session = sessionService.create(owner.id(), plan.id());
 
         sessionService.saveAssistantOutput(

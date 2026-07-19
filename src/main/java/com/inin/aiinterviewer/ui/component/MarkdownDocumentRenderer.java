@@ -16,7 +16,7 @@ public final class MarkdownDocumentRenderer {
     private static final Parser PARSER = Parser.builder().extensions(EXTENSIONS).build();
     private static final HtmlRenderer RENDERER = HtmlRenderer.builder()
             .extensions(EXTENSIONS)
-            .escapeHtml(true)
+            .escapeHtml(false)
             .sanitizeUrls(true)
             .percentEncodeUrls(true)
             .build();
@@ -51,10 +51,13 @@ public final class MarkdownDocumentRenderer {
                     h3 { margin: 26px 0 10px; font-size: 17px; }
                     p { margin: 10px 0; }
                     strong { color: #3446b5; }
-                    table { width: 100%; border-collapse: collapse; margin: 18px 0 26px; }
-                    th, td { padding: 11px 14px; border: 1px solid #e1e5eb; text-align: left; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 18px 0 26px; }
+                    th, td { padding: 11px 14px; border: 1px solid #e1e5eb; text-align: left; vertical-align: top; }
                     th { background: #f6f7fb; font-weight: 700; color: #343b49; }
                     tr:nth-child(even) td { background: #fafbfc; }
+                    td:first-child, th:first-child { position: sticky; left: 0; z-index: 1; min-width: 72px; background: inherit; }
+                    td { word-break: break-word; overflow-wrap: anywhere; }
+                    td code { word-break: break-all; }
                     blockquote { margin: 18px 0; padding: 10px 18px; border-left: 4px solid #7382e8;
                                  background: #f3f4ff; color: #4f5766; }
                     code { padding: 2px 6px; border-radius: 4px; background: #f1f3f6;

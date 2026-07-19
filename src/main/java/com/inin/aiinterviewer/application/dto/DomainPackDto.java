@@ -5,6 +5,7 @@ public record DomainPackDto(
         String roleCode,
         String industryCode,
         String version,
-        String displayName
+        String displayName,
+        String source
 ) {
 }

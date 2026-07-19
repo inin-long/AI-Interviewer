@@ -201,7 +201,7 @@ class InterviewAgentServiceIntegrationTest {
         var user = userService.register("coach-feedback-owner", "Coach Owner", "safe-password");
         Map<String, Object> coachingRules = new com.inin.aiinterviewer.domain.model.InterviewPlanSettings(
                 com.inin.aiinterviewer.domain.enums.InterviewMode.COACHING,
-                com.inin.aiinterviewer.domain.enums.InterviewerPersona.FUTURE_PEER,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.FRIENDLY,
                 com.inin.aiinterviewer.domain.enums.PressureLevel.RELAXED,
                 com.inin.aiinterviewer.domain.enums.VerificationStrictness.STANDARD,
                 0).mergeInto(Map.of());
@@ -253,8 +253,8 @@ class InterviewAgentServiceIntegrationTest {
         var plan = planService.create(user.id(), new SaveInterviewPlanCommand(
                 "质量门验证", "Java 后端工程师", "高并发核心服务", InterviewDifficulty.SENIOR,
                 45, 6, null, null,
-                Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
-                        "TECH_LEAD"),
+                Map.of(                        com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
+                        "TECHNICAL"),
                 List.of("INTRODUCTION", "TECHNICAL_DEEP_DIVE", "SUMMARY")));
 
         var retriedSession = sessionService.create(user.id(), plan.id());
@@ -289,7 +289,7 @@ class InterviewAgentServiceIntegrationTest {
                 "协作证据验证", "Java 后端工程师", "跨团队核心服务", InterviewDifficulty.MEDIUM,
                 45, 6, null, null,
                 Map.of(com.inin.aiinterviewer.domain.model.InterviewPlanSettings.PERSONA_KEY,
-                        "INCIDENT_COMMANDER"),
+                        "PRESSURE"),
                 List.of("INTRODUCTION", "PROJECT_EXPERIENCE", "SUMMARY")));
         var session = sessionService.create(user.id(), plan.id());
         chatService.enqueueStream(Flux.just("请介绍一次需要跨团队协作的项目经历。"));
@@ -509,7 +509,7 @@ class InterviewAgentServiceIntegrationTest {
         var user = userService.register("scheduled-scenario", "Scheduled Scenario", "safe-password");
         Map<String, Object> rules = new InterviewPlanSettings(
                 com.inin.aiinterviewer.domain.enums.InterviewMode.SCENARIO_SIMULATION,
-                com.inin.aiinterviewer.domain.enums.InterviewerPersona.INCIDENT_COMMANDER,
+                com.inin.aiinterviewer.domain.enums.InterviewerPersona.PRESSURE,
                 com.inin.aiinterviewer.domain.enums.PressureLevel.CHALLENGING,
                 com.inin.aiinterviewer.domain.enums.VerificationStrictness.STRICT,
                 50).mergeInto(Map.of("focus", "故障处理"));

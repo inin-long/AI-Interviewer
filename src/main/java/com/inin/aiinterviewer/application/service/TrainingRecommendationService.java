@@ -94,7 +94,7 @@ public class TrainingRecommendationService {
         rules.put("coachingReferenceStructureEnabled", true);
         rules.put("focus", focus(recommendation));
         Map<String, Object> coachingRules = new InterviewPlanSettings(
-                InterviewMode.COACHING, InterviewerPersona.TECH_LEAD,
+                InterviewMode.COACHING, InterviewerPersona.TECHNICAL,
                 PressureLevel.RELAXED, VerificationStrictness.STANDARD, 0)
                 .mergeInto(rules);
 
