@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -47,7 +48,7 @@
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                                 <Label text="难度" styleClass="field-label"/>
-                                <ComboBox fx:id="difficultyBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="difficultyBox" maxWidth="Infinity"/>
                             </VBox>
                             <HBox spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                 <VBox spacing="6" HBox.hgrow="ALWAYS">
@@ -63,9 +64,9 @@
                         <Separator/>
                         <Label text="2  关联资料" styleClass="module-title"/>
                         <Label text="关联简历" styleClass="field-label"/>
-                        <ComboBox fx:id="resumeBox" maxWidth="Infinity" promptText="不关联简历"/>
+                                <AppSelect fx:id="resumeBox" maxWidth="Infinity" promptText="不关联简历"/>
                         <Label text="已确认候选人画像" styleClass="field-label"/>
-                        <ComboBox fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
+                                <AppSelect fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
                         <Label text="选择画像后会自动关联对应简历；未确认画像不会出现在这里。"
                                styleClass="secondary-text" wrapText="true"/>
                         <Label text="知识库分类（可多选）" styleClass="field-label"/>
@@ -77,7 +78,7 @@
                         <Separator/>
                         <Label text="3  面试规则" styleClass="module-title"/>
                         <Label text="岗位领域知识包" styleClass="field-label"/>
-                        <ComboBox fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
+                                <AppSelect fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
                         <Label text="知识包提供岗位能力模型、常见指标、事故模式、追问框架与评价标准。"
                                styleClass="secondary-text" wrapText="true"/>
                         <Label text="重点方向" styleClass="field-label"/>
@@ -89,23 +90,23 @@
                             </columnConstraints>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
                                 <Label text="面试模式" styleClass="field-label"/>
-                                <ComboBox fx:id="modeBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="modeBox" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
                                 <Label text="面试官角色" styleClass="field-label"/>
-                                <ComboBox fx:id="personaBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="personaBox" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                                 <Label text="压力等级上限" styleClass="field-label"/>
-                                <ComboBox fx:id="pressureBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="pressureBox" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                 <Label text="验证严格度" styleClass="field-label"/>
-                                <ComboBox fx:id="strictnessBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="strictnessBox" maxWidth="Infinity"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2" GridPane.columnSpan="2">
                                 <Label text="情境沙盘题目比例" styleClass="field-label"/>
-                                <ComboBox fx:id="scenarioRatioBox" maxWidth="Infinity"/>
+                                <AppSelect fx:id="scenarioRatioBox" maxWidth="Infinity"/>
                                 <Label text="从 0%、20%、30% 或 50% 中选择；系统会使用当前知识包的内置岗位场景，并保证至少包含场景导入和一次决策后果。"
                                        styleClass="secondary-text" wrapText="true"/>
                             </VBox>

@@ -2,6 +2,9 @@ package com.inin.aiinterviewer.ui.controller;
 
 import com.inin.aiinterviewer.application.dto.SkillArticleDto;
 import com.inin.aiinterviewer.application.service.SkillsLibraryService;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.Route;
@@ -32,7 +35,7 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
     private SkillsLibraryService skillsLibraryService;
 
     @FXML
-    private ComboBox<String> categoryFilter;
+    private AppSelect<String> categoryFilter;
 
     @FXML
     private ListView<SkillArticleDto> articleList;
@@ -100,10 +103,12 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
         } catch (RuntimeException ex) {
             Throwable root = ex;
             while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.WARNING,
-                    "加载面试技巧失败: " + (root.getMessage() != null ? root.getMessage() : ex.getMessage()));
-            alert.setHeaderText("加载失败");
-            alert.showAndWait();
+            AppDialogs.showMessage(
+                    categoryFilter.getScene() == null ? null : categoryFilter.getScene().getWindow(),
+                    "加载失败",
+                    "面试技巧加载失败",
+                    root.getMessage() != null ? root.getMessage() : ex.getMessage(),
+                    AppDialog.Tone.WARNING);
         }
     }
 

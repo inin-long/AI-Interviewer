@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 <?import com.inin.aiinterviewer.ui.component.DrawerPane?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
@@ -111,7 +112,7 @@
                                   toggleGroup="$statusToggleGroup" styleClass="knowledge-filter-toggle"/>
                     <Region HBox.hgrow="ALWAYS"/>
                     <TextField fx:id="documentSearchField" promptText="搜索文档" prefWidth="205" styleClass="knowledge-search-field"/>
-                    <ComboBox fx:id="sortBox" prefWidth="120" styleClass="knowledge-sort-box"/>
+                    <AppSelect fx:id="sortBox" prefWidth="136" styleClass="knowledge-sort-box"/>
                 </HBox>
                 <Separator/>
                 <ListView fx:id="documentList" VBox.vgrow="ALWAYS" styleClass="knowledge-document-list">

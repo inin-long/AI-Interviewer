@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
@@ -31,7 +32,7 @@
         <TextField fx:id="titleField" promptText="文章标题" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
         <Label text="分类" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <ComboBox fx:id="categoryCombo" promptText="选择分类" editable="true" prefWidth="250"
+        <AppSelect fx:id="categoryCombo" promptText="选择分类" editable="true" prefWidth="250"
                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
         <Label text="摘要" GridPane.rowIndex="2" GridPane.columnIndex="0"/>

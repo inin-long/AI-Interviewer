@@ -7,6 +7,9 @@ import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentTaskService;
 import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.component.DrawerPane;
 import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -55,7 +58,7 @@ public class KnowledgeController {
     @FXML private ListView<KnowledgeDocumentDto> documentList;
     @FXML private TextField categorySearchField;
     @FXML private TextField documentSearchField;
-    @FXML private ComboBox<SortOption> sortBox;
+    @FXML private AppSelect<SortOption> sortBox;
     @FXML private ToggleGroup statusToggleGroup;
     @FXML private ToggleButton allStatusButton;
     @FXML private ToggleButton readyStatusButton;
@@ -129,7 +132,7 @@ public class KnowledgeController {
 
     @FXML
     private void createCategory() {
-        showCreateCategoryDialog().ifPresent(category -> {
+        showCreateCategoryDialog(documentList.getScene().getWindow()).ifPresent(category -> {
             refresh();
             selectCategory(category.name());
         });
@@ -183,16 +186,14 @@ public class KnowledgeController {
         }
     }
 
-    private Optional<KnowledgeCategoryDto> showCreateCategoryDialog() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.initOwner(documentList.getScene().getWindow());
-        dialog.setTitle("新建分类");
-        dialog.setHeaderText("创建文档分类");
-        dialog.setContentText("分类名称");
-        dialog.getEditor().setPromptText("例如：技术资料、项目文档、学习笔记");
-        Button confirm = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        confirm.disableProperty().bind(dialog.getEditor().textProperty().isEmpty());
-        return dialog.showAndWait().flatMap(name -> {
+    private Optional<KnowledgeCategoryDto> showCreateCategoryDialog(javafx.stage.Window owner) {
+        return AppDialogs.textInput(
+                owner,
+                "新建分类",
+                "创建文档分类",
+                "分类名称",
+                "例如：技术资料、项目文档、学习笔记"
+        ).flatMap(name -> {
             try {
                 return Optional.of(knowledgeService.createCategory(userId(), name));
             } catch (RuntimeException exception) {
@@ -203,22 +204,22 @@ public class KnowledgeController {
     }
 
     private Optional<String> chooseUploadCategory(Path selectedFile) {
-        Dialog<String> dialog = new Dialog<>();
-        dialog.initOwner(documentList.getScene().getWindow());
-        dialog.setTitle("上传文档");
-        dialog.setHeaderText("为文档选择分类");
-        ButtonType uploadType = new ButtonType("上传", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().setAll(ButtonType.CANCEL, uploadType);
+        AppDialog<String> dialog = new AppDialog<>(
+                documentList.getScene().getWindow(),
+                "上传文档",
+                "为文档选择分类",
+                "分类为必选项，面试方案将按分类自动使用其中已就绪的文档。",
+                AppDialog.Tone.INFORMATION);
 
         Label fileName = new Label(selectedFile.getFileName().toString());
         fileName.getStyleClass().add("upload-file-name");
-        ComboBox<String> categoryBox = new ComboBox<>();
+        AppSelect<String> categoryBox = new AppSelect<>();
         categoryBox.setPromptText("请选择分类（必选）");
         categoryBox.setMaxWidth(Double.MAX_VALUE);
         categoryBox.getItems().setAll(allCategories.stream().map(KnowledgeCategoryDto::name).toList());
         Button create = new Button("新建分类");
         create.getStyleClass().add("secondary-button");
-        create.setOnAction(event -> showCreateCategoryDialog().ifPresent(category -> {
+        create.setOnAction(event -> showCreateCategoryDialog(categoryBox.getScene().getWindow()).ifPresent(category -> {
             if (!categoryBox.getItems().contains(category.name())) categoryBox.getItems().add(category.name());
             categoryBox.setValue(category.name());
             allCategories.setAll(knowledgeService.listCategories(userId()));
@@ -227,22 +228,14 @@ public class KnowledgeController {
         HBox.setHgrow(categoryBox, Priority.ALWAYS);
         VBox content = new VBox(8,
                 new Label("已选择文档"), fileName,
-                new Label("文档分类"), categoryRow,
-                styledHint("每个文档必须归入一个明确分类，面试方案将直接选择分类。"));
-        content.setPadding(new Insets(6, 0, 2, 0));
-        dialog.getDialogPane().setContent(content);
+                new Label("文档分类"), categoryRow);
+        dialog.setBody(content);
 
-        Node confirm = dialog.getDialogPane().lookupButton(uploadType);
+        dialog.addCancelAction("取消");
+        Button confirm = dialog.addAction("上传", categoryBox::getValue, AppDialog.ActionStyle.PRIMARY);
         confirm.disableProperty().bind(categoryBox.valueProperty().isNull());
-        dialog.setResultConverter(button -> button == uploadType ? categoryBox.getValue() : null);
+        dialog.setInitialFocus(categoryBox);
         return dialog.showAndWait();
-    }
-
-    private Label styledHint(String text) {
-        Label label = new Label(text);
-        label.setWrapText(true);
-        label.getStyleClass().add("secondary-text");
-        return label;
     }
 
     private void showDocument(KnowledgeDocumentDto document) {
@@ -362,11 +355,13 @@ public class KnowledgeController {
     }
 
     private void deleteDocument(KnowledgeDocumentDto document) {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除知识文档 “" + document.name() + "” 及其向量索引？", ButtonType.CANCEL, ButtonType.OK);
-        confirmation.initOwner(documentList.getScene().getWindow());
-        confirmation.setHeaderText("确认删除知识文档");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (!AppDialogs.confirm(
+                documentList.getScene().getWindow(),
+                "删除文档",
+                "确认删除知识文档",
+                "将删除“" + document.name() + "”及其向量索引，此操作无法撤销。",
+                "删除",
+                true)) return;
         try {
             if (documentDrawer.isOpen()) documentDrawer.close();
             knowledgeService.delete(userId(), document.id());

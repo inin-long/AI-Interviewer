@@ -5,6 +5,8 @@ import com.inin.aiinterviewer.application.dto.GeneratePlanCommand;
 import com.inin.aiinterviewer.application.dto.OptimizeResumeCommand;
 import com.inin.aiinterviewer.application.dto.ResumeOptimizationDto;
 import com.inin.aiinterviewer.application.service.CareerPlanningService;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.component.MarkdownView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
@@ -66,7 +68,7 @@ public class CareerPlanningController implements ContextAwareController<Object> 
     private void handleGeneratePlan() {
         String position = targetPositionField.getText().strip();
         if (position.isBlank()) {
-            showAlert(Alert.AlertType.WARNING, "请输入目标岗位");
+            showWarning("请输入目标岗位");
             return;
         }
         Long userId = userSessionState.requireCurrentUser().id();
@@ -117,7 +119,7 @@ public class CareerPlanningController implements ContextAwareController<Object> 
     private void handleOptimizeResume() {
         String original = originalResumeArea.getText().strip();
         if (original.isBlank()) {
-            showAlert(Alert.AlertType.WARNING, "请输入需要优化的简历内容");
+            showWarning("请输入需要优化的简历内容");
             return;
         }
         Long userId = userSessionState.requireCurrentUser().id();
@@ -166,9 +168,12 @@ public class CareerPlanningController implements ContextAwareController<Object> 
         navigator.showSubRoute(Route.RESUME_OPTIMIZATION_HISTORY, null);
     }
 
-    private void showAlert(Alert.AlertType type, String msg) {
-        Alert alert = new Alert(type, msg);
-        alert.setHeaderText(null);
-        alert.showAndWait();
+    private void showWarning(String message) {
+        AppDialogs.showMessage(
+                tabPane.getScene() == null ? null : tabPane.getScene().getWindow(),
+                "请检查输入",
+                "需要补充信息",
+                message,
+                AppDialog.Tone.WARNING);
     }
 }

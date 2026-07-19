@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
@@ -20,7 +21,7 @@
     </HBox>
     <HBox alignment="CENTER_LEFT" spacing="10" styleClass="content-card history-filter-bar">
         <TextField fx:id="searchField" promptText="搜索面试标题或岗位" HBox.hgrow="ALWAYS"/>
-        <ComboBox fx:id="statusBox" prefWidth="150" onAction="#refresh"/>
+        <AppSelect fx:id="statusBox" prefWidth="150" onAction="#refresh"/>
         <Button text="搜索" onAction="#refresh" styleClass="secondary-button"/>
         <Button text="清除" onAction="#clearFilters" styleClass="text-button"/>
     </HBox>

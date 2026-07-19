@@ -2,9 +2,13 @@ package com.inin.aiinterviewer.ui;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.api.Test;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,5 +33,48 @@ class FxmlResourceTest {
             String controller = document.getDocumentElement().getAttribute("fx:controller");
             assertThat(controller).startsWith("com.inin.aiinterviewer.ui.controller.");
         }
+    }
+
+    @Test
+    void featureViewsUseSharedDialogsAndSelectsInsteadOfRawJavaFxControls() throws Exception {
+        try (Stream<Path> fxmlFiles = Files.walk(Path.of("src/main/resources/fxml"));
+             Stream<Path> javaFiles = Files.walk(Path.of("src/main/java"));
+             Stream<Path> controllerFiles = Files.walk(Path.of("src/main/java/com/inin/aiinterviewer/ui/controller"))) {
+            String fxml = readAll(fxmlFiles, ".fxml");
+            String java = readAll(javaFiles, ".java");
+            String controllers = readAll(controllerFiles, ".java");
+
+            assertThat(fxml).doesNotContain("<ComboBox", "<ChoiceBox");
+            assertThat(java).doesNotContain(
+                    "new Alert(",
+                    "new Dialog<", 
+                    "new TextInputDialog(",
+                    "new ChoiceDialog(",
+                    "new ComboBox<",
+                    "new javafx.scene.control.Alert(",
+                    "new javafx.scene.control.Dialog<",
+                    "new javafx.scene.control.TextInputDialog(",
+                    "new javafx.scene.control.ChoiceDialog(",
+                    "new javafx.scene.control.ComboBox<");
+            assertThat(controllers).doesNotContain(
+                    "ComboBox<",
+                    "ChoiceBox<",
+                    "import javafx.scene.control.ComboBox;",
+                    "import javafx.scene.control.ChoiceBox;");
+        }
+    }
+
+    private String readAll(Stream<Path> paths, String suffix) {
+        return paths
+                .filter(Files::isRegularFile)
+                .filter(path -> path.toString().endsWith(suffix))
+                .map(path -> {
+                    try {
+                        return Files.readString(path);
+                    } catch (Exception exception) {
+                        throw new IllegalStateException("Unable to read " + path, exception);
+                    }
+                })
+                .reduce("", (left, right) -> left + "\n" + right);
     }
 }

@@ -3,6 +3,9 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.SaveSkillArticleCommand;
 import com.inin.aiinterviewer.application.dto.SkillArticleDto;
 import com.inin.aiinterviewer.application.service.SkillsLibraryService;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
@@ -31,7 +34,7 @@ public class SkillArticleEditorController implements ContextAwareController<Skil
     private TextField titleField;
 
     @FXML
-    private ComboBox<String> categoryCombo;
+    private AppSelect<String> categoryCombo;
 
     @FXML
     private TextArea summaryField;
@@ -60,11 +63,11 @@ public class SkillArticleEditorController implements ContextAwareController<Skil
         String title = titleField.getText().strip();
         String category = categoryCombo.getValue();
         if (title.isBlank()) {
-            showAlert(Alert.AlertType.WARNING, "请输入标题");
+            showWarning("请输入标题");
             return;
         }
         if (category == null || category.isBlank()) {
-            showAlert(Alert.AlertType.WARNING, "请选择分类");
+            showWarning("请选择分类");
             return;
         }
 
@@ -88,9 +91,12 @@ public class SkillArticleEditorController implements ContextAwareController<Skil
         navigator.back();
     }
 
-    private void showAlert(Alert.AlertType type, String msg) {
-        Alert alert = new Alert(type, msg);
-        alert.setHeaderText(null);
-        alert.showAndWait();
+    private void showWarning(String message) {
+        AppDialogs.showMessage(
+                categoryCombo.getScene() == null ? null : categoryCombo.getScene().getWindow(),
+                "请检查输入",
+                "需要补充信息",
+                message,
+                AppDialog.Tone.WARNING);
     }
 }

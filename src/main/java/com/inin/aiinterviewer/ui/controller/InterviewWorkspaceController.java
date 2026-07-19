@@ -21,6 +21,7 @@ import com.inin.aiinterviewer.domain.enums.ReportStatus;
 import com.inin.aiinterviewer.domain.enums.ScenarioStatus;
 import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.Message;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
@@ -31,9 +32,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
@@ -193,14 +192,13 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             return;
         }
         if (currentSession != null && currentSession.status() == InterviewStatus.RUNNING) {
-            Alert confirmation = new Alert(
-                    Alert.AlertType.CONFIRMATION,
-                    "离开面试页面前将自动暂停，并保存当前 Checkpoint。",
-                    ButtonType.CANCEL, ButtonType.OK);
-            confirmation.setHeaderText("暂停并离开面试？");
-            if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
-                return;
-            }
+            if (!AppDialogs.confirm(
+                    workspaceRoot.getScene() == null ? null : workspaceRoot.getScene().getWindow(),
+                    "暂停面试",
+                    "暂停并离开面试？",
+                    "离开前将自动暂停面试并保存当前进度，之后可以继续。",
+                    "暂停并离开",
+                    false)) return;
             try {
                 sessionService.pause(userId(), sessionId);
             } catch (RuntimeException exception) {

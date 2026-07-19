@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.application.service.ResumeTaskService;
 import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
 import com.inin.aiinterviewer.domain.enums.ResumeStatus;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.dialog.FileDialogService;
@@ -17,9 +18,7 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -163,13 +162,13 @@ public class ResumeController {
         if (selected == null) {
             return;
         }
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除简历 “" + selected.originalName() + "”？本地文件也会被删除。",
-                ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("确认删除简历");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
-            return;
-        }
+        if (!AppDialogs.confirm(
+                resumeTable.getScene() == null ? null : resumeTable.getScene().getWindow(),
+                "删除简历",
+                "确认删除简历",
+                "将删除“" + selected.originalName() + "”及其本地文件，此操作无法撤销。",
+                "删除简历",
+                true)) return;
         try {
             resumeService.delete(sessionState.requireCurrentUser().id(), selected.id());
             taskLabel.setText("简历已删除");

@@ -1,11 +1,12 @@
 package com.inin.aiinterviewer.ui.navigation;
 
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 import org.springframework.context.ApplicationContext;
@@ -76,21 +77,11 @@ public class JavaFxViewManager implements ViewManager {
     }
 
     public void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(primaryStage);
-        alert.setTitle("操作失败");
-        alert.setHeaderText("操作未能完成");
-        alert.setContentText(message);
-        alert.showAndWait();
+        AppDialogs.showMessage(primaryStage, "操作失败", "操作未能完成", message, AppDialog.Tone.DANGER);
     }
 
     public void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.initOwner(primaryStage);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AppDialogs.showMessage(primaryStage, title, title, message, AppDialog.Tone.INFORMATION);
     }
 
     public void maximizePrimaryStage() {

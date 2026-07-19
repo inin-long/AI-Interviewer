@@ -5,14 +5,13 @@ import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -140,10 +139,13 @@ public class InterviewPlanController {
     private void deleteSelected() {
         InterviewPlanDto selected = planTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除面试方案 “" + selected.name() + "”？", ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("确认删除面试方案");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (!AppDialogs.confirm(
+                planTable.getScene() == null ? null : planTable.getScene().getWindow(),
+                "删除面试方案",
+                "确认删除面试方案",
+                "将永久删除“" + selected.name() + "”，此操作无法撤销。",
+                "删除",
+                true)) return;
         try {
             planService.delete(sessionState.requireCurrentUser().id(), selected.id());
             refresh();

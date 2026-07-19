@@ -4,14 +4,13 @@ import com.inin.aiinterviewer.application.dto.BackgroundTaskDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.BackgroundTaskService;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskStatus;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import org.springframework.context.annotation.Scope;
@@ -86,13 +85,13 @@ public class BackgroundTaskDetailController implements ContextAwareController<Lo
 
     @FXML
     private void delete() {
-        Alert confirmation = new Alert(
-                Alert.AlertType.CONFIRMATION,
+        if (!AppDialogs.confirm(
+                deleteButton.getScene() == null ? null : deleteButton.getScene().getWindow(),
+                "删除任务",
+                "删除这个后台任务？",
                 "删除后该任务将不再出现在任务中心，业务数据和已生成结果不会被删除。",
-                ButtonType.CANCEL, ButtonType.OK);
-        if (deleteButton.getScene() != null) confirmation.initOwner(deleteButton.getScene().getWindow());
-        confirmation.setHeaderText("删除这个后台任务？");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+                "删除",
+                true)) return;
         try {
             taskService.deleteTerminal(sessionState.requireCurrentUser().id(), taskId);
             contentNavigator.back();

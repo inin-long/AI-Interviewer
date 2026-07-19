@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
@@ -16,7 +17,7 @@
     <HBox spacing="12" alignment="CENTER_LEFT">
         <Label text="面试技巧库" styleClass="heading-2"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <ComboBox fx:id="categoryFilter" promptText="分类筛选" prefWidth="140"/>
+        <AppSelect fx:id="categoryFilter" promptText="分类筛选" prefWidth="140"/>
         <Button text="新增文章" onAction="#handleAdd" styleClass="btn-primary"/>
     </HBox>
 

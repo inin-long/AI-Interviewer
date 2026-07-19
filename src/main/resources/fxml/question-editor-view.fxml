@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -38,15 +39,15 @@
                             </columnConstraints>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
                                 <Label text="归属岗位" styleClass="field-label"/>
-                                <ComboBox fx:id="jobCombo" promptText="可选：不归类到具体岗位"/>
+                                <AppSelect fx:id="jobCombo" promptText="可选：不归类到具体岗位"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
                                 <Label text="题目类别" styleClass="field-label"/>
-                                <ComboBox fx:id="categoryCombo"/>
+                                <AppSelect fx:id="categoryCombo"/>
                             </VBox>
                             <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
                                 <Label text="难度" styleClass="field-label"/>
-                                <ComboBox fx:id="difficultyCombo"/>
+                                <AppSelect fx:id="difficultyCombo"/>
                             </VBox>
                         </GridPane>
                         <Label text="题目标题" styleClass="field-label"/>

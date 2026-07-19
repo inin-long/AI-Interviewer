@@ -3,6 +3,8 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.InterviewHistoryItemDto;
 import com.inin.aiinterviewer.application.service.InterviewHistoryService;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
@@ -28,7 +30,7 @@ public class InterviewHistoryController {
     private final ContentNavigator contentNavigator;
 
     @FXML private TextField searchField;
-    @FXML private ComboBox<String> statusBox;
+    @FXML private AppSelect<String> statusBox;
     @FXML private TableView<InterviewHistoryItemDto> historyTable;
     @FXML private TableColumn<InterviewHistoryItemDto, String> titleColumn;
     @FXML private TableColumn<InterviewHistoryItemDto, String> jobColumn;
@@ -173,14 +175,13 @@ public class InterviewHistoryController {
     private void deleteRecord() {
         InterviewHistoryItemDto selected = selected();
         if (selected == null) return;
-        Alert confirmation = new Alert(
-                Alert.AlertType.CONFIRMATION,
-                "确定要删除这条面试记录吗？此操作不可恢复。",
-                ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("删除面试记录");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
-            return;
-        }
+        if (!AppDialogs.confirm(
+                historyTable.getScene() == null ? null : historyTable.getScene().getWindow(),
+                "删除面试记录",
+                "确认删除面试记录",
+                "将永久删除这条面试记录，此操作无法撤销。",
+                "删除",
+                true)) return;
         try {
             historyService.delete(userId(), selected.sessionId());
             refresh();

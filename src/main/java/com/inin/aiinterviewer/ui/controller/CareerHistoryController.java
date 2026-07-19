@@ -3,13 +3,12 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.AssessmentResultDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.CareerAssessmentService;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import org.springframework.context.annotation.Scope;
@@ -80,10 +79,13 @@ public class CareerHistoryController {
     private void deleteSelected() {
         AssessmentResultDto selected = resultListView.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除这条测评记录？", ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("确认删除测评记录");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (!AppDialogs.confirm(
+                resultListView.getScene() == null ? null : resultListView.getScene().getWindow(),
+                "删除测评记录",
+                "确认删除测评记录",
+                "将永久删除这条职业测评记录，此操作无法撤销。",
+                "删除",
+                true)) return;
         try {
             assessmentService.deleteResult(sessionState.requireCurrentUser().id(), selected.id());
             refresh();

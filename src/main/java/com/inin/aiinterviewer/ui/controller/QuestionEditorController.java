@@ -7,16 +7,16 @@ import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.QuestionBankService;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.QuestionCategory;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.util.StringConverter;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -34,9 +34,9 @@ public class QuestionEditorController implements ContextAwareController<Long> {
     private final GlobalExceptionHandler exceptionHandler;
 
     @FXML private Label hintLabel;
-    @FXML private ComboBox<JobPositionDto> jobCombo;
-    @FXML private ComboBox<QuestionCategory> categoryCombo;
-    @FXML private ComboBox<InterviewDifficulty> difficultyCombo;
+    @FXML private AppSelect<JobPositionDto> jobCombo;
+    @FXML private AppSelect<QuestionCategory> categoryCombo;
+    @FXML private AppSelect<InterviewDifficulty> difficultyCombo;
     @FXML private TextField titleField;
     @FXML private TextArea contentArea;
     @FXML private TextArea answerArea;
@@ -62,14 +62,11 @@ public class QuestionEditorController implements ContextAwareController<Long> {
     public void initializeContext(Long context) {
         long userId = sessionState.requireCurrentUser().id();
         jobCombo.getItems().setAll(questionBankService.listJobs(userId));
-        jobCombo.setCellFactory(combo -> jobCell());
-        jobCombo.setButtonCell(jobCell());
+        jobCombo.setConverter(converter(job -> job.title()));
         categoryCombo.getItems().setAll(QuestionCategory.values());
-        categoryCombo.setCellFactory(combo -> categoryCell());
-        categoryCombo.setButtonCell(categoryCell());
+        categoryCombo.setConverter(converter(QuestionCategory::label));
         difficultyCombo.getItems().setAll(InterviewDifficulty.values());
-        difficultyCombo.setCellFactory(combo -> difficultyCell());
-        difficultyCombo.setButtonCell(difficultyCell());
+        difficultyCombo.setConverter(converter(this::difficultyText));
 
         if (context == null) {
             hintLabel.setText("新建面试题 · 选择类别与标签以便检索");
@@ -130,32 +127,16 @@ public class QuestionEditorController implements ContextAwareController<Long> {
                 .map(String::strip).filter(item -> !item.isBlank()).toList();
     }
 
-    private ListCell<JobPositionDto> jobCell() {
-        return new ListCell<>() {
+    private <T> StringConverter<T> converter(java.util.function.Function<T, String> display) {
+        return new StringConverter<>() {
             @Override
-            protected void updateItem(JobPositionDto item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.title());
+            public String toString(T value) {
+                return value == null ? "" : display.apply(value);
             }
-        };
-    }
 
-    private ListCell<QuestionCategory> categoryCell() {
-        return new ListCell<>() {
             @Override
-            protected void updateItem(QuestionCategory item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : item.label());
-            }
-        };
-    }
-
-    private ListCell<InterviewDifficulty> difficultyCell() {
-        return new ListCell<>() {
-            @Override
-            protected void updateItem(InterviewDifficulty item, boolean empty) {
-                super.updateItem(item, empty);
-                setText(empty || item == null ? null : difficultyText(item));
+            public T fromString(String value) {
+                return null;
             }
         };
     }

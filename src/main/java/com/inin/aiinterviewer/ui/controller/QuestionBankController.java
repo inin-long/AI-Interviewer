@@ -7,15 +7,14 @@ import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.QuestionBankService;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.QuestionCategory;
+import com.inin.aiinterviewer.ui.component.AppDialogs;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -42,8 +41,8 @@ public class QuestionBankController {
     @FXML private TextField newJobTitleField;
     @FXML private TextField newJobDeptField;
     @FXML private Button deleteJobButton;
-    @FXML private ComboBox<String> categoryFilterCombo;
-    @FXML private ComboBox<String> tagFilterCombo;
+    @FXML private AppSelect<String> categoryFilterCombo;
+    @FXML private AppSelect<String> tagFilterCombo;
     @FXML private TableView<InterviewQuestionDto> questionTable;
     @FXML private TableColumn<InterviewQuestionDto, String> jobColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> categoryColumn;
@@ -131,11 +130,13 @@ public class QuestionBankController {
     private void deleteSelectedJob() {
         JobPositionDto selected = jobListView.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除岗位「" + selected.title() + "」？其下题目将一并删除。",
-                ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("确认删除岗位");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (!AppDialogs.confirm(
+                jobListView.getScene() == null ? null : jobListView.getScene().getWindow(),
+                "删除岗位",
+                "确认删除岗位",
+                "将删除“" + selected.title() + "”及其下所有题目，此操作无法撤销。",
+                "删除岗位",
+                true)) return;
         try {
             long userId = sessionState.requireCurrentUser().id();
             for (InterviewQuestionDto question : allQuestions) {
@@ -167,10 +168,13 @@ public class QuestionBankController {
     private void deleteSelectedQuestion() {
         InterviewQuestionDto selected = questionTable.getSelectionModel().getSelectedItem();
         if (selected == null) return;
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION,
-                "删除面试题「" + selected.title() + "」？", ButtonType.CANCEL, ButtonType.OK);
-        confirmation.setHeaderText("确认删除题目");
-        if (confirmation.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) return;
+        if (!AppDialogs.confirm(
+                questionTable.getScene() == null ? null : questionTable.getScene().getWindow(),
+                "删除面试题",
+                "确认删除题目",
+                "将永久删除“" + selected.title() + "”，此操作无法撤销。",
+                "删除题目",
+                true)) return;
         try {
             questionBankService.deleteQuestion(sessionState.requireCurrentUser().id(), selected.id());
             loadAll();

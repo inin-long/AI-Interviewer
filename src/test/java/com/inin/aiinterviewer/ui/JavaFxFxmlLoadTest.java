@@ -8,6 +8,8 @@ import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
+import com.inin.aiinterviewer.ui.component.AppDialog;
+import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.component.DrawerPane;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
@@ -29,9 +31,12 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.css.PseudoClass;
@@ -317,12 +322,82 @@ class JavaFxFxmlLoadTest {
             return new boolean[]{
                     root.lookup("#categoryList") instanceof ListView,
                     root.lookup("#documentList") instanceof ListView,
+                    root.lookup("#sortBox") instanceof AppSelect,
                     root.lookup("#documentTable") == null,
                     root.lookup("#searchResultArea") == null,
                     drawer.isOpen(),
                     Math.abs(drawer.getDrawerWidth() - 442) < 0.5,
                     root.lookupAll(".knowledge-stat-card").size() == 1,
                     root.lookupAll(".knowledge-stat-segment").size() == 4
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void sharedDialogAndSelectOwnProductChromeAndInteractionStates() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            AppSelect<String> select = new AppSelect<>();
+            select.getItems().setAll("按更新时间", "按名称", "按大小");
+            select.setValue("按更新时间");
+
+            AppDialog<String> dialog = new AppDialog<>(
+                    null,
+                    "组件验证",
+                    "通用弹窗",
+                    "用于验证品牌化外壳和操作区。",
+                    AppDialog.Tone.INFORMATION);
+            dialog.setBody(new Label("弹窗内容"));
+            Button cancel = dialog.addCancelAction("取消");
+            Button confirm = dialog.addAction("确定", () -> "ok", AppDialog.ActionStyle.PRIMARY);
+
+            StackPane root = new StackPane(select, dialog.getDialogPane());
+            Scene scene = new Scene(root, 720, 480);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+
+            AppDialog<Boolean> cancelDialog = new AppDialog<>(null, "关闭验证", "取消操作");
+            Button productCancel = cancelDialog.addCancelAction("取消");
+            cancelDialog.show();
+            boolean cancelDialogOpened = cancelDialog.isShowing();
+            productCancel.fire();
+            boolean cancelActionClosed = !cancelDialog.isShowing();
+
+            AppDialog<Boolean> chromeDialog = new AppDialog<>(null, "关闭验证", "标题栏关闭");
+            chromeDialog.addCancelAction("取消");
+            chromeDialog.show();
+            Button chromeClose = (Button) chromeDialog.getDialogPane().lookup(".app-dialog-close-button");
+            boolean chromeDialogOpened = chromeDialog.isShowing() && chromeClose != null;
+            chromeClose.fire();
+            boolean chromeActionClosed = !chromeDialog.isShowing();
+
+            AppDialog<Boolean> escapeDialog = new AppDialog<>(null, "关闭验证", "Esc 关闭");
+            escapeDialog.addCancelAction("取消");
+            escapeDialog.show();
+            boolean escapeDialogOpened = escapeDialog.isShowing();
+            escapeDialog.getDialogPane().fireEvent(new KeyEvent(
+                    KeyEvent.KEY_PRESSED, "", "", KeyCode.ESCAPE,
+                    false, false, false, false));
+            boolean escapeActionClosed = !escapeDialog.isShowing();
+
+            return new boolean[]{
+                    select.getStyleClass().contains("app-select"),
+                    select.getCellFactory() != null,
+                    select.getButtonCell().getStyleClass().contains("app-select-button-cell"),
+                    dialog.getDialogPane().lookup(".app-dialog-shell") != null,
+                    dialog.getDialogPane().lookup(".app-dialog-brand") != null,
+                    dialog.getDialogPane().lookup(".app-dialog-actions") != null,
+                    cancel.isCancelButton(),
+                    confirm.isDefaultButton(),
+                    confirm.getStyleClass().contains("app-dialog-primary-button"),
+                    cancelDialogOpened,
+                    cancelActionClosed,
+                    chromeDialogOpened,
+                    chromeActionClosed,
+                    escapeDialogOpened,
+                    escapeActionClosed
             };
         });
         Platform.runLater(task);
