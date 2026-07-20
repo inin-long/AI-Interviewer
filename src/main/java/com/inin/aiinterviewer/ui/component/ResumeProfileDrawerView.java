@@ -214,14 +214,16 @@ public final class ResumeProfileDrawerView extends BorderPane {
         return list;
     }
 
-    private HBox facts(CandidateProfileContent candidate) {
+    private VBox facts(CandidateProfileContent candidate) {
         VBox experience = factCard("mdi2a-account-tie-outline", "工作年限",
                 value(candidate.yearsExperience(), "待补充"), first(candidate.experience(), "经历待补充"));
+        experience.setId("resumeExperienceFactCard");
         VBox education = factCard("mdi2s-school-outline", "教育背景",
                 value(candidate.education(), "待补充"), "候选人简历提取");
-        HBox.setHgrow(experience, Priority.ALWAYS);
-        HBox.setHgrow(education, Priority.ALWAYS);
-        HBox cards = new HBox(10, experience, education);
+        education.setId("resumeEducationFactCard");
+        VBox cards = new VBox(10, experience, education);
+        cards.setId("resumeFacts");
+        cards.setFillWidth(true);
         cards.getStyleClass().add("resume-drawer-facts");
         return cards;
     }
@@ -235,6 +237,8 @@ public final class ResumeProfileDrawerView extends BorderPane {
         HBox heading = new HBox(7, icon, label);
         heading.setAlignment(Pos.CENTER_LEFT);
         Label value = new Label(valueText);
+        value.setWrapText(true);
+        value.setMaxWidth(Double.MAX_VALUE);
         value.getStyleClass().add("resume-fact-value");
         Label hint = new Label(hintText);
         hint.setWrapText(true);

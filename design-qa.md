@@ -132,6 +132,27 @@ final result: passed（本轮垂直间距与启动窗口调整）
 
 final result: passed
 
+## 候选人画像 Drawer 信息卡响应修复（2026-07-20）
+
+- source issue screenshot: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-62288905-ae32-42ec-a2c5-99c32b1fac51.png`
+- implementation screenshot: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-drawer-card-stack-fix.png`
+- viewport: `1672 × 901` JavaFX scene，右侧 Drawer 固定为 `470px`
+- Browser classification: Browser/IAB 不适用于 JavaFX 桌面应用；使用 JavaFX 原生截图、布局坐标断言与完整 UI 回归
+
+### Mismatch ledger
+
+- P1：原实现把工作年限和教育背景放在同一个横向 `HBox`；较长的工作经历形成较大的最小宽度，教育卡只剩窄条并在 Drawer 右侧被裁切。已将卡片容器改为纵向满宽 `VBox`，教育背景稳定展示在工作年限下方。
+- P2：较长的学校、专业和学历组合原本仍按单行值渲染。教育主值已启用卡内换行，不再从卡片右侧溢出。
+- 复查：两张卡宽度一致，教育卡右边界不超过 Drawer 内容区；`470 × 620` 较矮场景中内容区可滚动，下方岗位和总结区顺序不变，底部操作栏固定可见。
+
+### Verification
+
+- 新增 `resumePortraitDrawerStacksEducationBelowExperienceAtDrawerWidth`，在 `470 × 620` 场景中使用长学历名称，断言卡片纵向位置、等宽、文本换行、内容区滚动、右边界和固定操作栏。
+- `JavaFxFxmlLoadTest`：22 项通过，0 失败。
+- 完整 `mvnw test`：171 项，166 通过、5 项按条件跳过，0 失败、0 错误。
+
+final result: passed
+
 ## 面试方案窄窗口 / 字段可读性 / 分类弹层（2026-07-20）
 
 - source issue screenshot 1: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-34ed55ca-7586-4ad5-9937-c9ba82c336f2.png`

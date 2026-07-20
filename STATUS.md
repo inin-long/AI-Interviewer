@@ -212,3 +212,14 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 - [x] JavaFX 回归：`JavaFxFxmlLoadTest` 21 项通过，覆盖弹层打开、两项选择后摘要更新和关闭；完整 `mvnw test` 共 170 项，165 项通过、5 项按条件跳过，0 失败、0 错误。
 
 本轮视觉证据：`plan-workspace-fixes-final.png`、`plan-editor-fixes-final.png`、`plan-detail-fixes-final.png`、`plan-knowledge-popup-fixes-final.png`、`compare-plan-list-overflow-fix.png` 与 `compare-plan-editor-popup-fix.png`，均位于 `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040`。
+
+### 候选人画像 Drawer 信息卡修复（2026-07-20）
+
+- [x] “工作年限 / 教育背景”由横向等分卡片改为纵向满宽卡片；长工作经历不会再占用教育卡的可视宽度，教育背景固定完整展示在工作年限下方。
+- [x] 学历主值支持卡内自动换行；长学校、专业和学历组合不会越过卡片右边界。
+- [x] 新增 `470px` Drawer 宽度布局回归：验证教育卡位于工作年限卡下方、两张卡宽度一致，且教育卡右边界不超出场景。
+- [x] 较矮窗口下内容区保持纵向滚动，底部编辑、确认和进入面试操作栏固定在场景内。
+- [x] JavaFX 原生截图复查通过；后续“适配岗位 / AI 总结”和底部操作区仍可见，无横向滚动、裁切或遮挡。
+- [x] `JavaFxFxmlLoadTest` 22 项通过；完整 `mvnw test` 共 171 项，166 项通过、5 项按条件跳过，0 失败、0 错误。
+
+本轮视觉证据：`C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-drawer-card-stack-fix.png`。Browser 插件不适用于 JavaFX 桌面应用，本轮继续使用 JavaFX 原生 `Parent.snapshot` 与场景布局断言验收。

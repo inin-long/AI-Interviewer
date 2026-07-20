@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record InterviewHistoryItemDto(
         long sessionId,
@@ -16,6 +17,16 @@ public record InterviewHistoryItemDto(
         LocalDateTime updateTime,
         int messageCount,
         boolean reportAvailable,
-        Integer score
+        Integer score,
+        String planIconPath,
+        String resumeName,
+        List<String> tags,
+        List<String> sessionStages,
+        String interviewSummary,
+        String reportStatusText
 ) {
+    public InterviewHistoryItemDto {
+        tags = tags == null ? List.of() : List.copyOf(tags);
+        sessionStages = sessionStages == null ? List.of() : List.copyOf(sessionStages);
+    }
 }

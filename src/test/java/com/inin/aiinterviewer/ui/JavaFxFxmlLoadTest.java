@@ -2,10 +2,17 @@ package com.inin.aiinterviewer.ui;
 
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
+import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
+import com.inin.aiinterviewer.application.dto.ResumeDetailDto;
+import com.inin.aiinterviewer.application.dto.ResumeDto;
 import com.inin.aiinterviewer.application.dto.UserDto;
 import com.inin.aiinterviewer.application.event.BackgroundTaskCompletedEvent;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
+import com.inin.aiinterviewer.domain.enums.ProfileSource;
+import com.inin.aiinterviewer.domain.enums.ProfileStatus;
+import com.inin.aiinterviewer.domain.enums.ResumeStatus;
+import com.inin.aiinterviewer.domain.model.CandidateProfileContent;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
 import com.inin.aiinterviewer.ui.component.AppDialog;
@@ -410,6 +417,49 @@ class JavaFxFxmlLoadTest {
                     getClass().getResource("/images/resume/candidate-avatar.png") != null,
                     getClass().getResource("/images/resume/resume-sidebar-illustration.png") != null,
                     artwork.isVisible() && artwork.isManaged()
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void resumePortraitDrawerStacksEducationBelowExperienceAtDrawerWidth() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            LocalDateTime now = LocalDateTime.now();
+            ResumeDto resume = new ResumeDto(1L, "张宇辰_后端开发工程师.docx", "docx", 1024,
+                    ResumeStatus.COMPLETED, null, now, now);
+            CandidateProfileContent content = new CandidateProfileContent(
+                    "张宇辰", "后端开发工程师（Java）", "2年经验",
+                    "北京航空航天大学 · 计算机科学与技术专业 · 硕士研究生",
+                    List.of("Java", "Spring Boot"), List.of("通用后台管理系统"),
+                    List.of("XX信息科技有限公司｜后端开发工程师｜2023.03 - 至今：负责SaaS后台管理系统"),
+                    List.of(), List.of(), "具备扎实的 Java 后端开发能力。");
+            CandidateProfileDto profile = new CandidateProfileDto(1L, 1L, content,
+                    ProfileSource.AI, ProfileStatus.CONFIRMED, true, null, now);
+
+            ResumeProfileDrawerView portrait = new ResumeProfileDrawerView();
+            portrait.render(new ResumeDetailDto(resume, ""), profile, false);
+            Scene scene = new Scene(portrait, 470, 620);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            portrait.applyCss();
+            portrait.layout();
+
+            Region experience = (Region) portrait.lookup("#resumeExperienceFactCard");
+            VBox education = (VBox) portrait.lookup("#resumeEducationFactCard");
+            Label educationValue = (Label) education.lookup(".resume-fact-value");
+            ScrollPane drawerScroll = (ScrollPane) portrait.lookup(".resume-drawer-scroll");
+            Region actionBar = (Region) portrait.lookup(".resume-drawer-actions");
+            return new boolean[]{
+                    experience != null,
+                    education != null,
+                    education.getBoundsInParent().getMinY() >= experience.getBoundsInParent().getMaxY(),
+                    Math.abs(experience.getWidth() - education.getWidth()) < 0.5,
+                    education.localToScene(education.getBoundsInLocal()).getMaxX() <= scene.getWidth() + 0.5,
+                    educationValue.isWrapText(),
+                    educationValue.getBoundsInParent().getMaxX() <= education.getWidth() + 0.5,
+                    drawerScroll.getContent().getLayoutBounds().getHeight() > drawerScroll.getViewportBounds().getHeight(),
+                    actionBar.localToScene(actionBar.getBoundsInLocal()).getMaxY() <= scene.getHeight() + 0.5
             };
         });
         Platform.runLater(task);
