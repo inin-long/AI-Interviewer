@@ -201,3 +201,14 @@ V1 不实现云同步、OAuth、语音、OCR、本地模型、代码运行、自
 - [x] 自动化回归：`LocalFileStorageServiceTest` 与 `JavaFxFxmlLoadTest` 共 22 项通过；使用 JDK 21.0.2 执行完整 `mvnw test`，169 项测试中 164 项通过、5 项按条件跳过，0 失败、0 错误。
 
 视觉证据：`C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-workspace-v4.png`、`plan-editor-v4.png`、`plan-detail-v4.png` 及对应 `compare-*-v4.png`。Browser 插件不适用于 JavaFX 桌面应用，本轮使用 JavaFX 原生 `Parent.snapshot`、FXML 加载测试与控制器交互回归。
+
+### 面试方案窄窗口与知识分类选择修复（2026-07-20）
+
+- [x] 方案卡片宽度跟随 `ListView` 可视区，标题、元数据和重点区域允许收缩，操作区保留稳定宽度；`1366 × 846` 窄窗口下无横向滚动、无右侧预览遮挡，方案名称和主要动作完整可见。
+- [x] 顶部搜索、筛选、排序和主操作收敛固定宽度，右侧预览栏及编辑/详情摘要栏降低最小宽度，避免较窄桌面窗口把内容推出视口。
+- [x] 编辑页输入框与 `AppSelect` 从 32px 调整为 38px，并优化紧凑选择器内边距；高 DPI 下文字基线、短选项和中文内容不再裁切，详情动态值允许换行。
+- [x] 新增通用 `AppMultiSelect<T>`：使用锚定弹出层承载分类搜索、多选、已选计数、清空和完成操作；按钮显示已选摘要，点击完成、再次点击、Esc 或失焦均可关闭。
+- [x] 面试方案编辑器已移除原始 JavaFX 多选 `ListView`，改用 `AppMultiSelect<String>`，加载旧方案、保存分类、右侧摘要及启动面试时的分类快照逻辑保持一致。
+- [x] JavaFX 回归：`JavaFxFxmlLoadTest` 21 项通过，覆盖弹层打开、两项选择后摘要更新和关闭；完整 `mvnw test` 共 170 项，165 项通过、5 项按条件跳过，0 失败、0 错误。
+
+本轮视觉证据：`plan-workspace-fixes-final.png`、`plan-editor-fixes-final.png`、`plan-detail-fixes-final.png`、`plan-knowledge-popup-fixes-final.png`、`compare-plan-list-overflow-fix.png` 与 `compare-plan-editor-popup-fix.png`，均位于 `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040`。

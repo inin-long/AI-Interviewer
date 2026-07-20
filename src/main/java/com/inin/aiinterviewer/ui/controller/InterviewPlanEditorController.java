@@ -22,6 +22,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewerPersona;
 import com.inin.aiinterviewer.domain.enums.PressureLevel;
 import com.inin.aiinterviewer.domain.enums.VerificationStrictness;
 import com.inin.aiinterviewer.ui.component.AppSelect;
+import com.inin.aiinterviewer.ui.component.AppMultiSelect;
 import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.dialog.FileDialogService;
 import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
@@ -35,8 +36,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ListView;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.geometry.Pos;
@@ -81,7 +80,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private TextField questionCountField;
     @FXML private AppSelect<ResumeDto> resumeBox;
     @FXML private AppSelect<CandidateProfileListItemDto> profileBox;
-    @FXML private ListView<String> knowledgeList;
+    @FXML private AppMultiSelect<String> knowledgeSelect;
     @FXML private TextField focusField;
     @FXML private AppSelect<DomainPackDto> domainPackBox;
     @FXML private AppSelect<InterviewMode> modeBox;
@@ -200,8 +199,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         domainPackBox.getItems().setAll(domainPackService.list());
         resumeBox.getItems().setAll(resumeService.list(sessionState.requireCurrentUser().id()));
         profileBox.getItems().setAll(profileService.listConfirmed(sessionState.requireCurrentUser().id()));
-        knowledgeList.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        knowledgeList.getItems().setAll(knowledgeService.listCategories(
+        knowledgeSelect.getItems().setAll(knowledgeService.listCategories(
                 sessionState.requireCurrentUser().id()).stream().map(category -> category.name()).toList());
         nameField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
         jobTitleField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
@@ -233,8 +231,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                 profileBox.setValue(null);
             }
         });
-        knowledgeList.getSelectionModel().getSelectedItems()
-                .addListener((javafx.collections.ListChangeListener<String>) change -> refreshSummary());
+        knowledgeSelect.getSelectedItems()
+                .addListener((javafx.collections.SetChangeListener<String>) change -> refreshSummary());
         for (CheckBox stage : stageChecks()) {
             stage.selectedProperty().addListener((observable, oldValue, value) -> refreshSummary());
         }
@@ -399,9 +397,10 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                 .findFirst().ifPresent(resumeBox::setValue);
         profileBox.getItems().stream().filter(profile -> profile.id().equals(plan.profileId()))
                 .findFirst().ifPresent(profileBox::setValue);
-        for (String category : knowledgeList.getItems()) {
+        knowledgeSelect.getSelectedItems().clear();
+        for (String category : knowledgeSelect.getItems()) {
             if (plan.knowledgeCategories().contains(category)) {
-                knowledgeList.getSelectionModel().select(category);
+                knowledgeSelect.getSelectedItems().add(category);
             }
         }
         focusField.setText(String.valueOf(plan.rules().getOrDefault("focus", "")));
@@ -422,7 +421,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             int questions = Integer.parseInt(questionCountField.getText().trim());
             ResumeDto resume = resumeBox.getValue();
             CandidateProfileListItemDto profile = profileBox.getValue();
-            List<String> categories = List.copyOf(knowledgeList.getSelectionModel().getSelectedItems());
+            List<String> categories = knowledgeSelect.getItems().stream()
+                    .filter(knowledgeSelect.getSelectedItems()::contains).toList();
             if (selectedStages().isEmpty()) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
             validateStageTotals(duration, questions);
             LinkedHashMap<String, Object> baseRules = new LinkedHashMap<>();
@@ -464,8 +464,8 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             CandidateProfileListItemDto profile = profileBox.getValue();
             summaryProfileLabel.setText(profile == null ? "未关联" : profileBox.getConverter().toString(profile));
         }
-        if (summaryKnowledgeLabel != null && knowledgeList != null) {
-            int count = knowledgeList.getSelectionModel().getSelectedItems().size();
+        if (summaryKnowledgeLabel != null && knowledgeSelect != null) {
+            int count = knowledgeSelect.getSelectedItems().size();
             summaryKnowledgeLabel.setText(count == 0 ? "未选择" : count + " 个分类");
         }
         if (summaryDomainPackLabel != null && domainPackBox != null) {

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import com.inin.aiinterviewer.ui.component.AppMultiSelect?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.image.ImageView?>
@@ -36,7 +37,7 @@
     <center>
         <HBox spacing="16" styleClass="plan-editor-body">
             <padding><Insets top="14" right="24" bottom="14" left="24"/></padding>
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" HBox.hgrow="ALWAYS" styleClass="plan-editor-scroll">
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minWidth="0" HBox.hgrow="ALWAYS" styleClass="plan-editor-scroll">
                 <content>
                     <VBox spacing="12" styleClass="plan-editor-form">
                         <VBox spacing="8" styleClass="plan-editor-section">
@@ -111,7 +112,8 @@
                                 </VBox>
                                 <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                     <Label text="知识库分类（可多选）" styleClass="plan-field-label"/>
-                                    <ListView fx:id="knowledgeList" prefHeight="48" minHeight="48" maxHeight="48"/>
+                                    <AppMultiSelect fx:id="knowledgeSelect" promptText="请选择知识库分类"
+                                                    popupTitle="选择知识库分类" maxWidth="Infinity"/>
                                 </VBox>
                                 <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnSpan="2">
                                     <Label text="JD / 岗位描述 *" styleClass="plan-field-label"/>
@@ -168,7 +170,7 @@
                 </content>
             </ScrollPane>
 
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minWidth="360" prefWidth="390" maxWidth="410"
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minWidth="320" prefWidth="350" maxWidth="390"
                         styleClass="plan-editor-summary-scroll">
                 <content>
                     <VBox spacing="12" styleClass="plan-editor-summary-column">

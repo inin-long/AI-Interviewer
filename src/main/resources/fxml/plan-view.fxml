@@ -19,9 +19,9 @@
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <TextField fx:id="searchField" promptText="搜索方案名称、岗位或重点" onKeyReleased="#applyFilters"
-                   prefWidth="260" styleClass="plan-search-field"/>
-        <AppSelect fx:id="filterSelect" prefWidth="126" styleClass="plan-toolbar-select"/>
-        <AppSelect fx:id="sortSelect" prefWidth="126" styleClass="plan-toolbar-select"/>
+                   minWidth="150" prefWidth="180" styleClass="plan-search-field"/>
+        <AppSelect fx:id="filterSelect" minWidth="104" prefWidth="108" styleClass="plan-toolbar-select"/>
+        <AppSelect fx:id="sortSelect" minWidth="104" prefWidth="108" styleClass="plan-toolbar-select"/>
         <Button text="新建方案" onAction="#createPlan" styleClass="primary-button,plan-header-action">
             <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="19"/></graphic>
         </Button>
@@ -56,7 +56,7 @@
             </HBox>
         </VBox>
 
-        <VBox spacing="10" minWidth="360" prefWidth="380" maxWidth="400">
+        <VBox spacing="10" minWidth="320" prefWidth="340" maxWidth="380">
             <VBox spacing="10" styleClass="plan-side-card">
                 <padding><Insets top="15" right="16" bottom="15" left="16"/></padding>
                 <HBox alignment="CENTER_LEFT" spacing="8">

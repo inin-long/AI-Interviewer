@@ -40,7 +40,7 @@
             <content>
                 <HBox spacing="14" styleClass="plan-detail-body">
                     <padding><Insets top="14" right="24" bottom="18" left="24"/></padding>
-                    <VBox spacing="10" HBox.hgrow="ALWAYS">
+                    <VBox spacing="10" minWidth="0" HBox.hgrow="ALWAYS">
                         <VBox spacing="10" styleClass="plan-detail-card">
                             <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
                             <Label text="基础信息" styleClass="plan-detail-card-title"/>
@@ -136,7 +136,7 @@
                         </VBox>
                     </VBox>
 
-                    <VBox spacing="10" minWidth="370" prefWidth="390" maxWidth="410">
+                    <VBox spacing="10" minWidth="320" prefWidth="350" maxWidth="390">
                         <VBox spacing="10" styleClass="plan-detail-card">
                             <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
                             <Label text="方案摘要" styleClass="plan-detail-card-title"/>

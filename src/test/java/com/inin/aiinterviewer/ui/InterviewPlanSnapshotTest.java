@@ -13,6 +13,7 @@ import com.inin.aiinterviewer.domain.enums.ResumeStatus;
 import com.inin.aiinterviewer.infrastructure.database.mapper.ResumeMapper;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
+import com.inin.aiinterviewer.ui.component.AppMultiSelect;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -21,6 +22,8 @@ import javafx.scene.control.Button;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Region;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
@@ -70,6 +73,7 @@ class InterviewPlanSnapshotTest {
         CountDownLatch latch = new CountDownLatch(1);
         try { Platform.startup(latch::countDown); } catch (IllegalStateException alreadyStarted) { latch.countDown(); }
         latch.await(10, TimeUnit.SECONDS);
+        Platform.setImplicitExit(false);
     }
 
     @Test
@@ -78,6 +82,9 @@ class InterviewPlanSnapshotTest {
         assumeTrue(listOutput != null && !listOutput.isBlank());
         String editorOutput = System.getProperty("plan.editor.snapshot.path");
         String detailOutput = System.getProperty("plan.detail.snapshot.path");
+        String popupOutput = System.getProperty("plan.popup.snapshot.path");
+        int width = Integer.getInteger("plan.snapshot.width", 1672);
+        int height = Integer.getInteger("plan.snapshot.height", 901);
 
         UserDto user = userService.register("plan-snapshot", "Mahoo", "Snapshot123!");
         sessionState.logIn(user);
@@ -88,36 +95,82 @@ class InterviewPlanSnapshotTest {
         List<Long> ids = seedPlans(user.id(), resumeId);
         interviewSessionService.startOrResume(user.id(), ids.getFirst());
 
-        FutureTask<Parent> setup = new FutureTask<>(() -> {
+        FutureTask<SnapshotContext> setup = new FutureTask<>(() -> {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-window.fxml"));
             loader.setControllerFactory(applicationContext::getBean);
             Parent root = loader.load();
-            Scene scene = new Scene(root, 1672, 901);
+            Scene scene = new Scene(root, width, height);
             scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
-            if (root instanceof Region region) region.resize(1672, 901);
+            Stage stage = new Stage(StageStyle.UNDECORATED);
+            stage.setScene(scene);
+            stage.setWidth(width);
+            stage.setHeight(height);
+            stage.setX(40);
+            stage.setY(30);
+            stage.setAlwaysOnTop(true);
+            stage.show();
+            stage.toFront();
+            stage.requestFocus();
+            if (root instanceof Region region) region.resize(width, height);
             root.applyCss();
             root.layout();
             ((Button) root.lookup("#plansNavButton")).fire();
             root.applyCss();
             root.layout();
-            writeSnapshot(root, Path.of(listOutput), 1672, 901);
+            writeSnapshot(root, Path.of(listOutput), width, height);
 
             if (detailOutput != null && !detailOutput.isBlank()) {
                 contentNavigator.showSubPage("/fxml/plan-detail-view.fxml", "面试方案详情", ids.getFirst());
                 root.applyCss();
                 root.layout();
-                writeSnapshot(root, Path.of(detailOutput), 1672, 901);
+                writeSnapshot(root, Path.of(detailOutput), width, height);
             }
             if (editorOutput != null && !editorOutput.isBlank()) {
                 contentNavigator.showSubPage("/fxml/plan-editor-view.fxml", "编辑面试方案", ids.getFirst());
                 root.applyCss();
                 root.layout();
-                writeSnapshot(root, Path.of(editorOutput), 1672, 901);
+                writeSnapshot(root, Path.of(editorOutput), width, height);
             }
-            return root;
+            return new SnapshotContext(root, stage);
         });
         Platform.runLater(setup);
-        setup.get(45, TimeUnit.SECONDS);
+        SnapshotContext context = setup.get(45, TimeUnit.SECONDS);
+        if (popupOutput != null && !popupOutput.isBlank()) {
+            FutureTask<Void> openPopup = new FutureTask<>(() -> {
+                @SuppressWarnings("unchecked")
+                AppMultiSelect<String> knowledgeSelect =
+                        (AppMultiSelect<String>) context.root().lookup("#knowledgeSelect");
+                context.stage().toFront();
+                knowledgeSelect.fire();
+                return null;
+            });
+            Platform.runLater(openPopup);
+            openPopup.get(10, TimeUnit.SECONDS);
+
+            FutureTask<Void> capturePopup = new FutureTask<>(() -> {
+                @SuppressWarnings("unchecked")
+                AppMultiSelect<String> knowledgeSelect =
+                        (AppMultiSelect<String>) context.root().lookup("#knowledgeSelect");
+                Region popupContent = knowledgeSelect.getPopupContent();
+                popupContent.applyCss();
+                popupContent.layout();
+                int popupWidth = Math.max(1, (int) Math.ceil(popupContent.getWidth()));
+                int popupHeight = Math.max(1, (int) Math.ceil(popupContent.getHeight()));
+                WritableImage popupImage = new WritableImage(popupWidth, popupHeight);
+                popupContent.snapshot(null, popupImage);
+                writeImage(popupImage, Path.of(popupOutput), popupWidth, popupHeight);
+                if (knowledgeSelect.isPopupShowing()) knowledgeSelect.fire();
+                return null;
+            });
+            Platform.runLater(capturePopup);
+            capturePopup.get(10, TimeUnit.SECONDS);
+        }
+        FutureTask<Void> closeStage = new FutureTask<>(() -> {
+            context.stage().close();
+            return null;
+        });
+        Platform.runLater(closeStage);
+        closeStage.get(10, TimeUnit.SECONDS);
     }
 
     private long seedResume(long userId) {
@@ -176,6 +229,10 @@ class InterviewPlanSnapshotTest {
     private void writeSnapshot(Parent root, Path output, int width, int height) throws Exception {
         WritableImage snapshot = new WritableImage(width, height);
         root.snapshot(null, snapshot);
+        writeImage(snapshot, output, width, height);
+    }
+
+    private void writeImage(WritableImage snapshot, Path output, int width, int height) throws Exception {
         int[] pixels = new int[width * height];
         snapshot.getPixelReader().getPixels(0, 0, width, height,
                 PixelFormat.getIntArgbPreInstance(), pixels, 0, width);
@@ -183,5 +240,8 @@ class InterviewPlanSnapshotTest {
         image.setRGB(0, 0, width, height, pixels, 0, width);
         Files.createDirectories(output.getParent());
         ImageIO.write(image, "png", output.toFile());
+    }
+
+    private record SnapshotContext(Parent root, Stage stage) {
     }
 }

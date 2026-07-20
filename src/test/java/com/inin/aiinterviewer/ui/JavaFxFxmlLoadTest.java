@@ -10,6 +10,7 @@ import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.ui.animation.AuthIllustrationMotion;
 import com.inin.aiinterviewer.ui.component.AppDialog;
 import com.inin.aiinterviewer.ui.component.AppSelect;
+import com.inin.aiinterviewer.ui.component.AppMultiSelect;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.component.DrawerPane;
 import com.inin.aiinterviewer.ui.component.ResumeProfileDrawerView;
@@ -31,7 +32,6 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.ListView;
 import javafx.scene.control.Label;
-import javafx.scene.control.SelectionMode;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ProgressIndicator;
@@ -103,6 +103,7 @@ class JavaFxFxmlLoadTest {
             started.countDown();
         }
         assertThat(started.await(10, TimeUnit.SECONDS)).isTrue();
+        Platform.setImplicitExit(false);
     }
 
     @Test
@@ -285,12 +286,12 @@ class JavaFxFxmlLoadTest {
         });
         Platform.runLater(task);
         double[] heights = task.get(15, TimeUnit.SECONDS);
-        assertThat(heights[0]).isEqualTo(32.0);
+        assertThat(heights[0]).isEqualTo(38.0);
         assertThat(heights[0]).isEqualTo(heights[1]);
     }
 
     @Test
-    void planEditorUsesAlignedSelectorsAndMultiSelectKnowledgeList() throws Exception {
+    void planEditorUsesAlignedSelectorsAndPopupMultiSelect() throws Exception {
         if (sessionState.currentUser().isEmpty()) {
             sessionState.logIn(new UserDto(1L, "plan-form-user", "方案表单用户", LocalDateTime.now()));
         }
@@ -303,11 +304,12 @@ class JavaFxFxmlLoadTest {
             TextField name = (TextField) root.lookup("#nameField");
             ComboBox<?> resume = (ComboBox<?>) root.lookup("#resumeBox");
             ComboBox<?> profile = (ComboBox<?>) root.lookup("#profileBox");
-            ListView<?> knowledge = (ListView<?>) root.lookup("#knowledgeList");
+            AppMultiSelect<?> knowledge = (AppMultiSelect<?>) root.lookup("#knowledgeSelect");
             return new boolean[]{
                     name.getHeight() == resume.getHeight(),
                     name.getHeight() == profile.getHeight(),
-                    knowledge.getSelectionModel().getSelectionMode() == SelectionMode.MULTIPLE
+                    knowledge.getHeight() == name.getHeight(),
+                    "请选择知识库分类".equals(knowledge.getPromptText())
             };
         });
         Platform.runLater(task);
@@ -338,6 +340,36 @@ class JavaFxFxmlLoadTest {
                     root.lookupAll(".knowledge-stat-card").size() == 1,
                     root.lookupAll(".knowledge-stat-segment").size() == 4
             };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void popupMultiSelectOpensUpdatesSummaryAndCloses() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            AppMultiSelect<String> select = new AppMultiSelect<>();
+            select.setPromptText("请选择知识库分类");
+            select.setPopupTitle("选择知识库分类");
+            select.getItems().setAll("Java 基础", "Spring 框架", "分布式系统");
+            VBox root = new VBox(select);
+            Scene scene = new Scene(root, 520, 360);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            Stage stage = new Stage();
+            stage.setScene(scene);
+            stage.show();
+            root.applyCss();
+            root.layout();
+            select.fire();
+            boolean opened = select.isPopupShowing();
+            select.getSelectedItems().add("Java 基础");
+            select.getSelectedItems().add("Spring 框架");
+            boolean summaryUpdated = select.getDisplayText().contains("已选择 2 个分类")
+                    && select.getDisplayText().contains("Java 基础");
+            select.fire();
+            boolean closed = !select.isPopupShowing();
+            stage.close();
+            return new boolean[]{opened, summaryUpdated, closed};
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);

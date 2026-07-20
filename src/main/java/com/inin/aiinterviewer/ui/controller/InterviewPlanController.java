@@ -397,6 +397,8 @@ public class InterviewPlanController {
             Label name = new Label(plan.name());
             name.getStyleClass().add("plan-row-title");
             name.setTextOverrun(OverrunStyle.ELLIPSIS);
+            name.setMinWidth(160);
+            name.setMaxWidth(Double.MAX_VALUE);
             FlowPane tags = new FlowPane(6, 4);
             if (plan.defaultPlan()) tags.getChildren().add(tag("默认方案", "primary"));
             if (sessions.stream().anyMatch(session -> plan.id().equals(session.planId()))) {
@@ -404,21 +406,33 @@ public class InterviewPlanController {
             }
             HBox title = new HBox(8, name, tags);
             title.setAlignment(Pos.CENTER_LEFT);
+            title.setMinWidth(0);
+            title.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(name, Priority.ALWAYS);
             Label meta = new Label(plan.jobTitle() + "  ·  " + difficultyText(plan.difficulty()) + "  ·  "
                     + plan.durationMinutes() + " 分钟  ·  " + plan.questionCount() + " 题");
             meta.getStyleClass().add("plan-row-meta");
+            meta.setMinWidth(0);
+            meta.setMaxWidth(Double.MAX_VALUE);
+            meta.setTextOverrun(OverrunStyle.ELLIPSIS);
             String focus = String.valueOf(plan.rules().getOrDefault("focus", "按岗位能力模型动态追问"));
             Label focusLabel = new Label("重点：" + focus);
             focusLabel.getStyleClass().add("plan-row-focus");
             focusLabel.setTextOverrun(OverrunStyle.ELLIPSIS);
+            focusLabel.setMinWidth(0);
+            focusLabel.setMaxWidth(Double.MAX_VALUE);
             VBox identity = new VBox(5, title, meta, focusLabel);
+            identity.setMinWidth(0);
+            identity.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(identity, Priority.ALWAYS);
 
             Label updated = new Label("更新于 " + (plan.updateTime() == null ? "—" : DATE_FORMAT.format(plan.updateTime())));
             updated.getStyleClass().add("plan-row-updated");
             Button start = action("开始面试", "mdi2p-play-outline", true);
+            start.setMinWidth(94);
             start.setOnAction(event -> start(plan));
             Button edit = action("编辑", "mdi2p-pencil-outline", false);
+            edit.setMinWidth(64);
             edit.setOnAction(event -> {
                 getListView().getSelectionModel().select(plan);
                 editSelected();
@@ -428,11 +442,15 @@ public class InterviewPlanController {
             detail.setOnAction(event -> openDetail(plan));
             VBox operations = new VBox(13, updated, new HBox(9, start, edit, detail));
             operations.setAlignment(Pos.CENTER_RIGHT);
+            operations.setMinWidth(220);
 
             HBox card = new HBox(14, coverBox, identity, operations);
             card.setAlignment(Pos.CENTER_LEFT);
             card.setPadding(new Insets(12, 14, 12, 12));
             card.getStyleClass().add("plan-row-card");
+            card.setMinWidth(0);
+            card.setMaxWidth(Double.MAX_VALUE);
+            card.prefWidthProperty().bind(planList.widthProperty().subtract(32));
             card.setOnMouseClicked(event -> {
                 getListView().getSelectionModel().select(plan);
                 if (event.getClickCount() == 2) openDetail(plan);

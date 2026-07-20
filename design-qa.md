@@ -132,6 +132,45 @@ final result: passed（本轮垂直间距与启动窗口调整）
 
 final result: passed
 
+## 面试方案窄窗口 / 字段可读性 / 分类弹层（2026-07-20）
+
+- source issue screenshot 1: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-34ed55ca-7586-4ad5-9937-c9ba82c336f2.png`
+- source issue screenshot 2: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-c626dfc4-3f71-460f-a72d-d7ab0f1c95f6.png`
+- implementation workspace: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-workspace-fixes-final.png`
+- implementation editor: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-editor-fixes-final.png`
+- implementation detail: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-detail-fixes-final.png`
+- popup surface: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-knowledge-popup-fixes-final.png`
+- combined comparison inputs: `compare-plan-list-overflow-fix.png`, `compare-plan-editor-popup-fix.png`
+- viewport: `1366 × 846` JavaFX scene，覆盖用户截图对应的窄桌面窗口状态
+- state: 5 个方案、2 个知识库分类已选、1 个分类未选，编辑器处于已有方案状态
+- Browser classification: Browser/IAB 不适用于 JavaFX 桌面应用；使用 JavaFX 原生 `Parent.snapshot`、弹层节点快照及交互测试
+
+### Findings and comparison history
+
+- Pass 1 / P1：方案卡片按内容计算最小宽度，操作区与右侧预览重叠，并触发横向滚动。修复为卡片宽度绑定列表可视宽度，文本节点允许收缩，操作区固定 220px；后续截图无横向滚动或遮挡。
+- Pass 2 / P2：卡片自适应后方案名和按钮被过度省略。为名称保留 160px 最小可读宽度，并为开始/编辑按钮保留显式最小宽度；五个基准方案名称与全部主操作在同画幅完整显示。
+- Pass 1 / P1：编辑页 32px 控件在高 DPI 下裁切短文本，`高级` 被渲染为省略号。控件高度提升为 38px，并收敛 `AppSelect` 内部左右留白；复查后中文文字基线和短值完整。
+- Pass 1 / P1：知识分类使用裸 `ListView`，占据固定高度且缺少清晰的搜索、计数和关闭闭环。新增锚定 `AppMultiSelect`，支持搜索、多选、清空、完成、自动关闭和已选摘要；独立弹层快照及打开/选择/关闭测试通过。
+- Pass 2 / P2：弹层右侧计数与完成按钮在节点快照中贴边裁切。增加右侧安全内边距并重新抓取，`已选 2 / 3` 和完成按钮完整显示。
+- Pass 3：将两张问题截图与最终实现置于同一比较输入，字体、间距、颜色、图像、文案、遮挡、滚动与弹层状态均无剩余 P0/P1/P2 问题。
+
+### Required fidelity surfaces
+
+- typography: 编辑控件统一 38px 高度与 12px 字号，中文基线、短选项和详情动态值可读；长摘要使用省略或换行但不覆盖相邻内容。
+- spacing/layout: 列表、预览和操作区在 1366px 宽度内闭合；编辑与详情左右栏可收缩，弹层使用 13/24px 安全内边距。
+- colors/tokens: 继续使用项目现有白色表面、`#E2E6EF` 边框、蓝紫主色和选中柔和底色。
+- image quality: 用户上传方案图标和中性占位图未改动，裁切与清晰度保持既有实现。
+- copy/content: 已选数量、分类名称、搜索、清空与完成文案均对应真实选择状态，不写入演示数据。
+
+### Interaction verification
+
+- 面试方案列表在窄窗口加载五条数据，方案名、更新时间、开始、编辑和更多操作均可见，列表底部没有横向滚动条。
+- 分类弹层可打开；选择两项后触发摘要更新；再次点击选择器或点击完成可关闭，Popup 同时启用失焦自动关闭和 Esc 关闭。
+- 已有方案分类会回填到弹层，保存时按分类列表顺序写回，未改变后续会话知识快照逻辑。
+- `JavaFxFxmlLoadTest` 21 项通过；完整 `mvnw test` 170 项中 165 项通过、5 项条件跳过，0 失败、0 错误。
+
+final result: passed
+
 ## 面试方案列表 / 编辑 / 详情（2026-07-20）
 
 - source visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\plan.png`

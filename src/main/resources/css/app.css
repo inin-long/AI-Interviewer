@@ -1510,6 +1510,68 @@
     -fx-icon-color: -primary;
 }
 
+/* Shared popup multi-select ----------------------------------------------- */
+.app-multi-select {
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-max-height: 38;
+    -fx-padding: 0 13;
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 9;
+    -fx-background-radius: 9;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+
+.app-multi-select:hover { -fx-border-color: #BAC2D0; -fx-background-color: #FCFCFD; }
+.app-multi-select:focused,
+.app-multi-select:showing {
+    -fx-border-color: #7484E8;
+    -fx-effect: dropshadow(gaussian, rgba(79, 99, 217, 0.14), 8, 0.1, 0, 0);
+}
+
+.app-multi-select-value { -fx-font-size: 12px; -fx-text-fill: -text-muted; }
+.app-multi-select-value.has-selection { -fx-text-fill: -text; -fx-font-weight: 600; }
+.app-multi-select-arrow { -fx-icon-color: -text-secondary; }
+.app-multi-select:showing .app-multi-select-arrow { -fx-icon-color: -primary; -fx-rotate: 180; }
+
+.app-multi-select-popup {
+    -fx-padding: 13 24 13 13;
+    -fx-background-color: -surface;
+    -fx-background-radius: 12;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(28, 35, 54, 0.20), 24, 0.10, 0, 8);
+}
+
+.app-multi-select-title { -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: -text; }
+.app-multi-select-count { -fx-font-size: 11px; -fx-text-fill: -primary; }
+.app-multi-select-search { -fx-min-height: 36; -fx-pref-height: 36; -fx-font-size: 12px; }
+.app-multi-select-scroll,
+.app-multi-select-scroll > .viewport { -fx-background-color: transparent; -fx-border-color: transparent; }
+.app-multi-select-scroll { -fx-padding: 0; }
+.app-multi-select-option {
+    -fx-min-height: 34;
+    -fx-pref-height: 34;
+    -fx-padding: 6 9;
+    -fx-background-color: transparent;
+    -fx-background-radius: 7;
+    -fx-font-size: 12px;
+    -fx-text-fill: -text;
+}
+.app-multi-select-option:hover { -fx-background-color: -hover; }
+.app-multi-select-option:selected { -fx-background-color: -primary-soft; -fx-text-fill: -primary; -fx-font-weight: 700; }
+.app-multi-select-empty { -fx-padding: 18 10; -fx-text-fill: -text-muted; }
+.app-multi-select-clear,
+.app-multi-select-done { -fx-min-height: 32; -fx-pref-height: 32; -fx-padding: 5 12; -fx-font-size: 11px; }
+.app-multi-select-clear { -fx-background-color: transparent; -fx-text-fill: -text-secondary; }
+.app-multi-select-clear:hover { -fx-background-color: -hover; -fx-text-fill: -text; }
+.app-multi-select-done { -fx-background-color: -primary; -fx-text-fill: white; }
+.app-multi-select-done:hover { -fx-background-color: -primary-hover; }
+
 /* Shared product dialog --------------------------------------------------- */
 .app-dialog-pane {
     -fx-background-color: transparent;
@@ -3277,6 +3339,8 @@
     -fx-text-fill: #263149;
 }
 
+.plan-detail-value { -fx-wrap-text: true; }
+
 .plan-link-text { -fx-text-fill: #5263E5; }
 .plan-preview-rules { -fx-font-size: 12px; -fx-text-fill: #3E4960; -fx-line-spacing: 4; }
 
@@ -3341,12 +3405,17 @@
 }
 
 .plan-editor-page .text-field,
-.plan-editor-page .app-select {
-    -fx-min-height: 32;
-    -fx-pref-height: 32;
-    -fx-max-height: 32;
+.plan-editor-page .app-select,
+.plan-editor-page .app-multi-select {
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-max-height: 38;
     -fx-font-size: 12px;
 }
+
+.plan-editor-page .text-field { -fx-padding: 7 12; }
+.plan-editor-page .app-select > .list-cell { -fx-padding: 0 9; }
+.plan-editor-page .app-select > .arrow-button { -fx-padding: 0 9 0 5; }
 
 .plan-editor-page .text-area {
     -fx-font-size: 12px;
@@ -3522,8 +3591,9 @@
 }
 
 .plan-editor-page .text-field,
-.plan-editor-page .app-select {
-    -fx-min-height: 32;
-    -fx-pref-height: 32;
-    -fx-max-height: 32;
+.plan-editor-page .app-select,
+.plan-editor-page .app-multi-select {
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-max-height: 38;
 }
