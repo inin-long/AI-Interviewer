@@ -1,44 +1,141 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.InterviewPlanController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
-            <Label text="面试方案" styleClass="page-title"/>
-            <Label text="保存常用岗位、简历和面试规则；双击列表可进入独立编辑页" styleClass="secondary-text"/>
+      spacing="14" styleClass="plan-page">
+    <padding><Insets top="20" right="24" bottom="18" left="24"/></padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="12" styleClass="plan-header">
+        <VBox spacing="4">
+            <Label text="面试方案" styleClass="plan-page-title"/>
+            <Label text="保存常用岗位、简历与面试规则，快速发起高质量模拟面试" styleClass="plan-page-subtitle"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="summaryLabel" text="共 0 个可复用方案" styleClass="secondary-text"/>
-        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
-        <Button fx:id="createPlanButton" text="新建方案" onAction="#createPlan" styleClass="primary-button"/>
+        <TextField fx:id="searchField" promptText="搜索方案名称、岗位或重点" onKeyReleased="#applyFilters"
+                   prefWidth="260" styleClass="plan-search-field"/>
+        <AppSelect fx:id="filterSelect" prefWidth="126" styleClass="plan-toolbar-select"/>
+        <AppSelect fx:id="sortSelect" prefWidth="126" styleClass="plan-toolbar-select"/>
+        <Button text="新建方案" onAction="#createPlan" styleClass="primary-button,plan-header-action">
+            <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="19"/></graphic>
+        </Button>
+        <Button text="快速开始" onAction="#quickStart" styleClass="plan-outline-action,plan-header-action">
+            <graphic><FontIcon iconLiteral="mdi2p-play-outline" iconSize="19"/></graphic>
+        </Button>
     </HBox>
-    <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
-        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-        <TableView fx:id="planTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-            <placeholder><Label text="暂无方案，点击右上角创建" styleClass="secondary-text"/></placeholder>
-            <columns>
-                <TableColumn fx:id="planNameColumn" text="方案名称" prefWidth="250"/>
-                <TableColumn fx:id="jobColumn" text="目标岗位" prefWidth="220"/>
-                <TableColumn fx:id="difficultyColumn" text="难度" prefWidth="100"/>
-                <TableColumn fx:id="durationColumn" text="时长（分钟）" prefWidth="120"/>
-                <TableColumn fx:id="questionColumn" text="题目数量" prefWidth="110"/>
-                <TableColumn fx:id="profileColumn" text="候选人画像" prefWidth="140"/>
-                <TableColumn fx:id="knowledgeColumn" text="知识库分类" prefWidth="120"/>
-                <TableColumn fx:id="updatedColumn" text="更新时间" prefWidth="170"/>
-            </columns>
-        </TableView>
-        <HBox alignment="CENTER_RIGHT" spacing="10">
-            <Button fx:id="duplicateButton" text="复制所选" onAction="#duplicateSelected" styleClass="secondary-button"/>
-            <Button fx:id="deleteButton" text="删除所选" onAction="#deleteSelected" styleClass="danger-button"/>
-            <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="secondary-button"/>
-            <Button fx:id="startButton" text="开始 / 恢复面试" onAction="#startSelected" styleClass="primary-button"/>
-        </HBox>
-    </VBox>
+
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="plan-list-panel">
+            <padding><Insets top="15" right="14" bottom="12" left="14"/></padding>
+            <HBox alignment="CENTER_LEFT">
+                <Label text="全部方案" styleClass="plan-section-title"/>
+                <Label fx:id="summaryLabel" text="（0）" styleClass="plan-count-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button onAction="#refresh" accessibleText="刷新方案" styleClass="plan-icon-button">
+                    <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="18"/></graphic>
+                    <tooltip><Tooltip text="刷新方案"/></tooltip>
+                </Button>
+            </HBox>
+            <ListView fx:id="planList" VBox.vgrow="ALWAYS" styleClass="plan-list">
+                <placeholder>
+                    <VBox spacing="9" alignment="CENTER">
+                        <FontIcon iconLiteral="mdi2c-clipboard-text-outline" iconSize="36" styleClass="plan-empty-icon"/>
+                        <Label text="暂无符合条件的面试方案" styleClass="plan-empty-title"/>
+                        <Label text="创建方案后，可在这里关联画像、知识库分类并发起面试" styleClass="plan-empty-copy"/>
+                    </VBox>
+                </placeholder>
+            </ListView>
+            <HBox alignment="CENTER_RIGHT">
+                <Label fx:id="footerCountLabel" text="共 0 条" styleClass="plan-count-label"/>
+            </HBox>
+        </VBox>
+
+        <VBox spacing="10" minWidth="360" prefWidth="380" maxWidth="400">
+            <VBox spacing="10" styleClass="plan-side-card">
+                <padding><Insets top="15" right="16" bottom="15" left="16"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="18" styleClass="plan-side-icon"/>
+                    <Label text="方案预览" styleClass="plan-section-title"/>
+                </HBox>
+                <GridPane hgap="10" vgap="9">
+                    <columnConstraints>
+                        <ColumnConstraints minWidth="78" prefWidth="78"/>
+                        <ColumnConstraints hgrow="ALWAYS"/>
+                    </columnConstraints>
+                    <Label text="方案名称：" styleClass="plan-preview-key" GridPane.rowIndex="0"/>
+                    <Label fx:id="previewNameLabel" text="请选择方案" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                    <Label text="面向岗位：" styleClass="plan-preview-key" GridPane.rowIndex="1"/>
+                    <Label fx:id="previewJobLabel" text="—" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    <Label text="难度：" styleClass="plan-preview-key" GridPane.rowIndex="2"/>
+                    <Label fx:id="previewDifficultyLabel" text="—" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                    <Label text="预计时长：" styleClass="plan-preview-key" GridPane.rowIndex="3"/>
+                    <Label fx:id="previewDurationLabel" text="—" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                    <Label text="题目数量：" styleClass="plan-preview-key" GridPane.rowIndex="4"/>
+                    <Label fx:id="previewQuestionLabel" text="—" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                    <Label text="关联简历：" styleClass="plan-preview-key" GridPane.rowIndex="5"/>
+                    <Label fx:id="previewResumeLabel" text="—" wrapText="true" styleClass="plan-preview-value,plan-link-text" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                    <Label text="知识库：" styleClass="plan-preview-key" GridPane.rowIndex="6"/>
+                    <Label fx:id="previewKnowledgeLabel" text="—" styleClass="plan-preview-value,plan-link-text" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                    <Label text="面试阶段：" styleClass="plan-preview-key" GridPane.rowIndex="7"/>
+                    <Label fx:id="previewStagesLabel" text="—" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="7"/>
+                </GridPane>
+                <Separator/>
+                <Label text="规则摘要" styleClass="plan-side-subtitle"/>
+                <Label fx:id="previewRulesLabel" text="请选择方案后查看规则" wrapText="true" styleClass="plan-preview-rules"/>
+                <HBox spacing="10">
+                    <Button fx:id="editButton" text="编辑方案" onAction="#editSelected" maxWidth="Infinity"
+                            HBox.hgrow="ALWAYS" styleClass="primary-button,plan-side-primary">
+                        <graphic><FontIcon iconLiteral="mdi2p-pencil-outline" iconSize="17"/></graphic>
+                    </Button>
+                    <Button fx:id="duplicateButton" text="复制方案" onAction="#duplicateSelected" maxWidth="Infinity"
+                            HBox.hgrow="ALWAYS" styleClass="plan-outline-action,plan-side-primary">
+                        <graphic><FontIcon iconLiteral="mdi2c-content-copy" iconSize="17"/></graphic>
+                    </Button>
+                </HBox>
+            </VBox>
+
+            <VBox spacing="10" styleClass="plan-side-card">
+                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <FontIcon iconLiteral="mdi2l-lightning-bolt-outline" iconSize="18" styleClass="plan-side-icon"/>
+                    <Label text="快捷操作" styleClass="plan-section-title"/>
+                </HBox>
+                <GridPane hgap="8" vgap="8">
+                    <columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
+                    <Button text="新建空白方案" onAction="#createPlan" maxWidth="Infinity" styleClass="plan-quick-button"/>
+                    <Button text="从最近面试生成" onAction="#createFromRecent" maxWidth="Infinity" styleClass="plan-quick-button" GridPane.columnIndex="1"/>
+                    <Button text="导入方案" onAction="#importPlan" maxWidth="Infinity" styleClass="plan-quick-button" GridPane.rowIndex="1"/>
+                    <Button text="选择简历" onAction="#openResumes" maxWidth="Infinity" styleClass="plan-quick-button" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                </GridPane>
+            </VBox>
+
+            <VBox spacing="10" styleClass="plan-side-card">
+                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="18" styleClass="plan-side-icon"/>
+                    <Label text="使用统计" styleClass="plan-section-title"/>
+                </HBox>
+                <HBox spacing="8">
+                    <VBox alignment="CENTER" spacing="4" HBox.hgrow="ALWAYS" styleClass="plan-metric-box">
+                        <Label text="本周使用" styleClass="plan-metric-label"/>
+                        <Label fx:id="weeklyUseLabel" text="0 次" styleClass="plan-metric-value"/>
+                    </VBox>
+                    <VBox alignment="CENTER" spacing="4" HBox.hgrow="ALWAYS" styleClass="plan-metric-box">
+                        <Label text="平均得分" styleClass="plan-metric-label"/>
+                        <Label fx:id="averageScoreLabel" text="—" styleClass="plan-metric-value"/>
+                    </VBox>
+                    <VBox alignment="CENTER" spacing="4" HBox.hgrow="ALWAYS" styleClass="plan-metric-box">
+                        <Label text="最近一次" styleClass="plan-metric-label"/>
+                        <Label fx:id="latestUseLabel" text="—" styleClass="plan-metric-value"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </VBox>
+    </HBox>
 </VBox>

@@ -36,7 +36,7 @@ class LocalFileStorageServiceTest {
     @Test
     void rejectsUnsupportedFileType() throws IOException {
         Path home = Files.createDirectory(tempDirectory.resolve("home"));
-        Path source = tempDirectory.resolve("photo.png");
+        Path source = tempDirectory.resolve("archive.exe");
         Files.write(source, new byte[]{1, 2, 3});
         PathService pathService = new DefaultPathService(new AppProperties("AI", "test", home.toString()));
         LocalFileStorageService service = new LocalFileStorageService(pathService);
@@ -45,4 +45,3 @@ class LocalFileStorageServiceTest {
                 .isInstanceOf(FileException.class);
     }
 }
-

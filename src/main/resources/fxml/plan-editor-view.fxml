@@ -1,147 +1,252 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
-<?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.InterviewPlanEditorController"
-            styleClass="page-content">
+            styleClass="plan-editor-page">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
-            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="←" onAction="#cancel" styleClass="back-icon-button"
-                    accessibleText="返回面试方案列表">
-                <tooltip><Tooltip text="返回面试方案列表"/></tooltip>
-            </Button>
-            <VBox spacing="4">
-                <Label fx:id="pageHeadingLabel" text="新建面试方案" styleClass="page-title"/>
-                <Label text="配置岗位、简历和规则，保存后返回方案列表" styleClass="secondary-text"/>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="plan-editor-header">
+            <padding><Insets top="16" right="24" bottom="14" left="24"/></padding>
+            <Button text="←" onAction="#cancel" accessibleText="返回面试方案列表" styleClass="back-icon-button"/>
+            <VBox spacing="3">
+                <Label fx:id="pageHeadingLabel" text="新建面试方案" styleClass="plan-editor-title"/>
+                <Label text="配置岗位、候选人资料、面试范围、流程与规则，生成可直接执行的 AI 面试方案。"
+                       styleClass="plan-editor-subtitle"/>
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button text="取消" onAction="#cancel" styleClass="secondary-button"/>
-            <Button fx:id="savePlanButton" text="保存方案" onAction="#savePlan" defaultButton="true" styleClass="primary-button"/>
+            <Button fx:id="duplicateTopButton" text="复制方案" onAction="#duplicatePlan" styleClass="plan-editor-utility">
+                <graphic><FontIcon iconLiteral="mdi2c-content-copy" iconSize="16"/></graphic>
+            </Button>
+            <Button text="导出方案" onAction="#exportPlan" styleClass="plan-editor-utility">
+                <graphic><FontIcon iconLiteral="mdi2d-download-outline" iconSize="16"/></graphic>
+            </Button>
+            <Button text="导入方案" onAction="#importPlan" styleClass="plan-editor-utility">
+                <graphic><FontIcon iconLiteral="mdi2u-upload-outline" iconSize="16"/></graphic>
+            </Button>
         </HBox>
     </top>
+
     <center>
-        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
-            <content>
-                <HBox spacing="20" styleClass="editor-page">
-                    <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
-                    <VBox spacing="14" HBox.hgrow="ALWAYS" styleClass="content-card">
-                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                        <Label text="1  基础信息" styleClass="module-title"/>
-                        <GridPane hgap="14" vgap="10">
-                            <columnConstraints>
-                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
-                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
-                            </columnConstraints>
-                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                                <Label text="方案名称" styleClass="field-label"/>
-                                <TextField fx:id="nameField" promptText="例如：Java 后端高级面试"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                                <Label text="目标岗位" styleClass="field-label"/>
-                                <TextField fx:id="jobTitleField" promptText="例如：Java 后端工程师"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
-                                <Label text="难度" styleClass="field-label"/>
-                                <AppSelect fx:id="difficultyBox" maxWidth="Infinity"/>
-                            </VBox>
-                            <HBox spacing="12" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                    <Label text="时长（分钟）" styleClass="field-label"/>
-                                    <TextField fx:id="durationField"/>
+        <HBox spacing="16" styleClass="plan-editor-body">
+            <padding><Insets top="14" right="24" bottom="14" left="24"/></padding>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" HBox.hgrow="ALWAYS" styleClass="plan-editor-scroll">
+                <content>
+                    <VBox spacing="12" styleClass="plan-editor-form">
+                        <VBox spacing="8" styleClass="plan-editor-section">
+                            <padding><Insets top="9" right="12" bottom="9" left="12"/></padding>
+                            <Label text="①  基础信息" styleClass="plan-editor-section-title"/>
+                            <GridPane hgap="12" vgap="7">
+                                <columnConstraints>
+                                    <ColumnConstraints percentWidth="36" hgrow="ALWAYS"/>
+                                    <ColumnConstraints percentWidth="36" hgrow="ALWAYS"/>
+                                    <ColumnConstraints percentWidth="28" hgrow="ALWAYS"/>
+                                </columnConstraints>
+                                <VBox spacing="5">
+                                    <Label text="方案名称 *" styleClass="plan-field-label"/>
+                                    <TextField fx:id="nameField" promptText="例如：Java 后端高级面试"/>
                                 </VBox>
-                                <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                    <Label text="题目数量" styleClass="field-label"/>
-                                    <TextField fx:id="questionCountField"/>
+                                <VBox spacing="5" GridPane.columnIndex="1">
+                                    <Label text="目标岗位 *" styleClass="plan-field-label"/>
+                                    <TextField fx:id="jobTitleField" promptText="例如：Java 后端工程师"/>
                                 </VBox>
+                                <VBox spacing="5" GridPane.columnIndex="2" GridPane.rowSpan="2">
+                                    <Label text="方案图标" styleClass="plan-field-label"/>
+                                    <HBox alignment="CENTER_LEFT" spacing="9">
+                                        <StackPane styleClass="plan-icon-preview-box">
+                                            <ImageView fx:id="iconPreview" fitWidth="58" fitHeight="58" preserveRatio="true" smooth="true"/>
+                                        </StackPane>
+                                        <VBox spacing="5">
+                                            <Button text="上传图片" onAction="#choosePlanIcon" styleClass="plan-small-outline"/>
+                                            <Button text="移除" onAction="#removePlanIcon" styleClass="plan-small-quiet"/>
+                                        </VBox>
+                                    </HBox>
+                                    <Label text="PNG/JPG，最大 5 MB" wrapText="true" styleClass="plan-field-hint"/>
+                                </VBox>
+                                <HBox spacing="10" GridPane.rowIndex="1">
+                                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                        <Label text="难度等级 *" styleClass="plan-field-label"/>
+                                        <AppSelect fx:id="difficultyBox" maxWidth="Infinity"/>
+                                    </VBox>
+                                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                        <Label text="面试时长 *" styleClass="plan-field-label"/>
+                                        <TextField fx:id="durationField"/>
+                                    </VBox>
+                                </HBox>
+                                <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                        <Label text="题目数量 *" styleClass="plan-field-label"/>
+                                        <TextField fx:id="questionCountField"/>
+                                    </VBox>
+                                    <VBox spacing="5" HBox.hgrow="ALWAYS">
+                                        <Label text="标签 / 重点" styleClass="plan-field-label"/>
+                                        <TextField fx:id="focusField" promptText="Spring、MySQL、高并发"/>
+                                    </VBox>
+                                </HBox>
+                            </GridPane>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-editor-section">
+                            <padding><Insets top="9" right="12" bottom="9" left="12"/></padding>
+                            <Label text="②  关联资料" styleClass="plan-editor-section-title"/>
+                            <GridPane hgap="12" vgap="7">
+                                <columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
+                                <VBox spacing="5">
+                                    <Label text="关联简历" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="resumeBox" maxWidth="Infinity" promptText="不关联简历"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.columnIndex="1">
+                                    <Label text="已确认候选人画像" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.rowIndex="1">
+                                    <Label text="岗位领域知识包" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label text="知识库分类（可多选）" styleClass="plan-field-label"/>
+                                    <ListView fx:id="knowledgeList" prefHeight="48" minHeight="48" maxHeight="48"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnSpan="2">
+                                    <Label text="JD / 岗位描述 *" styleClass="plan-field-label"/>
+                                    <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责、技术要求和业务场景" prefHeight="54" minHeight="54" maxHeight="54" wrapText="true"/>
+                                </VBox>
+                            </GridPane>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-editor-section">
+                            <padding><Insets top="9" right="12" bottom="9" left="12"/></padding>
+                            <HBox alignment="CENTER_LEFT">
+                                <Label text="③  面试结构配置" styleClass="plan-editor-section-title"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button text="按总量自动分配" onAction="#rebalanceStages" styleClass="plan-small-quiet"/>
                             </HBox>
-                        </GridPane>
-                        <Separator/>
-                        <Label text="2  关联资料" styleClass="module-title"/>
-                        <Label text="关联简历" styleClass="field-label"/>
-                                <AppSelect fx:id="resumeBox" maxWidth="Infinity" promptText="不关联简历"/>
-                        <Label text="已确认候选人画像" styleClass="field-label"/>
-                                <AppSelect fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
-                        <Label text="选择画像后会自动关联对应简历；未确认画像不会出现在这里。"
-                               styleClass="secondary-text" wrapText="true"/>
-                        <Label text="知识库分类（可多选）" styleClass="field-label"/>
-                        <ListView fx:id="knowledgeList" prefHeight="150" minHeight="120"/>
-                        <Label text="面试开始时会自动纳入所选分类下全部已就绪文档；按 Ctrl 或 Shift 可多选。"
-                               styleClass="secondary-text" wrapText="true"/>
-                        <Label text="岗位描述 / JD" styleClass="field-label"/>
-                        <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责与要求" prefRowCount="7" wrapText="true"/>
-                        <Separator/>
-                        <Label text="3  面试规则" styleClass="module-title"/>
-                        <Label text="岗位领域知识包" styleClass="field-label"/>
-                                <AppSelect fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
-                        <Label text="知识包提供岗位能力模型、常见指标、事故模式、追问框架与评价标准。"
-                               styleClass="secondary-text" wrapText="true"/>
-                        <Label text="重点方向" styleClass="field-label"/>
-                        <TextField fx:id="focusField" promptText="例如：Spring、数据库、项目深挖"/>
-                        <GridPane hgap="14" vgap="10">
-                            <columnConstraints>
-                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
-                                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
-                            </columnConstraints>
-                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
-                                <Label text="面试模式" styleClass="field-label"/>
-                                <AppSelect fx:id="modeBox" maxWidth="Infinity"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                                <Label text="面试官角色" styleClass="field-label"/>
-                                <AppSelect fx:id="personaBox" maxWidth="Infinity"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
-                                <Label text="压力等级上限" styleClass="field-label"/>
-                                <AppSelect fx:id="pressureBox" maxWidth="Infinity"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                                <Label text="验证严格度" styleClass="field-label"/>
-                                <AppSelect fx:id="strictnessBox" maxWidth="Infinity"/>
-                            </VBox>
-                            <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2" GridPane.columnSpan="2">
-                                <Label text="情境沙盘题目比例" styleClass="field-label"/>
-                                <AppSelect fx:id="scenarioRatioBox" maxWidth="Infinity"/>
-                                <Label text="从 0%、20%、30% 或 50% 中选择；系统会使用当前知识包的内置岗位场景，并保证至少包含场景导入和一次决策后果。"
-                                       styleClass="secondary-text" wrapText="true"/>
-                            </VBox>
-                        </GridPane>
+                            <VBox fx:id="stageConfigContainer" spacing="3"/>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-editor-section">
+                            <padding><Insets top="9" right="12" bottom="9" left="12"/></padding>
+                            <Label text="④  规则设置" styleClass="plan-editor-section-title"/>
+                            <GridPane hgap="12" vgap="7">
+                                <columnConstraints><ColumnConstraints percentWidth="50"/><ColumnConstraints percentWidth="50"/></columnConstraints>
+                                <VBox spacing="5">
+                                    <Label text="面试模式" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="modeBox" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.columnIndex="1">
+                                    <Label text="面试官角色" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="personaBox" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.rowIndex="1">
+                                    <Label text="压力等级上限" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="pressureBox" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                                    <Label text="回答验证严格度" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="strictnessBox" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="5" GridPane.rowIndex="2">
+                                    <Label text="情境沙盘题目比例" styleClass="plan-field-label"/>
+                                    <AppSelect fx:id="scenarioRatioBox" maxWidth="Infinity"/>
+                                </VBox>
+                                <VBox spacing="7" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                                    <Label text="执行规则" styleClass="plan-field-label"/>
+                                    <FlowPane hgap="12" vgap="6">
+                                        <CheckBox fx:id="adaptiveFollowupCheck" text="阶段内动态追问" styleClass="plan-rule-check"/>
+                                        <CheckBox fx:id="reportCheck" text="生成评估报告" styleClass="plan-rule-check"/>
+                                    </FlowPane>
+                                </VBox>
+                            </GridPane>
+                        </VBox>
                     </VBox>
-                    <VBox spacing="14" prefWidth="320" minWidth="300" styleClass="content-card">
-                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                        <Label text="方案摘要" styleClass="module-title"/>
-                        <Separator/>
-                        <Label text="目标岗位" styleClass="summary-label"/>
-                        <Label fx:id="summaryJobLabel" text="待填写" styleClass="summary-value" wrapText="true"/>
-                        <Label text="难度" styleClass="summary-label"/>
-                        <Label fx:id="summaryDifficultyLabel" text="中级" styleClass="summary-value"/>
-                        <Label text="预计时长" styleClass="summary-label"/>
-                        <Label fx:id="summaryDurationLabel" text="45 分钟" styleClass="summary-value"/>
-                        <Label text="题目数量" styleClass="summary-label"/>
-                        <Label fx:id="summaryQuestionsLabel" text="15 题" styleClass="summary-value"/>
-                        <Label text="候选人画像" styleClass="summary-label"/>
-                        <Label fx:id="summaryProfileLabel" text="未关联" styleClass="summary-value" wrapText="true"/>
-                        <Label text="知识库分类" styleClass="summary-label"/>
-                        <Label fx:id="summaryKnowledgeLabel" text="未选择" styleClass="summary-value"/>
-                        <Label text="领域知识包" styleClass="summary-label"/>
-                        <Label fx:id="summaryDomainPackLabel" text="待选择" styleClass="summary-value" wrapText="true"/>
-                        <Label text="面试模式" styleClass="summary-label"/>
-                        <Label fx:id="summaryModeLabel" text="正式模拟" styleClass="summary-value"/>
-                        <Label text="压力等级" styleClass="summary-label"/>
-                        <Label fx:id="summaryPressureLabel" text="标准" styleClass="summary-value"/>
-                        <Label text="沙盘比例" styleClass="summary-label"/>
-                        <Label fx:id="summaryScenarioRatioLabel" text="0%" styleClass="summary-value"/>
-                        <Region prefHeight="8"/>
-                        <Label text="保存方案后，可以从列表进入候选人画像和模拟面试准备流程。"
-                               styleClass="local-data-note" wrapText="true"/>
+                </content>
+            </ScrollPane>
+
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" minWidth="360" prefWidth="390" maxWidth="410"
+                        styleClass="plan-editor-summary-scroll">
+                <content>
+                    <VBox spacing="12" styleClass="plan-editor-summary-column">
+                        <VBox spacing="9" styleClass="plan-editor-summary-card">
+                            <padding><Insets top="14" right="15" bottom="14" left="15"/></padding>
+                            <Label text="方案摘要" styleClass="plan-editor-section-title"/>
+                            <GridPane hgap="10" vgap="8">
+                                <columnConstraints><ColumnConstraints minWidth="82"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                                <Label text="岗位：" styleClass="plan-preview-key"/>
+                                <Label fx:id="summaryJobLabel" text="待填写" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1"/>
+                                <Label text="难度：" styleClass="plan-preview-key" GridPane.rowIndex="1"/>
+                                <Label fx:id="summaryDifficultyLabel" text="中级" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                <Label text="面试时长：" styleClass="plan-preview-key" GridPane.rowIndex="2"/>
+                                <Label fx:id="summaryDurationLabel" text="45 分钟" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                <Label text="题目数量：" styleClass="plan-preview-key" GridPane.rowIndex="3"/>
+                                <Label fx:id="summaryQuestionsLabel" text="15 题" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                <Label text="候选人画像：" styleClass="plan-preview-key" GridPane.rowIndex="4"/>
+                                <Label fx:id="summaryProfileLabel" text="未关联" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                <Label text="知识库：" styleClass="plan-preview-key" GridPane.rowIndex="5"/>
+                                <Label fx:id="summaryKnowledgeLabel" text="未选择" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+                                <Label text="知识包：" styleClass="plan-preview-key" GridPane.rowIndex="6"/>
+                                <Label fx:id="summaryDomainPackLabel" text="待选择" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
+                            </GridPane>
+                        </VBox>
+
+                        <HBox spacing="10">
+                            <VBox spacing="8" HBox.hgrow="ALWAYS" styleClass="plan-editor-summary-card">
+                                <padding><Insets top="13" right="13" bottom="13" left="13"/></padding>
+                                <Label text="流程时间分布（预估）" styleClass="plan-side-subtitle"/>
+                                <Label fx:id="summaryStagesLabel" text="自我介绍 / 项目经历 / 技术深挖 / 系统设计 / 总结"
+                                       wrapText="true" styleClass="plan-summary-stage-copy"/>
+                            </VBox>
+                            <VBox spacing="8" minWidth="145" prefWidth="145" styleClass="plan-editor-summary-card">
+                                <padding><Insets top="13" right="13" bottom="13" left="13"/></padding>
+                                <Label text="评分维度预览" styleClass="plan-side-subtitle"/>
+                                <Label text="技术能力  35%" styleClass="plan-summary-mini"/>
+                                <ProgressBar progress="0.35" maxWidth="Infinity" styleClass="plan-score-bar"/>
+                                <Label text="项目经验  25%" styleClass="plan-summary-mini"/>
+                                <ProgressBar progress="0.25" maxWidth="Infinity" styleClass="plan-score-bar"/>
+                                <Label text="沟通表达  15%" styleClass="plan-summary-mini"/>
+                            </VBox>
+                        </HBox>
+
+                        <VBox spacing="8" styleClass="plan-editor-summary-card">
+                            <padding><Insets top="13" right="14" bottom="14" left="14"/></padding>
+                            <Label text="面试风格" styleClass="plan-side-subtitle"/>
+                            <FlowPane hgap="7" vgap="7">
+                                <Label fx:id="summaryModeLabel" text="正式模拟" styleClass="plan-summary-chip"/>
+                                <Label fx:id="summaryPressureLabel" text="标准" styleClass="plan-summary-chip"/>
+                                <Label fx:id="summaryScenarioRatioLabel" text="沙盘 0%" styleClass="plan-summary-chip"/>
+                            </FlowPane>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-editor-summary-card">
+                            <padding><Insets top="13" right="14" bottom="14" left="14"/></padding>
+                            <Label text="预览首题" styleClass="plan-side-subtitle"/>
+                            <HBox alignment="TOP_LEFT" spacing="10">
+                                <StackPane styleClass="plan-ai-badge"><FontIcon iconLiteral="mdi2r-robot-outline" iconSize="18"/></StackPane>
+                                <Label fx:id="firstQuestionLabel" text="欢迎参加本次面试。请先做一个简短的自我介绍，并重点说明与目标岗位相关的项目经验。"
+                                       wrapText="true" HBox.hgrow="ALWAYS" styleClass="plan-first-question"/>
+                            </HBox>
+                        </VBox>
                     </VBox>
-                </HBox>
-            </content>
-        </ScrollPane>
+                </content>
+            </ScrollPane>
+        </HBox>
     </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" spacing="12" styleClass="plan-editor-footer">
+            <padding><Insets top="12" right="24" bottom="12" left="24"/></padding>
+            <Button text="取消" onAction="#cancel" styleClass="plan-editor-cancel"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="deletePlanButton" text="删除方案" onAction="#deletePlan" styleClass="plan-editor-delete"/>
+            <Button fx:id="savePlanButton" text="保存方案" onAction="#savePlan" defaultButton="true" styleClass="primary-button,plan-editor-save"/>
+            <Button text="保存并开始面试" onAction="#saveAndStart" styleClass="primary-button,plan-editor-start">
+                <graphic><FontIcon iconLiteral="mdi2p-play-outline" iconSize="18"/></graphic>
+            </Button>
+        </HBox>
+    </bottom>
 </BorderPane>

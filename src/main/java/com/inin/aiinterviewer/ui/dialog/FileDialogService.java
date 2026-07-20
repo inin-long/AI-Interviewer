@@ -14,4 +14,16 @@ public interface FileDialogService {
     Optional<Path> chooseResume(Window owner);
 
     Optional<Path> chooseKnowledgeDocument(Window owner);
+
+    default Optional<Path> choosePlanIcon(Window owner) {
+        return Optional.empty();
+    }
+
+    default Optional<Path> choosePlanImport(Window owner) {
+        return Optional.empty();
+    }
+
+    default Optional<Path> choosePlanExport(Window owner, String suggestedName) {
+        return Optional.empty();
+    }
 }

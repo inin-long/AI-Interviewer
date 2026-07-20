@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.domain.enums;
 public enum StorageCategory {
     RESUMES("resumes"),
     DOCUMENTS("documents"),
+    PLAN_ASSETS("plan-assets"),
     REPORTS("reports"),
     VECTOR("vector");
 
@@ -16,4 +17,3 @@ public enum StorageCategory {
         return directoryName;
     }
 }
-

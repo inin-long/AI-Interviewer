@@ -132,6 +132,43 @@ final result: passed（本轮垂直间距与启动窗口调整）
 
 final result: passed
 
+## 面试方案列表 / 编辑 / 详情（2026-07-20）
+
+- source visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\plan.png`
+- editor visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\interview-plan.png`
+- detail visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\interview-plan-2.png`
+- implementation screenshots: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\plan-workspace-v4.png`, `plan-editor-v4.png`, `plan-detail-v4.png`
+- same-frame comparisons: `compare-plan-workspace-v4.png`, `compare-plan-editor-v4.png`, `compare-plan-detail-v4.png`
+- focused comparisons: `compare-plan-workspace-focus-v4.png`, `compare-plan-editor-focus-v4.png`, `compare-plan-detail-focus-v4.png`
+- viewport: `1672 × 901` JavaFX scene
+- rendering method: JavaFX native `Parent.snapshot` after CSS/layout completion
+- Browser classification: Browser/IAB 不适用于 JavaFX 桌面应用，因此使用原生渲染截图、FXML 加载测试和控制器交互验证
+
+### Fidelity and interaction evidence
+
+- 列表页复现参考图的标题与主操作、筛选工具栏、左侧高密度方案卡片和右侧选中预览；卡片直接展示用户上传图标、岗位、时长、题量、阶段、画像/知识范围及使用状态。
+- 编辑页复现双栏卡片结构、固定头尾操作区和参数摘要；阶段配置从静态勾选补齐为可编辑蓝图，支持启停、说明、题量、时长、权重及按总量自动分配。
+- 详情页按业务数据展示阶段流程、关联范围、规则、使用统计和建议，并串联返回、复制、导出、编辑、启动与删除操作。
+- 图标只由用户上传；PNG/JPG/JPEG 在保存时复制到用户隔离目录，5 MB 上限，移除或无上传时回退到中性生成占位图。截图中的技术图标仅是测试上传夹具。
+- 导入/导出使用版本化 JSON，导入创建副本，导出清理本机图标绝对路径，避免不可迁移数据泄漏。
+- 无数据库迁移：`planIconPath` 与 `stageBlueprint` 保存在现有可扩展规则映射中，旧方案加载时自动生成平衡阶段配置。
+
+### Comparison history
+
+- Pass 1 / P1：卡片图标因后台加载而出现空白；改为同步读取本地上传图并增加中性占位资源，复查通过。
+- Pass 1 / P1：编辑页只有阶段勾选，无法表达题量、时长和权重；新增阶段蓝图编辑器、自动分配和保存校验，复查通过。
+- Pass 2 / P2：编辑页基础信息与关联区过高，导致核心规则层级下沉；压缩表单、卡片和控件高度，同时保留滚动与固定操作区，复查通过。
+- Pass 3 / P2：详情页阶段时间为平均推算，未反映真实阶段配置；改为读取 `stageBlueprint` 并展示阶段题量和时长，复查通过。
+- Pass 4：三屏重新以同画幅和聚焦区域对比，字体、间距、颜色、图像、文案与主要交互未发现剩余 P0/P1/P2 问题。
+
+### Intentional deviations
+
+- 参考列表底部分页未照搬：当前数据量由 JavaFX 虚拟化列表承载，五条基准数据可完整显示；后续数据量增长时再接服务层分页，不制造无效页码。
+- 编辑页完整阶段规则在较矮窗口中允许纵向滚动，固定页脚始终可见；这是为容纳真实阶段蓝图和校验信息保留的可用性调整。
+- 全局侧栏沿用项目既有导航结构，未为单页增加参考图中不存在于当前产品信息架构的入口。
+
+final result: passed
+
 ## 简历中心与候选人画像 Drawer（2026-07-20）
 
 - source visual truth: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-aeffc1c5-f8f0-4875-88f9-0cc2afe5df4b.png`

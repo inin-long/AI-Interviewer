@@ -15,7 +15,8 @@ import java.util.Set;
 @Service
 public class LocalFileStorageService implements FileStorageService {
 
-    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("pdf", "docx", "md", "txt");
+    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of(
+            "pdf", "docx", "md", "txt", "png", "jpg", "jpeg");
 
     private final PathService pathService;
 
@@ -60,4 +61,3 @@ public class LocalFileStorageService implements FileStorageService {
         }
     }
 }
-

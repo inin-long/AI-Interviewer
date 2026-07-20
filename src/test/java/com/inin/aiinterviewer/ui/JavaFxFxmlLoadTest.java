@@ -34,12 +34,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.Region;
@@ -283,7 +285,7 @@ class JavaFxFxmlLoadTest {
         });
         Platform.runLater(task);
         double[] heights = task.get(15, TimeUnit.SECONDS);
-        assertThat(heights[0]).isEqualTo(52.0);
+        assertThat(heights[0]).isEqualTo(32.0);
         assertThat(heights[0]).isEqualTo(heights[1]);
     }
 
@@ -705,6 +707,36 @@ class JavaFxFxmlLoadTest {
                     && aiPane.isVisible() && !generalPane.isVisible();
             boolean masked = key.getText() == null || !key.getText().startsWith("sk-");
             return new boolean[]{initial, switched, masked};
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void interviewPlanWorkspaceEditorAndDetailUseCardBasedLayouts() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "plan-layout-user", "方案布局用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent workspace = load("/fxml/plan-view.fxml");
+            Parent editor = load("/fxml/plan-editor-view.fxml");
+            Parent detail = load("/fxml/plan-detail-view.fxml");
+            Scene scene = new Scene(new VBox(workspace, editor, detail), 1672, 1800);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            scene.getRoot().applyCss();
+            scene.getRoot().layout();
+            return new boolean[]{
+                    workspace.lookup("#planList") instanceof ListView,
+                    workspace.lookup("#filterSelect") instanceof AppSelect,
+                    workspace.lookup("#sortSelect") instanceof AppSelect,
+                    workspace.lookup("#previewNameLabel") instanceof Label,
+                    editor.lookup("#iconPreview") instanceof javafx.scene.image.ImageView,
+                    editor.lookup("#introductionStageCheck") instanceof CheckBox,
+                    editor.lookup("#adaptiveFollowupCheck") instanceof CheckBox,
+                    detail.lookup("#stageContainer") instanceof FlowPane,
+                    detail.lookup("#completenessIndicator") instanceof ProgressIndicator,
+                    detail.lookup("#usageContainer") instanceof VBox
+            };
         });
         Platform.runLater(task);
         assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);

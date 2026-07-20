@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.InterviewPlanDetailController"
+            styleClass="plan-detail-page">
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="11" styleClass="plan-detail-header">
+            <padding><Insets top="16" right="24" bottom="14" left="24"/></padding>
+            <Button text="←" onAction="#back" styleClass="back-icon-button"/>
+            <VBox spacing="3">
+                <Label text="面试方案详情" styleClass="plan-detail-title"/>
+                <Label fx:id="breadcrumbLabel" text="面试方案 / 方案详情" styleClass="plan-detail-breadcrumb"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="返回面试方案" onAction="#back" styleClass="plan-detail-utility"/>
+            <Button text="复制方案" onAction="#duplicatePlan" styleClass="plan-detail-utility">
+                <graphic><FontIcon iconLiteral="mdi2c-content-copy" iconSize="16"/></graphic>
+            </Button>
+            <Button text="导出快照" onAction="#exportSnapshot" styleClass="plan-detail-utility">
+                <graphic><FontIcon iconLiteral="mdi2d-download-outline" iconSize="16"/></graphic>
+            </Button>
+            <Button text="编辑方案" onAction="#editPlan" styleClass="plan-detail-utility">
+                <graphic><FontIcon iconLiteral="mdi2p-pencil-outline" iconSize="16"/></graphic>
+            </Button>
+            <Button text="立即开始面试" onAction="#startInterview" styleClass="primary-button,plan-detail-start">
+                <graphic><FontIcon iconLiteral="mdi2p-play-outline" iconSize="18"/></graphic>
+            </Button>
+        </HBox>
+    </top>
+
+    <center>
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="plan-detail-scroll">
+            <content>
+                <HBox spacing="14" styleClass="plan-detail-body">
+                    <padding><Insets top="14" right="24" bottom="18" left="24"/></padding>
+                    <VBox spacing="10" HBox.hgrow="ALWAYS">
+                        <VBox spacing="10" styleClass="plan-detail-card">
+                            <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
+                            <Label text="基础信息" styleClass="plan-detail-card-title"/>
+                            <HBox alignment="CENTER_LEFT" spacing="16">
+                                <StackPane styleClass="plan-detail-cover-box">
+                                    <ImageView fx:id="iconView" fitWidth="82" fitHeight="82" preserveRatio="true" smooth="true"/>
+                                </StackPane>
+                                <VBox spacing="7" HBox.hgrow="ALWAYS">
+                                    <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <Label fx:id="nameLabel" text="方案名称" styleClass="plan-detail-plan-name"/>
+                                        <Label fx:id="stateLabel" text="已启用" styleClass="plan-detail-state"/>
+                                    </HBox>
+                                    <FlowPane fx:id="tagContainer" hgap="7" vgap="6"/>
+                                    <Label fx:id="descriptionLabel" text="方案说明" wrapText="true" styleClass="plan-detail-description"/>
+                                    <Label fx:id="suitableLabel" text="适用岗位：—" styleClass="plan-detail-suitable"/>
+                                </VBox>
+                                <GridPane hgap="10" vgap="8" minWidth="290">
+                                    <columnConstraints><ColumnConstraints minWidth="96"/><ColumnConstraints hgrow="ALWAYS"/></columnConstraints>
+                                    <Label text="创建时间" styleClass="plan-detail-key"/>
+                                    <Label fx:id="createdLabel" text="—" styleClass="plan-detail-value" GridPane.columnIndex="1"/>
+                                    <Label text="最后更新" styleClass="plan-detail-key" GridPane.rowIndex="1"/>
+                                    <Label fx:id="updatedLabel" text="—" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                    <Label text="预计题量" styleClass="plan-detail-key" GridPane.rowIndex="2"/>
+                                    <Label fx:id="questionLabel" text="—" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                    <Label text="关联简历" styleClass="plan-detail-key" GridPane.rowIndex="3"/>
+                                    <Label fx:id="resumeCountLabel" text="—" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                    <Label text="知识库分类" styleClass="plan-detail-key" GridPane.rowIndex="4"/>
+                                    <Label fx:id="knowledgeCountLabel" text="—" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                </GridPane>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="9" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <HBox alignment="CENTER_LEFT"><Label text="流程与阶段配置" styleClass="plan-detail-card-title"/><Region HBox.hgrow="ALWAYS"/><Label text="阶段按顺序执行，AI 可在阶段内动态追问" styleClass="plan-detail-hint"/></HBox>
+                            <FlowPane fx:id="stageContainer" hgap="8" vgap="8" styleClass="plan-detail-stage-flow"/>
+                            <HBox alignment="CENTER_RIGHT" spacing="4">
+                                <Label text="总时长" styleClass="plan-detail-key"/>
+                                <Label fx:id="durationTotalLabel" text="45" styleClass="plan-detail-duration-number"/>
+                                <Label text="分钟" styleClass="plan-detail-value"/>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="9" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="方案参数" styleClass="plan-detail-card-title"/>
+                            <GridPane hgap="12" vgap="9">
+                                <columnConstraints><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/><ColumnConstraints percentWidth="25"/></columnConstraints>
+                                <VBox spacing="3"><Label text="岗位名称" styleClass="plan-detail-key"/><Label fx:id="jobLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="1"><Label text="面试难度" styleClass="plan-detail-key"/><Label fx:id="difficultyLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="2"><Label text="面试模式" styleClass="plan-detail-key"/><Label fx:id="modeLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="3"><Label text="面试官角色" styleClass="plan-detail-key"/><Label fx:id="personaLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.rowIndex="1"><Label text="压力等级" styleClass="plan-detail-key"/><Label fx:id="pressureLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="1" GridPane.rowIndex="1"><Label text="验证严格度" styleClass="plan-detail-key"/><Label fx:id="strictnessLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="2" GridPane.rowIndex="1"><Label text="情境沙盘比例" styleClass="plan-detail-key"/><Label fx:id="scenarioLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                                <VBox spacing="3" GridPane.columnIndex="3" GridPane.rowIndex="1"><Label text="领域知识包" styleClass="plan-detail-key"/><Label fx:id="domainPackLabel" text="—" styleClass="plan-detail-value"/></VBox>
+                            </GridPane>
+                        </VBox>
+
+                        <VBox spacing="9" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="关联资源" styleClass="plan-detail-card-title"/>
+                            <HBox spacing="12">
+                                <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="plan-resource-box">
+                                    <Label text="关联简历 / 画像" styleClass="plan-detail-side-subtitle"/>
+                                    <Label fx:id="resumeLabel" text="未关联简历" wrapText="true" styleClass="plan-resource-title"/>
+                                    <Label fx:id="profileLabel" text="未关联画像" wrapText="true" styleClass="plan-detail-hint"/>
+                                </VBox>
+                                <VBox spacing="7" HBox.hgrow="ALWAYS" styleClass="plan-resource-box">
+                                    <Label text="知识库分类" styleClass="plan-detail-side-subtitle"/>
+                                    <FlowPane fx:id="knowledgeContainer" hgap="6" vgap="6"/>
+                                    <Label fx:id="documentCountLabel" text="当前无已就绪文档" styleClass="plan-detail-hint"/>
+                                </VBox>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="9" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="重点考察维度" styleClass="plan-detail-card-title"/>
+                            <FlowPane fx:id="focusContainer" hgap="14" vgap="9"/>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="方案规则摘要" styleClass="plan-detail-card-title"/>
+                            <Label fx:id="ruleSummaryLabel" text="—" wrapText="true" styleClass="plan-detail-rule-summary"/>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <HBox alignment="CENTER_LEFT"><Label text="最近使用记录" styleClass="plan-detail-card-title"/><Region HBox.hgrow="ALWAYS"/><Label fx:id="usageCountLabel" text="0 次" styleClass="plan-detail-hint"/></HBox>
+                            <VBox fx:id="usageContainer" spacing="6"/>
+                        </VBox>
+                    </VBox>
+
+                    <VBox spacing="10" minWidth="370" prefWidth="390" maxWidth="410">
+                        <VBox spacing="10" styleClass="plan-detail-card">
+                            <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
+                            <Label text="方案摘要" styleClass="plan-detail-card-title"/>
+                            <HBox alignment="CENTER" spacing="24">
+                                <StackPane>
+                                    <ProgressIndicator fx:id="completenessIndicator" progress="0.8" prefWidth="128" prefHeight="128" styleClass="plan-completeness-ring"/>
+                                    <VBox alignment="CENTER" spacing="1"><Label fx:id="completenessLabel" text="80%" styleClass="plan-completeness-value"/><Label text="方案完整度" styleClass="plan-detail-hint"/></VBox>
+                                </StackPane>
+                                <GridPane hgap="10" vgap="9">
+                                    <Label text="阶段数量" styleClass="plan-detail-key"/><Label fx:id="stageCountLabel" text="0" styleClass="plan-detail-value" GridPane.columnIndex="1"/>
+                                    <Label text="题量" styleClass="plan-detail-key" GridPane.rowIndex="1"/><Label fx:id="sideQuestionLabel" text="0" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                                    <Label text="关联简历" styleClass="plan-detail-key" GridPane.rowIndex="2"/><Label fx:id="sideResumeLabel" text="0" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                                    <Label text="知识库分类" styleClass="plan-detail-key" GridPane.rowIndex="3"/><Label fx:id="sideKnowledgeLabel" text="0" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                                    <Label text="规则条数" styleClass="plan-detail-key" GridPane.rowIndex="4"/><Label fx:id="ruleCountLabel" text="0" styleClass="plan-detail-value" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                </GridPane>
+                            </HBox>
+                        </VBox>
+
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="适用场景" styleClass="plan-detail-card-title"/>
+                            <VBox fx:id="sceneContainer" spacing="7"/>
+                        </VBox>
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="推荐追问方向" styleClass="plan-detail-card-title"/>
+                            <VBox fx:id="directionContainer" spacing="7"/>
+                        </VBox>
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="方案风险提醒" styleClass="plan-detail-card-title"/>
+                            <VBox fx:id="riskContainer" spacing="7"/>
+                        </VBox>
+                        <VBox spacing="8" styleClass="plan-detail-card">
+                            <padding><Insets top="13" right="16" bottom="13" left="16"/></padding>
+                            <Label text="操作建议" styleClass="plan-detail-card-title"/>
+                            <VBox fx:id="adviceContainer" spacing="7"/>
+                        </VBox>
+                        <HBox spacing="10">
+                            <Button text="删除方案" onAction="#deletePlan" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="plan-detail-delete"/>
+                            <Button text="编辑方案" onAction="#editPlan" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="plan-detail-utility"/>
+                            <Button text="立即面试" onAction="#startInterview" maxWidth="Infinity" HBox.hgrow="ALWAYS" styleClass="primary-button,plan-detail-start"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+            </content>
+        </ScrollPane>
+    </center>
+</BorderPane>
