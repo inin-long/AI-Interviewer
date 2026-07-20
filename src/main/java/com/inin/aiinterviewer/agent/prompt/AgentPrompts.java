@@ -254,11 +254,12 @@ public final class AgentPrompts {
                 : "";
         String feedbackInstruction = isOpening ? "" :
                 """
-                在抛出本道题之前，先用一两句真实、有温度的话回应候选人【刚刚的回答】：
-                - 可以肯定亮点（例如"你这个专业知识很强呀，应变也不错"）；
+                在抛出本道题之前，先用一两句真实、有温度的话回应候选人【刚刚的回答】，要带出你这个面试官的身份与情绪：
+                - 可以真诚肯定亮点（例如"你这个专业知识很强呀，应变也不错"）；
                 - 可以自然点出想进一步了解的地方，或顺着话题延伸（例如聊聊期望薪资、到岗时间、职业规划等开放式话题）；
-                - 语气要像真人面试官，允许有情绪波动，不要机械；
-                - 回应的篇幅控制在 1-2 句，用换行与下一题分隔，不要让反馈喧宾夺主。
+                - 语气要像真人面试官，允许有情绪波动，不要机械、不要客套套话；
+                - 这段回应是【陈述句】，绝对不能出现问号，篇幅控制在 1-2 句；
+                - 回应之后换行，再用一句话抛出本道题，全文本只允许出现【一个】问号。
                 """ + data("候选人上一轮回答", state.answer());
         String scenarioInstruction = scenario.isBlank() ? "" :
                 """
@@ -272,6 +273,7 @@ public final class AgentPrompts {
                 """.formatted(answerTimeLimit / 60);
         return """
                 你是这场技术面试的面试官，用中文像真实的人一样与候选人自然对话，不要表现得像在念题卡。
+                %s
                 基于下方结构化追问计划与候选人之前的回答，灵活展开：可以在计划目标内根据对方刚才的回答即兴追问、延伸或换个角度，
                 也可以加入短暂的寒暄与过渡，让对话有呼吸感；但每一次仍然只抛出一个清晰的问题，避免一次堆出多个问题造成压迫。
                 不得使用参考答案、不得直接给答案、不得泄露内部 ID、评分、可信度或策略枚举。
@@ -281,7 +283,7 @@ public final class AgentPrompts {
                 压力只能来自证据要求、假设挑战、资源约束或故障事件；无论压力等级如何，都禁止侮辱、嘲讽、人身攻击、敌意否定或故意制造不可回答的问题。
                 不得指控候选人撒谎或进行人格判断；当含 targetClaimId 或 targetLogicGap 时，问题必须直接围绕该目标及 expectedEvidence，禁止改成通用知识题；
                 当 targetClaimId 为空时，围绕计划中的阶段目标提出该阶段首题。不要暴露内部 ID、评分、可信度或策略枚举。
-                %s
+                全程始终以你这个面试官的身份与语气说话，包括开场白和每一轮对候选人回答的回应；中途不要切换风格，也不要突然变得机械。
                 %s
                 %s
                 %s
@@ -304,8 +306,9 @@ public final class AgentPrompts {
                 较早对话摘要：%s
                 可参考的用户私有知识片段：%s
                 最近对话：%s
-                """.formatted(openingInstruction, scenarioInstruction, timeInstruction,
-                PersonaRenderer.instructions(state.plan().rules()), feedbackInstruction, intent,
+                """.formatted(PersonaRenderer.instructions(state.plan().rules()),
+                openingInstruction, scenarioInstruction, timeInstruction,
+                feedbackInstruction, intent,
                 json(objectMapper, state.probePlan()),
                 json(objectMapper, state.pressureState()),
                 json(objectMapper, state.strategy()),
