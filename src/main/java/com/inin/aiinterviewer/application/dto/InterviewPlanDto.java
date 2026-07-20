@@ -27,6 +27,8 @@ public record InterviewPlanDto(
 ) implements Serializable {
     public InterviewPlanDto {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
+        rules = rules == null ? Map.of() : Map.copyOf(rules);
+        stages = stages == null ? List.of() : List.copyOf(stages);
     }
 
     public InterviewPlanDto(

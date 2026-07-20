@@ -20,8 +20,10 @@ import com.inin.aiinterviewer.application.exception.SystemException;
 import com.inin.aiinterviewer.domain.entity.AgentCheckpointEntity;
 import com.inin.aiinterviewer.domain.entity.InterviewMessageEntity;
 import com.inin.aiinterviewer.domain.entity.InterviewSessionEntity;
+import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.InterviewStatus;
+import com.inin.aiinterviewer.domain.model.InterviewPlanSettings;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.domain.model.AnswerAnalysis;
 import com.inin.aiinterviewer.domain.model.CandidateProfile;
@@ -604,7 +606,7 @@ public class InterviewSessionService {
     private InterviewSessionDto toDto(InterviewSessionEntity entity) {
         return new InterviewSessionDto(
                 entity.getId(), entity.getPlanId(), entity.getResumeId(), entity.getProfileId(),
-                entity.getTitle(), entity.getJobTitle(), readPlan(entity.getPlanSnapshotJson()),
+                entity.getTitle(), entity.getJobTitle(), readPlanOrFallback(entity),
                 readProfile(entity.getProfileSnapshotJson()),
                 readKnowledgeSnapshot(entity.getKnowledgeSnapshotJson()), entity.getStage(), entity.getStatus(),
                 entity.getPromptVersion(), entity.getStartedTime(), entity.getCompletedTime(),
@@ -716,11 +718,29 @@ public class InterviewSessionService {
     }
 
     private InterviewPlanDto readPlan(String json) {
+        if (json == null || json.isBlank() || "{}".equals(json.strip())) return null;
         try {
             return objectMapper.readValue(json, InterviewPlanDto.class);
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
         }
+    }
+
+    /**
+     * 读取方案快照；若快照缺失或为空，则构造一个带默认规则的兜底方案，
+     * 避免 {@code planSnapshot()} 返回 null 导致下游链式调用（如 questionCount()、rules()）NPE 崩溃。
+     */
+    private InterviewPlanDto readPlanOrFallback(InterviewSessionEntity entity) {
+        InterviewPlanDto plan = readPlan(entity.getPlanSnapshotJson());
+        if (plan != null) return plan;
+        log.warn("planSnapshotJson 缺失，使用默认方案兜底，sessionId={}", entity.getId());
+        return new InterviewPlanDto(
+                entity.getPlanId(), entity.getTitle(),
+                entity.getJobTitle() == null ? "未命名面试" : entity.getJobTitle(), "",
+                InterviewDifficulty.MEDIUM, 30, 5,
+                entity.getResumeId(), entity.getProfileId(),
+                List.of(), InterviewPlanSettings.defaults().mergeInto(Map.of()),
+                List.of(), false, entity.getCreateTime(), entity.getUpdateTime());
     }
 
     private CandidateProfileDto readProfile(String json) {
@@ -762,7 +782,7 @@ public class InterviewSessionService {
     }
 
     private CandidateProfile stateProfile(CandidateProfileDto snapshot) {
-        if (snapshot == null) return null;
+        if (snapshot == null || snapshot.content() == null) return null;
         var content = snapshot.content();
         return new CandidateProfile(
                 content.skills(),
