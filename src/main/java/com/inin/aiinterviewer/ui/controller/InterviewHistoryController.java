@@ -139,23 +139,25 @@ public class InterviewHistoryController {
     private long userId() { return sessionState.requireCurrentUser().id(); }
 
     private InterviewStatus selectedStatus() {
-        return switch (statusBox.getSelectionModel().getSelectedIndex()) {
-            case 1 -> InterviewStatus.RUNNING;
-            case 2 -> InterviewStatus.PAUSED;
-            case 3 -> InterviewStatus.COMPLETED;
-            case 4 -> InterviewStatus.FAILED;
-            default -> null;
-        };
+        switch (statusBox.getSelectionModel().getSelectedIndex()) {
+            case 1: return InterviewStatus.RUNNING;
+            case 2: return InterviewStatus.PAUSED;
+            case 3: return InterviewStatus.COMPLETED;
+            case 4: return InterviewStatus.FAILED;
+            default: return null;
+        }
     }
 
     private String statusText(InterviewStatus status) {
-        return switch (status) {
-            case CREATED -> "待开始";
-            case RUNNING -> "进行中";
-            case PAUSED -> "已暂停";
-            case COMPLETED -> "已完成";
-            case FAILED -> "异常中止";
-        };
+        if (status == null) return "—";
+        switch (status) {
+            case CREATED: return "待开始";
+            case RUNNING: return "进行中";
+            case PAUSED: return "已暂停";
+            case COMPLETED: return "已完成";
+            case FAILED: return "异常中止";
+            default: return "未知";
+        }
     }
 
     private String durationText(InterviewHistoryItemDto item) {

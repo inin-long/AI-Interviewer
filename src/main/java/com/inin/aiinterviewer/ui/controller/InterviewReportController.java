@@ -93,6 +93,15 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     @Override
     public void initializeContext(Long interviewId) {
+        try {
+            doInitializeContext(interviewId);
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+            throw exception;
+        }
+    }
+
+    private void doInitializeContext(Long interviewId) {
         if (interviewId == null) throw new IllegalArgumentException("Report requires an interview id");
         this.interviewId = interviewId;
         long userId = sessionState.requireCurrentUser().id();

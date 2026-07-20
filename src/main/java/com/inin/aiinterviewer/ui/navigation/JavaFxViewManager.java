@@ -104,11 +104,26 @@ public class JavaFxViewManager implements ViewManager {
     }
 
     private Parent load(Route route) throws IOException {
-        URL location = Objects.requireNonNull(getClass().getResource(route.fxmlPath()),
-                () -> "Missing FXML resource: " + route.fxmlPath());
+        URL location = classLoaderResource(route.fxmlPath());
+        if (location == null) {
+            throw new IOException("Missing FXML resource: " + route.fxmlPath());
+        }
         FXMLLoader loader = new FXMLLoader(location);
         loader.setControllerFactory(applicationContext::getBean);
         return loader.load();
+    }
+
+    private URL classLoaderResource(String path) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+        String normalized = path.startsWith("/") ? path.substring(1) : path;
+        URL resource = classLoader.getResource(normalized);
+        if (resource == null) {
+            resource = getClass().getResource(path);
+        }
+        return resource;
     }
 
     private Route authorize(Route requestedRoute) {
