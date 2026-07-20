@@ -1,38 +1,160 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import com.inin.aiinterviewer.ui.component.DrawerPane?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns="http://javafx.com/javafx/21"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.inin.aiinterviewer.ui.controller.ResumeController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
-            <Label text="简历中心" styleClass="page-title"/>
-            <Label text="上传并解析 PDF、DOCX、Markdown 或 TXT 简历" styleClass="secondary-text"/>
-        </VBox>
-        <Region HBox.hgrow="ALWAYS"/>
-        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
-        <Button fx:id="uploadButton" text="上传简历" onAction="#uploadResume" styleClass="primary-button"/>
-    </HBox>
-    <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
-        <Label fx:id="summaryLabel" text="共 0 份" styleClass="summary-value"/>
-        <Label fx:id="taskLabel" text="文件和解析结果仅保存在本机" styleClass="secondary-text"/>
-        <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="deleteButton" text="删除所选" onAction="#deleteSelected" styleClass="danger-button"/>
-        <Button fx:id="viewButton" text="查看 / 编辑画像" onAction="#viewSelected" styleClass="primary-button"/>
-    </HBox>
-    <TableView fx:id="resumeTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-        <placeholder><Label text="暂无简历，点击右上角上传" styleClass="secondary-text"/></placeholder>
-        <columns>
-            <TableColumn fx:id="nameColumn" text="文件名" prefWidth="310"/>
-            <TableColumn fx:id="typeColumn" text="格式" prefWidth="90"/>
-            <TableColumn fx:id="sizeColumn" text="大小" prefWidth="110"/>
-            <TableColumn fx:id="statusColumn" text="解析状态" prefWidth="130"/>
-            <TableColumn fx:id="updateTimeColumn" text="更新时间" prefWidth="170"/>
-        </columns>
-    </TableView>
-</VBox>
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:id="resumeRoot"
+           fx:controller="com.inin.aiinterviewer.ui.controller.ResumeController"
+           styleClass="resume-page">
+    <fx:define>
+        <ToggleGroup fx:id="statusFilterGroup"/>
+    </fx:define>
+    <VBox spacing="12">
+        <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="resume-header">
+            <VBox spacing="4">
+                <Label text="简历中心" styleClass="resume-page-title"/>
+                <Label text="管理候选人简历、确认解析结果，并生成可用于模拟面试的候选人画像"
+                       styleClass="resume-page-subtitle"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="uploadButton" text="上传简历" onAction="#uploadResume"
+                    styleClass="primary-button,resume-primary-action">
+                <graphic><FontIcon iconLiteral="mdi2u-upload-outline" iconSize="18"/></graphic>
+            </Button>
+            <Button text="从本地导入" onAction="#importResume" styleClass="resume-outline-action">
+                <graphic><FontIcon iconLiteral="mdi2i-import" iconSize="18"/></graphic>
+            </Button>
+            <Button text="新建候选人画像" onAction="#createCandidateProfile" styleClass="resume-outline-action">
+                <graphic><FontIcon iconLiteral="mdi2a-account-plus-outline" iconSize="18"/></graphic>
+            </Button>
+        </HBox>
+
+        <HBox spacing="12" styleClass="resume-stats-row">
+            <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                <StackPane styleClass="resume-stat-icon-box,primary">
+                    <FontIcon iconLiteral="mdi2f-folder-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="简历总数" styleClass="resume-stat-label"/>
+                    <HBox alignment="BASELINE_LEFT" spacing="7">
+                        <Label fx:id="totalCountLabel" text="0" styleClass="resume-stat-value"/>
+                        <Label text="份" styleClass="resume-stat-unit"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                <StackPane styleClass="resume-stat-icon-box,success">
+                    <FontIcon iconLiteral="mdi2a-account-check-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="已确认画像" styleClass="resume-stat-label"/>
+                    <HBox alignment="BASELINE_LEFT" spacing="7">
+                        <Label fx:id="confirmedCountLabel" text="0" styleClass="resume-stat-value"/>
+                        <Label text="份" styleClass="resume-stat-unit"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                <StackPane styleClass="resume-stat-icon-box,warning">
+                    <FontIcon iconLiteral="mdi2c-clock-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="待处理" styleClass="resume-stat-label"/>
+                    <HBox alignment="BASELINE_LEFT" spacing="7">
+                        <Label fx:id="pendingCountLabel" text="0" styleClass="resume-stat-value"/>
+                        <Label text="份" styleClass="resume-stat-unit"/>
+                    </HBox>
+                </VBox>
+            </HBox>
+            <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                <StackPane styleClass="resume-stat-icon-box,info">
+                    <FontIcon iconLiteral="mdi2c-calendar-month-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="最近更新" styleClass="resume-stat-label"/>
+                    <Label fx:id="latestDateLabel" text="--" styleClass="resume-stat-date"/>
+                    <Label fx:id="latestTimeLabel" text="--" styleClass="resume-stat-hint"/>
+                </VBox>
+            </HBox>
+        </HBox>
+
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="resume-toolbar">
+            <ToggleButton fx:id="allFilterButton" text="全部" selected="true" toggleGroup="$statusFilterGroup"
+                          onAction="#applyFilters" styleClass="resume-filter-button"/>
+            <ToggleButton fx:id="confirmedFilterButton" text="已确认" toggleGroup="$statusFilterGroup"
+                          onAction="#applyFilters" styleClass="resume-filter-button"/>
+            <ToggleButton fx:id="pendingFilterButton" text="待处理" toggleGroup="$statusFilterGroup"
+                          onAction="#applyFilters" styleClass="resume-filter-button"/>
+            <ToggleButton fx:id="failedFilterButton" text="失败" toggleGroup="$statusFilterGroup"
+                          onAction="#applyFilters" styleClass="resume-filter-button"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <TextField fx:id="searchField" promptText="搜索简历或候选人" onKeyReleased="#applyFilters"
+                       prefWidth="250" styleClass="resume-search-field"/>
+            <AppSelect fx:id="sortSelect" prefWidth="150" styleClass="resume-sort-select"/>
+            <Button onAction="#refresh" accessibleText="刷新简历" styleClass="resume-refresh-button">
+                <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="19"/></graphic>
+                <tooltip><Tooltip text="刷新简历"/></tooltip>
+            </Button>
+        </HBox>
+
+        <ListView fx:id="resumeList" VBox.vgrow="ALWAYS" styleClass="resume-list">
+            <placeholder>
+                <VBox spacing="10" alignment="CENTER">
+                    <FontIcon iconLiteral="mdi2f-file-account-outline" iconSize="36" styleClass="resume-empty-list-icon"/>
+                    <Label text="暂无符合条件的简历" styleClass="resume-empty-list-title"/>
+                    <Label text="上传简历后，解析、画像确认和模拟面试会在这里串联完成" styleClass="resume-empty-list-hint"/>
+                </VBox>
+            </placeholder>
+        </ListView>
+
+        <HBox alignment="CENTER_LEFT" spacing="18" styleClass="resume-process-card">
+            <VBox spacing="3" minWidth="185">
+                <Label text="解析流程" styleClass="resume-process-title"/>
+                <Label fx:id="processResumeLabel" text="选择一份简历查看处理进度" maxWidth="185"
+                       textOverrun="ELLIPSIS" styleClass="resume-process-current"/>
+            </VBox>
+            <HBox alignment="CENTER_LEFT" spacing="9" HBox.hgrow="ALWAYS">
+                <StackPane styleClass="resume-process-icon,complete">
+                    <FontIcon iconLiteral="mdi2c-cloud-upload-outline" iconSize="19"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="上传文件" styleClass="resume-process-step"/>
+                    <Label fx:id="uploadStateLabel" text="等待中" styleClass="resume-process-state"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" styleClass="resume-process-line"/>
+                <StackPane styleClass="resume-process-icon,active">
+                    <FontIcon iconLiteral="mdi2t-text-box-search-outline" iconSize="19"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="文本提取" styleClass="resume-process-step"/>
+                    <Label fx:id="extractStateLabel" text="等待中" styleClass="resume-process-state"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" styleClass="resume-process-line"/>
+                <StackPane styleClass="resume-process-icon">
+                    <FontIcon iconLiteral="mdi2b-brain" iconSize="19"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="AI 分析" styleClass="resume-process-step"/>
+                    <Label fx:id="analysisStateLabel" text="等待中" styleClass="resume-process-state"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" styleClass="resume-process-line"/>
+                <StackPane styleClass="resume-process-icon">
+                    <FontIcon iconLiteral="mdi2a-account-outline" iconSize="19"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="确认画像" styleClass="resume-process-step"/>
+                    <Label fx:id="portraitStateLabel" text="等待中" styleClass="resume-process-state"/>
+                </VBox>
+            </HBox>
+        </HBox>
+    </VBox>
+    <DrawerPane fx:id="profileDrawer"/>
+</StackPane>

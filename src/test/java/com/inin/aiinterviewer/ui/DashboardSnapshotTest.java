@@ -29,6 +29,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
 @SpringBootTest
 @EnabledOnOs(OS.WINDOWS)
 class DashboardSnapshotTest {
@@ -60,6 +62,8 @@ class DashboardSnapshotTest {
 
     @Test
     void captureDashboard() throws Exception {
+        String outputPath = System.getProperty("dashboard.snapshot.path");
+        assumeTrue(outputPath != null && !outputPath.isBlank());
         sessionState.logIn(new UserDto(1L, "snapshot-user", "inin", LocalDateTime.now()));
         FutureTask<Void> task = new FutureTask<>(() -> {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/main-window.fxml"));
@@ -81,7 +85,7 @@ class DashboardSnapshotTest {
                     PixelFormat.getIntArgbPreInstance(), pixels, 0, width);
             BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
             image.setRGB(0, 0, width, height, pixels, 0, width);
-            Path output = Path.of(System.getProperty("dashboard.snapshot.path"));
+            Path output = Path.of(outputPath);
             Files.createDirectories(output.getParent());
             ImageIO.write(image, "png", output.toFile());
             return null;

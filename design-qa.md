@@ -131,3 +131,60 @@ final result: passed（本轮垂直间距与启动窗口调整）
 - 主窗口侧栏与顶栏沿用项目现有全局壳层尺寸，避免知识库改造破坏其他页面；知识库内容区在该壳层内按参考图还原。
 
 final result: passed
+
+## 简历中心与候选人画像 Drawer（2026-07-20）
+
+- source visual truth: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-aeffc1c5-f8f0-4875-88f9-0cc2afe5df4b.png`
+- implementation screenshot: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-center-implementation-final.png`
+- Drawer screenshot: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-center-drawer-final.png`
+- full-view comparison: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-center-comparison-final.png`
+- Drawer full comparison: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-drawer-full-comparison-final.png`
+- Drawer focused comparison: `C:\Users\35975\.codex\visualizations\2026\07\18\019f7443-ad60-7703-91ed-cad90a055040\resume-drawer-focus-comparison-final.png`
+- viewport: `1672 × 901` JavaFX scene；参考图去除顶部 `40px` Windows 标题栏后同尺寸比较
+- state: 6 份简历，覆盖已确认、待确认、待生成、解析中和解析失败；Drawer 为已确认高级后端工程师画像
+- rendered screenshot method: JavaFX 原生 `Parent.snapshot`，在 CSS 与虚拟列表布局完成后抓取
+- Browser classification: Browser/IAB 不适用于 JavaFX 桌面应用；使用 JavaFX 原生渲染、截图与交互测试
+
+### Full-view and focused comparison evidence
+
+- 字体与层级：延续产品现有 Microsoft YaHei UI / Segoe UI 字体栈；页面标题、统计数值、文件名、状态、画像标题和分区标题均按参考层级设置字号与字重，列表长文件名使用省略策略。
+- 间距与布局：主界面保留标题操作区、4 张统计卡、胶囊筛选、搜索/排序、6 行密集简历卡和底部 4 步解析流程；`70px` 行高、`86px` 统计卡和 `82px` 流程卡在 `1672 × 901` 画幅内无裁切。
+- 颜色与表面：白色卡片、`#E2E6EF` 边框、蓝紫主色、绿色确认、橙色待处理、蓝色解析中和红色失败与参考图一致；圆角、弱阴影、选中描边和 Drawer 遮罩沿用全局令牌。
+- 图标：上传、导入、候选人、文件类型、状态、技能/项目/教育及流程图标全部来自项目既有 Ikonli Material Design 2 图标库，无文本符号、手工 SVG 或 CSS 图形替代。
+- 图片素材：候选人头像由 ImageGen 生成并按圆形头像位裁切；左侧简历文件夹插画由 ImageGen 生成，使用 chroma-key 后处理得到透明 PNG。两者均已落到工程资源目录，不依赖临时文件。
+- 内容：主界面使用真实简历、解析状态和候选人画像统计；Drawer 使用真实结构化画像内容，不把演示字段写回业务数据。
+- 响应与可访问性：主列表使用 JavaFX 虚拟列表；搜索、状态筛选和排序均可操作；按钮保留可访问文本和悬停/禁用状态；Drawer 可由关闭按钮或遮罩关闭。
+
+### Primary interactions and logic loop
+
+- “上传简历”和“从本地导入”均进入既有文件选择、保存、后台解析和状态轮询链路。
+- 状态筛选始终保持一个有效选项；搜索同时匹配文件名、候选人姓名和目标岗位；排序支持更新时间、名称和大小。
+- 单击简历整行或“查看画像”打开 `470px` 右侧 `DrawerPane`；“查看原文”复用同一 Drawer，并可返回画像预览。
+- 已解析但无画像时可直接生成画像；生成完成后 Drawer 自动刷新；待确认画像可确认保存，已确认画像可再次安全确认。
+- “进入模拟面试”会优先启动/恢复已关联该画像的面试方案；无关联方案时进入面试方案页并明确提示补齐关联，不制造隐式方案。
+- 详细编辑仍进入既有画像编辑页，保存草稿、重新分析和人工核对能力保持不变。
+
+### Intentional deviations
+
+- 参考图右侧画像工作区是常驻分栏；按用户明确要求，本实现改为点击简历后出现的 `470px` 右侧 Drawer，因此关闭状态下主列表使用完整内容宽度。
+- 主窗口侧栏与顶栏继续沿用产品现有全局壳层；只在简历路由显示生成的侧栏插画，避免影响其他页面。
+- 数据模型没有项目起止日期，Drawer 不伪造日期；项目名称、经验、教育和 AI 摘要均来自已保存画像。
+
+### Comparison history
+
+- Pass 1 / P2：初版 Drawer 内容密度偏紧，摘要结束后留白过大，底部三个动作按钮宽度不足。已启用内容高度适配、扩大 AI 摘要区并按 `88 / 132 / 132px` 收敛按钮宽度；复查后动作区比例通过。
+- Pass 1 / P2：初版 Drawer 在画像头部重复放置“查看原文”，导致核心技能区整体下移。已保留列表行原文入口并移除 Drawer 内重复入口；复查后头像、技能和项目分区基线更接近参考图。
+- Pass 2：重新抓取同尺寸主界面、Drawer 和聚焦区域，将参考与实现置于同一比较输入；五项必查表面（字体、间距、颜色、图片、文案）未发现剩余 P0/P1/P2 问题。
+
+### Verification
+
+- `ResumeCenterSnapshotTest` 使用隔离 SQLite 数据生成主界面和 Drawer 原生截图，覆盖 6 份真实状态组合。
+- `JavaFxFxmlLoadTest` 验证 4 张统计卡、`AppSelect` 排序、卡片列表、流程栏、`470px` Drawer 和两张生成素材加载。
+- 完整 `mvnw test`：167 项，163 通过，4 项按条件跳过，0 失败，0 错误。
+
+### Follow-up polish
+
+- P3：生成头像比参考图更接近半写实 3D，参考头像更扁平；当前裁切、色温和信息层级一致，可在后续品牌素材统一时再做风格微调。
+- P3：全宽主列表是 Drawer 方案的有意结果，关闭 Drawer 时不会保留参考图常驻分栏的空白占位。
+
+final result: passed

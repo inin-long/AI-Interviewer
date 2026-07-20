@@ -12,6 +12,7 @@ import com.inin.aiinterviewer.ui.component.AppDialog;
 import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.component.DrawerPane;
+import com.inin.aiinterviewer.ui.component.ResumeProfileDrawerView;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.Route;
@@ -334,6 +335,47 @@ class JavaFxFxmlLoadTest {
                     Math.abs(drawer.getDrawerWidth() - 442) < 0.5,
                     root.lookupAll(".knowledge-stat-card").size() == 1,
                     root.lookupAll(".knowledge-stat-segment").size() == 4
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void resumeCenterUsesCardListProcessRailGeneratedAssetsAndPortraitDrawer() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "resume-layout-user", "简历中心用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/resume-view.fxml");
+            Scene scene = new Scene(root, 1440, 839);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            DrawerPane drawer = (DrawerPane) root.lookup("#profileDrawer");
+            ResumeProfileDrawerView portrait = new ResumeProfileDrawerView();
+            drawer.open("候选人画像预览工作区", portrait);
+
+            Parent shell = load("/fxml/main-window.fxml");
+            Scene shellScene = new Scene(shell, 1440, 820);
+            shellScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            shell.applyCss();
+            shell.layout();
+            ((Button) shell.lookup("#resumesNavButton")).fire();
+            shell.applyCss();
+            shell.layout();
+            Region artwork = (Region) shell.lookup("#resumeSidebarArtwork");
+
+            return new boolean[]{
+                    root.lookup("#resumeList") instanceof ListView,
+                    root.lookup("#sortSelect") instanceof AppSelect,
+                    root.lookupAll(".resume-stat-card").size() == 4,
+                    root.lookup(".resume-process-card") != null,
+                    drawer.isOpen(),
+                    Math.abs(drawer.getDrawerWidth() - 470) < 0.5,
+                    getClass().getResource("/images/resume/candidate-avatar.png") != null,
+                    getClass().getResource("/images/resume/resume-sidebar-illustration.png") != null,
+                    artwork.isVisible() && artwork.isManaged()
             };
         });
         Platform.runLater(task);

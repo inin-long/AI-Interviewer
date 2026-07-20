@@ -55,6 +55,7 @@ public class MainWindowController {
     @FXML private Button settingsNavButton;
     @FXML private Button userMenuButton;
     @FXML private HBox activityReceipt;
+    @FXML private StackPane resumeSidebarArtwork;
     @FXML private Label activityTitleLabel;
     @FXML private Label activityDetailLabel;
 
@@ -136,6 +137,9 @@ public class MainWindowController {
         resumesNavButton.pseudoClassStateChanged(SELECTED, route == Route.RESUME);
         knowledgeNavButton.pseudoClassStateChanged(SELECTED, route == Route.KNOWLEDGE);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
+        boolean showResumeArtwork = route == Route.RESUME;
+        resumeSidebarArtwork.setManaged(showResumeArtwork);
+        resumeSidebarArtwork.setVisible(showResumeArtwork);
     }
 
     @FXML
