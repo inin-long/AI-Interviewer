@@ -43,7 +43,8 @@
                         maxWidth="Infinity" styleClass="report-directory-button"/>
                 <Separator/>
                 <Label text="综合得分" styleClass="summary-label"/>
-                <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score"/>
+                <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score" wrapText="true"/>
+                <Label fx:id="overallConfidenceLabel" text="" styleClass="secondary-text"/>
                 <Separator/>
                 <GridPane hgap="18" vgap="14">
                     <Label text="技术基础" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="summary-label"/>

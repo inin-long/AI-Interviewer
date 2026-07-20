@@ -55,6 +55,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     @FXML private Label titleLabel;
     @FXML private Label overallScoreLabel;
+    @FXML private Label overallConfidenceLabel;
     @FXML private Label technicalScoreLabel;
     @FXML private Label problemSolvingScoreLabel;
     @FXML private Label projectScoreLabel;
@@ -160,12 +161,11 @@ public class InterviewReportController implements ContextAwareController<Long> {
         evidence.stream()
                 .filter(item -> item.questionNumber() > 0)
                 .forEach(item -> {
-                    String detail = item.competencyCode() + " · " + shortEvidenceId(item.id());
                     Button link = new Button("Q" + item.questionNumber() + " · " + evidenceSignalText(item.signal()));
                     link.setMaxWidth(Double.MAX_VALUE);
                     link.getStyleClass().add("report-question-link");
                     link.setAccessibleText("查看第 " + item.questionNumber() + " 题的评分证据");
-                    link.setTooltip(new Tooltip("定位到第 " + item.questionNumber() + " 题评分证据\n" + detail));
+                    link.setTooltip(new Tooltip("定位到第 " + item.questionNumber() + " 题评分证据"));
                     link.setOnAction(event -> openTranscriptAt(item.questionNumber()));
                     Button replay = new Button("重答");
                     replay.getStyleClass().add("secondary-button");
@@ -360,12 +360,13 @@ public class InterviewReportController implements ContextAwareController<Long> {
             Label label,
             com.inin.aiinterviewer.application.dto.InterviewReportDto report
     ) {
+        label.setText(report.overallScore() + " / 100");
         if (report.scoreEvidence().isEmpty()) {
-            label.setText(report.overallScore() + " / 100");
+            overallConfidenceLabel.setText("");
             return;
         }
-        label.setText(report.overallScored()
-                ? report.overallScore() + " / 100 · " + confidenceText(report.overallConfidence())
+        overallConfidenceLabel.setText(report.overallScored()
+                ? confidenceText(report.overallConfidence())
                 : "证据不足");
         configureScoreNavigation(label, report, "overall");
     }
