@@ -88,10 +88,15 @@ public class ResumeDetailController implements ContextAwareController<Long> {
     @Override
     public void initializeContext(Long context) {
         if (context == null) {
-            throw new IllegalArgumentException("Resume detail requires a resume id");
+            viewManager.showError("缺少简历标识，无法打开详情。");
+            return;
         }
         resumeId = context;
-        load();
+        try {
+            load();
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     @FXML
@@ -137,7 +142,12 @@ public class ResumeDetailController implements ContextAwareController<Long> {
         long userId = sessionState.requireCurrentUser().id();
         ResumeDetailDto detail = resumeService.getDetail(userId, resumeId);
         resumeNameLabel.setText(detail.resume().originalName());
-        resumeStatusLabel.setText(detail.resume().status().name());
+        resumeStatusLabel.setText(switch (detail.resume().status()) {
+            case UPLOADED -> "已上传";
+            case PARSING -> "解析中";
+            case COMPLETED -> "已完成";
+            case FAILED -> "失败";
+        });
         rawTextArea.setText(detail.parsedText() == null ? "" : detail.parsedText());
         boolean parsed = detail.resume().status() == ResumeStatus.COMPLETED;
         generateButton.setDisable(!parsed);

@@ -15,6 +15,7 @@ import com.inin.aiinterviewer.domain.model.ScenarioState;
 import com.inin.aiinterviewer.domain.model.InterviewCoverage;
 import com.inin.aiinterviewer.domain.model.InterviewStrategy;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -206,7 +207,7 @@ public record InterviewState(
     public InterviewState {
         stateVersion = stateVersion == null ? CURRENT_VERSION : stateVersion;
         messages = messages == null ? List.of() : List.copyOf(messages);
-        rules = rules == null ? Map.of() : Map.copyOf(rules);
+        rules = rules == null ? Map.of() : new LinkedHashMap<>(rules);
         summary = summary == null ? "" : summary;
         claimLedger = claimLedger == null ? ClaimLedger.empty() : claimLedger;
         evidenceLedger = evidenceLedger == null ? EvidenceLedger.empty() : evidenceLedger;

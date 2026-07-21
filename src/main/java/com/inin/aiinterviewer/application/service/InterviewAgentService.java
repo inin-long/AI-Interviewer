@@ -209,6 +209,11 @@ public class InterviewAgentService {
 
             if (turn.stage() != session.stage()) {
                 sessionService.transitionStage(userId, sessionId, turn.stage());
+                // 模型主动以 COMPLETED 结束面试时（任意阶段提前收尾），
+                // 同样触发报告生成，避免"已结束但无报告"的半成品状态。
+                if (turn.stage() == InterviewStage.COMPLETED) {
+                    reportTaskService.enqueue(userId, sessionId);
+                }
             }
             return streamAndPersist(
                     userId, sessionId, turn.stage(), turn.questionPrompt(), turn.analysis(),

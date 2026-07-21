@@ -42,10 +42,11 @@ public class CareerReportController implements ContextAwareController<Long> {
 
     @Override
     public void initializeContext(Long context) {
-        if (context == null) {
-            throw new IllegalArgumentException("测评报告需要结果 id");
-        }
         try {
+            if (context == null) {
+                viewManager.showError("测评报告需要结果 id");
+                return;
+            }
             AssessmentResultDto result = assessmentService.getResult(
                     sessionState.requireCurrentUser().id(), context);
             codeLabel.setText("类型代码：" + result.resultCode());

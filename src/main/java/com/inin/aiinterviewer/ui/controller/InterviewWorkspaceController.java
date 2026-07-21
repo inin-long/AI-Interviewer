@@ -158,6 +158,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML
     private void submitAnswer() {
         String answer = answerArea.getText();
+        if (answer == null || answer.isBlank()) {
+            viewManager.showInfo("请输入回答", "请先填写你的回答再提交。");
+            return;
+        }
         if (llmProperties.isConfigured()) {
             boolean expectsNextQuestion = currentSession != null
                     && transcriptView.getQuestionCount() < currentSession.planSnapshot().questionCount();

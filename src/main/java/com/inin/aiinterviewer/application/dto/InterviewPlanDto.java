@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 
 import java.time.LocalDateTime;
 import java.io.Serializable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +28,7 @@ public record InterviewPlanDto(
 ) implements Serializable {
     public InterviewPlanDto {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
-        rules = rules == null ? Map.of() : Map.copyOf(rules);
+        rules = rules == null ? Map.of() : new LinkedHashMap<>(rules);
         stages = stages == null ? List.of() : List.copyOf(stages);
     }
 

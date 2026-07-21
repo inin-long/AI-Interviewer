@@ -97,7 +97,6 @@ public class InterviewReportController implements ContextAwareController<Long> {
             doInitializeContext(interviewId);
         } catch (RuntimeException exception) {
             viewManager.showError(exceptionHandler.toUserMessage(exception));
-            throw exception;
         }
     }
 

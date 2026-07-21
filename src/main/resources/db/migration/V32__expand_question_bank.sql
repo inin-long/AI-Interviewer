@@ -17,7 +17,7 @@ INSERT OR IGNORE INTO question_tag(user_id, name) VALUES
 (1, '测试'), (1, '自动化'), (1, '性能测试'), (1, 'Docker'), (1, 'Kubernetes'),
 (1, 'Linux'), (1, 'CI/CD'), (1, '监控'), (1, '设计规范'), (1, '用户体验'),
 (1, 'Figma'), (1, 'Node.js'), (1, 'Python'), (1, 'Redis'), (1, '微服务'),
-(1, '消息队列'), (1, 'JVM'), (1, '网络协议'), (1, '安全'), (1, '项目管埋'),
+(1, '消息队列'), (1, 'JVM'), (1, '网络协议'), (1, '安全'), (1, '项目管理'),
 (1, '领导力'), (1, '学习能力'), (1, '抗压能力'), (1, '机器学习'),
 (1, '数据可视化'), (1, 'A/B 测试'), (1, '需求分析'), (1, '原型设计');
 
@@ -286,7 +286,7 @@ INSERT INTO interview_question(user_id, job_id, category, title, content, refere
  '流水线阶段：1) Code Commit → 触发 webhook；2) Lint & Unit Test（开发提交时跑，< 5min，快速反馈）；3) Build（编译打包 Docker 镜像）；4) Integration Test（部署测试环境，跑接口/E2E 测试）；5) Static Analysis（SonarQube 代码质量扫描）；6) Security Scan（依赖漏洞检查 dependency-check/Snyk）；7) Deploy to Staging（预发布环境冒烟测试）；8) Production Deploy（灰度发布 + 自动化回归门禁）。关键：每阶段设置质量门禁（覆盖率阈值/严重 Bug数为0）。',
  'MEDIUM'),
 
-(1, (SELECT id FROM job_position WHERE title='测试开发测试工程师' AND user_id=1),
+(1, (SELECT id FROM job_position WHERE title='测试开发工程师' AND user_id=1),
  'SCENARIO', '测试环境的治理方案',
  '团队反映测试环境经常不稳定（数据被污染、服务不可用、配置和线上不一致），你如何系统性地治理？',
  '治理方案：1) 环境标准化：Docker Compose/Kubernetes 编排一键拉起整套环境，版本化管理 docker-compose.yml；2) 数据管理：每次回归前初始化种子数据（Flyway/Liquibase）、测试用例间数据隔离（每个用例独立数据 setUp/tearDown）；3) 配置一致性：配置中心（Nacos/Apollo）区分环境 profile、禁止硬编码；4) 稳定性监控：环境健康检查接口、定时巡检任务、服务宕动自动报警；5) 治本：推动测试环境纳入运维统一管理，与生产环境同等对待。',
@@ -555,7 +555,7 @@ WHERE q.title = '如何搭建产品的数据指标体系' AND t.name IN ('数据
 INSERT INTO question_tag_rel(question_id, tag_id, user_id)
 SELECT q.id, t.id, 1
 FROM interview_question q JOIN question_tag t ON t.user_id = 1
-WHERE q.title = '推动一个跨部门项目落地' AND t.name IN ('团队协作', '项目管埋');
+WHERE q.title = '推动一个跨部门项目落地' AND t.name IN ('团队协作', '项目管理');
 
 -- Q12: SQL薪资第二高 → 数据分析, 数据库
 INSERT INTO question_tag_rel(question_id, tag_id, user_id)
@@ -600,7 +600,7 @@ SELECT q.id, t.id, 1
 FROM interview_question q JOIN question_tag t ON t.user_id = 1
 JOIN job_position j ON q.job_id = j.id
 WHERE j.title = '产品经理' AND q.id > 14
-AND t.name IN ('产品思维','用户体验','需求分析','原型设计','数据分析','沟通表达','项目管埋');
+AND t.name IN ('产品思维','用户体验','需求分析','原型设计','数据分析','沟通表达','项目管理');
 
 -- 数据分析师新增 8 题 → 数据分析, Python, 数据可视化, 机器学习, SQL, 学习能力, 沟通表达
 INSERT INTO question_tag_rel(question_id, tag_id, user_id)

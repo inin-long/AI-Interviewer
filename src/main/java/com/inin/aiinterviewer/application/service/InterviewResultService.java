@@ -18,6 +18,7 @@ import com.inin.aiinterviewer.domain.entity.EvaluationEntity;
 import com.inin.aiinterviewer.domain.entity.InterviewReportEntity;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.enums.ReportStatus;
+import com.inin.aiinterviewer.domain.model.ClaimLedger;
 import com.inin.aiinterviewer.domain.model.EvaluationResult;
 import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.database.mapper.AgentCheckpointMapper;
@@ -41,6 +42,7 @@ public class InterviewResultService {
     private final StateSerializer stateSerializer;
     private final ObjectMapper objectMapper;
     private final EvidenceLedgerService evidenceLedgerService;
+    private final EvidenceScoreAggregator scoreAggregator;
 
     public InterviewResultService(
             InterviewResultMapper resultMapper,
@@ -49,7 +51,8 @@ public class InterviewResultService {
             InterviewMessageMapper messageMapper,
             StateSerializer stateSerializer,
             ObjectMapper objectMapper,
-            EvidenceLedgerService evidenceLedgerService
+            EvidenceLedgerService evidenceLedgerService,
+            EvidenceScoreAggregator scoreAggregator
     ) {
         this.resultMapper = resultMapper;
         this.sessionMapper = sessionMapper;
@@ -58,6 +61,7 @@ public class InterviewResultService {
         this.stateSerializer = stateSerializer;
         this.objectMapper = objectMapper;
         this.evidenceLedgerService = evidenceLedgerService;
+        this.scoreAggregator = scoreAggregator;
     }
 
     @Transactional
@@ -180,21 +184,32 @@ public class InterviewResultService {
         var ledger = evidenceLedgerService.ledger(report.getUserId(), report.getInterviewId());
         Map<Long, Integer> questionNumbers = messageQuestionNumbers(
                 report.getUserId(), report.getInterviewId());
-        Map<String, Double> confidence = payload.scoreEvidence().isEmpty()
+        // 评分器只产出分数与总结，通常不返回 scoreEvidence；用证据账本聚合补齐，
+        // 以保证报告页的评分证据面板、置信度与“点击分数跳转到证据”可用。AI 分数/总结仍保留。
+        EvaluationPayload aggregated = scoreAggregator.aggregate(
+                ledger, ClaimLedger.empty(), payload.summary());
+        EvaluationPayload effective = payload.scoreEvidence().isEmpty()
+                ? new EvaluationPayload(
+                        payload.overallScore(), payload.technicalScore(), payload.problemSolvingScore(),
+                        payload.projectScore(), payload.systemDesignScore(), payload.communicationScore(),
+                        payload.comprehensiveScore(), payload.summary(),
+                        aggregated.scoreEvidence(), aggregated.overallConfidence(), aggregated.overallScored())
+                : payload;
+        Map<String, Double> confidence = effective.scoreEvidence().isEmpty()
                 ? ledger.summaries().entrySet().stream()
-                        .collect(java.util.stream.Collectors.toUnmodifiableMap(
-                                Map.Entry::getKey, entry -> entry.getValue().confidence()))
-                : payload.scoreEvidence().entrySet().stream()
+                        .collect(java.util.stream.Collectors.toMap(
+                                Map.Entry::getKey, entry -> entry.getValue().confidence(), (a, b) -> a))
+                : effective.scoreEvidence().entrySet().stream()
                         .filter(entry -> !entry.getKey().equals(EvidenceScoreAggregator.OVERALL))
-                        .collect(java.util.stream.Collectors.toUnmodifiableMap(
-                                Map.Entry::getKey, entry -> entry.getValue().confidence()));
+                        .collect(java.util.stream.Collectors.toMap(
+                                Map.Entry::getKey, entry -> entry.getValue().confidence(), (a, b) -> a));
         return new InterviewReportDto(report.getId(), report.getInterviewId(), report.getTitle(),
-                payload.overallScore(), dimensions(payload), payload.summary(), report.getContentMarkdown(),
+                effective.overallScore(), dimensions(effective), effective.summary(), report.getContentMarkdown(),
                 confidence, ledger.evidence().stream()
                         .map(evidence -> EvaluationEvidenceDto.from(
                                 evidence, questionNumbers.getOrDefault(evidence.messageId(), 0)))
-                        .toList(), payload.scoreEvidence(), payload.overallConfidence(),
-                payload.overallScored());
+                        .toList(), effective.scoreEvidence(), effective.overallConfidence(),
+                effective.overallScored());
     }
 
     private Map<Long, Integer> messageQuestionNumbers(long userId, long sessionId) {

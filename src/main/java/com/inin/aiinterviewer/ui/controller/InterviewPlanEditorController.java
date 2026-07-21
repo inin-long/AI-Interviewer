@@ -324,6 +324,12 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
 
     @FXML
     private void savePlan() {
+        // 先做面向用户的具体校验：校验不过直接提示原因并返回，避免只弹「请检查输入内容」
+        String formError = validatePlanForm();
+        if (formError != null) {
+            viewManager.showError(formError);
+            return;
+        }
         try {
             SaveInterviewPlanCommand command = commandFromForm();
             long userId = sessionState.requireCurrentUser().id();
@@ -336,6 +342,59 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         } catch (RuntimeException exception) {
             viewManager.showError(exceptionHandler.toUserMessage(exception));
         }
+    }
+
+    /**
+     * 保存前的前端表单校验，返回面向用户的具体错误提示（多项错误以换行分隔）；全部通过返回 null。
+     * 覆盖触发「请检查输入内容」最常见的必填项与取值范围，与服务层 toEntity 校验规则保持一致，后者仍保留兜底。
+     */
+    private String validatePlanForm() {
+        List<String> errors = new ArrayList<>();
+
+        String name = nameField.getText() == null ? "" : nameField.getText().trim();
+        if (name.isBlank()) {
+            errors.add("请填写方案名称");
+        } else if (name.length() > 128) {
+            errors.add("方案名称不能超过 128 个字");
+        }
+
+        String jobTitle = jobTitleField.getText() == null ? "" : jobTitleField.getText().trim();
+        if (jobTitle.isBlank()) {
+            errors.add("请填写岗位名称");
+        } else if (jobTitle.length() > 128) {
+            errors.add("岗位名称不能超过 128 个字");
+        }
+
+        String durationText = durationField.getText() == null ? "" : durationField.getText().trim();
+        if (durationText.isEmpty()) {
+            errors.add("请填写面试时长（10-240 分钟）");
+        } else {
+            try {
+                int duration = Integer.parseInt(durationText);
+                if (duration < 10 || duration > 240) {
+                    errors.add("面试时长需在 10 到 240 分钟之间");
+                }
+            } catch (NumberFormatException ignore) {
+                errors.add("面试时长需为数字（10-240 分钟）");
+            }
+        }
+
+        String countText = questionCountField.getText() == null ? "" : questionCountField.getText().trim();
+        if (countText.isEmpty()) {
+            errors.add("请填写题目数量（1-100 题）");
+        } else {
+            try {
+                int count = Integer.parseInt(countText);
+                if (count < 1 || count > 100) {
+                    errors.add("题目数量需在 1 到 100 题之间");
+                }
+            } catch (NumberFormatException ignore) {
+                errors.add("题目数量需为数字（1-100 题）");
+            }
+        }
+
+        if (errors.isEmpty()) return null;
+        return String.join("\n", errors);
     }
 
     @FXML

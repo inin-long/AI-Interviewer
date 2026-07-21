@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.application.dto.KnowledgeDocumentDto;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
+import com.inin.aiinterviewer.domain.enums.KnowledgeStatus;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXML;
@@ -64,9 +65,16 @@ public class KnowledgeDetailController implements ContextAwareController<Long> {
 
     @Override
     public void initializeContext(Long documentId) {
-        if (documentId == null) throw new IllegalArgumentException("Knowledge detail requires document id");
+        if (documentId == null) {
+            viewManager.showError("缺少文档标识，无法打开详情。");
+            return;
+        }
         currentDocId = documentId;
-        loadDetail();
+        try {
+            loadDetail();
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
     }
 
     private void loadDetail() {
@@ -79,7 +87,7 @@ public class KnowledgeDetailController implements ContextAwareController<Long> {
 
         metadataLabel.setText(document.originalName() + " · " + document.category()
                 + " · " + detail.chunks().size() + " 个片段");
-        statusLabel.setText(document.status().name());
+        statusLabel.setText(statusText(document.status()));
         categoryBox.setValue(document.category());
 
         errorLabel.setVisible(document.errorMessage() != null);
@@ -220,5 +228,15 @@ public class KnowledgeDetailController implements ContextAwareController<Long> {
     @FXML
     private void initialize() {
         categoryBox.getItems().setAll(CATEGORIES);
+    }
+
+    private String statusText(KnowledgeStatus status) {
+        return switch (status) {
+            case UPLOADED -> "已上传";
+            case PARSING -> "解析中";
+            case INDEXING -> "向量化中";
+            case READY -> "已就绪";
+            case FAILED -> "失败";
+        };
     }
 }

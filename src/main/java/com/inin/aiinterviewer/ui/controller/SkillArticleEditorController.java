@@ -42,8 +42,8 @@ public class SkillArticleEditorController implements ContextAwareController<Skil
     private Long editingId = null;
 
     public void initializeContext(SkillArticleDto data) {
-        categoryCombo.getItems().addAll("STAR法则", "行为面试", "礼仪指南",
-                "沟通技巧", "薪资谈判", "群面技巧", "压力面试", "其他");
+        // 只提供与筛选下拉一致的 4 个真实分类，避免用户选了"沟通技巧/薪资谈判"等却被归一化为 GENERAL。
+        categoryCombo.getItems().addAll("STAR 法则", "行为面试", "礼仪指南", "通用技巧");
         if (data != null) {
             editingId = data.id();
             titleField.setText(data.title());
@@ -51,7 +51,7 @@ public class SkillArticleEditorController implements ContextAwareController<Skil
             summaryField.setText(data.summary());
             contentArea.setText(data.contentMarkdown());
         } else {
-            categoryCombo.setValue("其他");
+            categoryCombo.setValue("通用技巧");
         }
     }
 

@@ -48,18 +48,23 @@ public class CareerPlanningService {
         this.resumeOptimizationMapper = resumeOptimizationMapper;
     }
 
-    @Transactional
     public CareerPlanDto generatePlan(long userId, GeneratePlanCommand command) {
         if (command.targetRole() == null || command.targetRole().isBlank()) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
         String prompt = buildPlanPrompt(command);
+        // AI 调用在事务外完成，避免长时间占用数据库连接（最长约 305s 的超时）
         String markdown = callAiWithTimeout(prompt, "职业规划");
         // 降级：AI 不可用时使用本地模板
         if (markdown == null || markdown.isBlank()) {
             log.info("[CareerPlan] AI 不可用，使用本地模板: userId={}", userId);
             markdown = localPlanDraft(command);
         }
+        return persistPlan(userId, command, markdown);
+    }
+
+    @Transactional
+    private CareerPlanDto persistPlan(long userId, GeneratePlanCommand command, String markdown) {
         CareerPlanEntity entity = new CareerPlanEntity();
         entity.setUserId(userId);
         entity.setCurrentRole(command.currentRole() == null ? null : command.currentRole().strip());
@@ -92,13 +97,13 @@ public class CareerPlanningService {
         }
     }
 
-    @Transactional
     public ResumeOptimizationDto optimizeResume(long userId, OptimizeResumeCommand command) {
         if (command.originalText() == null || command.originalText().isBlank()) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
         String original = command.originalText().strip();
-        String prompt = buildResumePrompt(original);
+        // AI 调用在事务外完成，避免长时间占用数据库连接
+        String prompt = buildResumePrompt(original, command.resumeTarget(), command.optimizeDirection());
         String response = callAiWithTimeout(prompt, "简历优化");
         List<String> highlights;
         String optimized;
@@ -114,6 +119,11 @@ public class CareerPlanningService {
                     "为每条经历补充可量化的成果。",
                     "把职责描述改写为成就描述。");
         }
+        return persistOptimization(userId, original, optimized, highlights);
+    }
+
+    @Transactional
+    private ResumeOptimizationDto persistOptimization(long userId, String original, String optimized, List<String> highlights) {
         ResumeOptimizationEntity entity = new ResumeOptimizationEntity();
         entity.setUserId(userId);
         entity.setOriginalText(original);
@@ -160,13 +170,15 @@ public class CareerPlanningService {
                 - 目标岗位：%s
                 - 所在行业：%s
                 - 工作年限：%s
+                - 职业目标/愿景（选填）：%s
                 """.formatted(
                 orDash(command.currentRole()), orDash(command.targetRole()),
                 orDash(command.currentRole()), orDash(command.targetRole()),
-                orDash(command.industry()), orDash(command.experienceYears()));
+                orDash(command.industry()), orDash(command.experienceYears()),
+                orDash(command.careerGoal()));
     }
 
-    private String buildResumePrompt(String original) {
+    private String buildResumePrompt(String original, String resumeTarget, String optimizeDirection) {
         return """
                 你是简历优化专家。请把下面的简历原文改写为更专业、量化、结果导向的中文表述，必须保留事实、不编造。
                 输出格式（Markdown）：
@@ -175,9 +187,12 @@ public class CareerPlanningService {
                 ## 改写亮点
                 - （3-5 条，说明关键改写点）
 
+                目标岗位：%s
+                优化方向：%s
+
                 原文：
                 %s
-                """.formatted(original);
+                """.formatted(orDash(resumeTarget), orDash(optimizeDirection), original);
     }
 
     /**

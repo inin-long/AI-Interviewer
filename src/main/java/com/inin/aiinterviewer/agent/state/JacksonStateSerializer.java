@@ -29,11 +29,14 @@ public class JacksonStateSerializer implements StateSerializer {
         try {
             InterviewState state = objectMapper.readValue(json, InterviewState.class);
             if (InterviewState.CURRENT_VERSION.equals(state.stateVersion())) return state;
-            if ("1.0".equals(state.stateVersion()) || "2.0".equals(state.stateVersion())
-                    || "2.1".equals(state.stateVersion()) || "2.2".equals(state.stateVersion())
-                    || "2.3".equals(state.stateVersion()) || "2.4".equals(state.stateVersion())
-                    || "2.5".equals(state.stateVersion()) || "2.6".equals(state.stateVersion())
-                    || "2.7".equals(state.stateVersion()) || "2.8".equals(state.stateVersion())) {
+            String version = state.stateVersion();
+            boolean legacy = version == null || version.isBlank()
+                    || "1.0".equals(version) || "2.0".equals(version)
+                    || "2.1".equals(version) || "2.2".equals(version)
+                    || "2.3".equals(version) || "2.4".equals(version)
+                    || "2.5".equals(version) || "2.6".equals(version)
+                    || "2.7".equals(version) || "2.8".equals(version);
+            if (legacy) {
                 return new InterviewState(
                         InterviewState.CURRENT_VERSION, state.sessionId(), state.userId(), state.stage(),
                         state.messages(), state.currentQuestion(), state.latestAnswer(), state.analysis(),

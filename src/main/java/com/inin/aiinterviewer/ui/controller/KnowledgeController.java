@@ -104,8 +104,13 @@ public class KnowledgeController {
 
     @FXML
     private void search() {
+        String query = searchField.getText() == null ? "" : searchField.getText().strip();
+        if (query.isBlank()) {
+            searchResultArea.setText("请输入要检索的关键词。");
+            return;
+        }
         try {
-            var results = knowledgeService.search(userId(), searchField.getText(), 5);
+            var results = knowledgeService.search(userId(), query, 5);
             if (results.isEmpty()) {
                 searchResultArea.setText("没有找到相关知识片段。");
                 return;

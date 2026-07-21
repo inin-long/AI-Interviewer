@@ -224,6 +224,7 @@ public final class AgentPrompts {
                 可用阶段枚举：INTRODUCTION, RESUME_REVIEW, PROJECT_EXPERIENCE, TECHNICAL_DEEP_DIVE,
                 SYSTEM_DESIGN, CODING, BEHAVIORAL, SUMMARY, COMPLETED。
                 你不能创建阶段；阶段请求仍会由程序规则二次校验。
+                nextStage 仅可从下方【方案阶段】中选择；只有在题目已问完、或你判断必须提前结束整场面试时，才使用 COMPLETED。
 
                 当前阶段：%s
                 回答分析：%s
@@ -238,7 +239,7 @@ public final class AgentPrompts {
                 ? state.messages()
                 : state.messages().subList(state.messages().size() - 8, state.messages().size());
         String intent = state.data().containsKey(InterviewGraphState.ANALYSIS)
-                ? "严格按照结构化追问计划渲染下一题。上一轮分析："
+                ? "围绕结构化追问计划的目标，结合候选人刚刚的回答自然展开追问；可以在目标内即兴追问、延伸或换个角度，让对话有连续性。上一轮分析："
                     + json(objectMapper, state.analysis())
                 : "这是本场面试的第一题。";
         boolean isOpening = state.messages().isEmpty();
@@ -318,7 +319,7 @@ public final class AgentPrompts {
                 json(objectMapper, state.strategy()),
                 json(objectMapper, publicScenario(state)),
                 state.stage(), state.plan().jobTitle(), data("岗位描述", state.plan().jobDescription()),
-                state.plan().difficulty(), json(objectMapper, state.plan().rules()),
+                state.plan().difficulty(), "", // 原始 rules JSON 已由 PersonaRenderer.instructions 覆盖 persona/难度/压力，避免把规则原始 JSON 当作可执行指令或造成混淆
                 data("候选人画像", state.candidateProfileContext()), state.domainPackContext(),
                 json(objectMapper, state.claimExtraction()), state.claimLedgerContext(), data("对话摘要", state.summary()),
                 data("用户知识片段", state.retrievedContext()), data("最近对话", json(objectMapper, recent)));
