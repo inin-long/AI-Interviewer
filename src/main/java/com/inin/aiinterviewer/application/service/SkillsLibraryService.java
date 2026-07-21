@@ -99,10 +99,11 @@ public class SkillsLibraryService {
 
     private String normalizeCategory(String category) {
         if (category == null) return "GENERAL";
-        return switch (category.toUpperCase()) {
-            case "STAR" -> "STAR";
-            case "ETIQUETTE" -> "ETIQUETTE";
-            case "BEHAVIOR" -> "BEHAVIOR";
+        return switch (category.strip().toUpperCase(java.util.Locale.ROOT)) {
+            case "STAR", "STAR 法则", "STAR法则" -> "STAR";
+            case "ETIQUETTE", "礼仪指南" -> "ETIQUETTE";
+            case "BEHAVIOR", "行为面试" -> "BEHAVIOR";
+            case "GENERAL", "通用技巧", "其他" -> "GENERAL";
             default -> "GENERAL";
         };
     }

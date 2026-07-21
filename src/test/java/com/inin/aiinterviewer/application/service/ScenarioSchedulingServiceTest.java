@@ -57,7 +57,7 @@ class ScenarioSchedulingServiceTest {
         return new InterviewPlanDto(
                 1L, "场景方案", "Java 工程师", "核心服务", InterviewDifficulty.SENIOR,
                 45, 10, null, null, List.of(), rules,
-                List.of("SYSTEM_DESIGN", "SUMMARY"), false, now, now, "java-backend-1.0.0");
+                List.of("SYSTEM_DESIGN", "SUMMARY"), false, now, now, "test-pack-1.0.0");
     }
 
     private DomainPackSnapshot snapshot() {
@@ -71,7 +71,7 @@ class ScenarioSchedulingServiceTest {
                         "changes", Map.of("databaseCpu", 90))),
                 List.of("核心链路恢复"), 3);
         DomainPack pack = new DomainPack(
-                "java-backend-1.0.0", "java-backend", "internet", "1.0.0", "Java 后端",
+                "test-pack-1.0.0", "test-role", "test-industry", "1.0.0", "测试知识包",
                 List.of(), List.of(), List.of(), List.of(), List.of(scenario), List.of());
         return DomainPackSnapshot.from(pack);
     }

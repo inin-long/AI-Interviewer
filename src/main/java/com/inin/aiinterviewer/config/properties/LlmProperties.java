@@ -13,11 +13,13 @@ public record LlmProperties(
         Duration timeout,
         Integer maxRetries,
         Integer maxTokens,
-        Boolean thinkingEnabled
+        Boolean thinkingEnabled,
+        Double temperature
 ) {
     private static final Duration DEFAULT_TIMEOUT = Duration.ofMinutes(5);
     private static final int DEFAULT_MAX_RETRIES = 0;
     private static final int DEFAULT_MAX_TOKENS = 2_048;
+    private static final double DEFAULT_TEMPERATURE = 0.1;
 
     public boolean isConfigured() {
         return apiKey != null && !apiKey.isBlank()
@@ -40,6 +42,10 @@ public record LlmProperties(
 
     public int effectiveMaxTokens() {
         return maxTokens == null || maxTokens <= 0 ? DEFAULT_MAX_TOKENS : maxTokens;
+    }
+
+    public double effectiveTemperature() {
+        return temperature == null ? DEFAULT_TEMPERATURE : temperature;
     }
 
     /**

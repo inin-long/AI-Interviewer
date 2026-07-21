@@ -40,7 +40,8 @@ class ConsistencyCheckNodeTest {
 
         assertThat(result.degraded()).isFalse();
         assertThat(result.issues()).singleElement().satisfies(issue -> {
-            assertThat(issue.issueId()).isEmpty();
+            // 稳定的 issueId 由 "类型:关联主张" 派生生成，便于图内路由澄清探针
+            assertThat(issue.issueId()).isEqualTo("OWNERSHIP_CONFLICT:claim-new,claim-old");
             assertThat(issue.type()).isEqualTo(ConsistencyIssueType.OWNERSHIP_CONFLICT);
             assertThat(issue.relatedClaimIds()).containsExactly("claim-new", "claim-old");
             assertThat(issue.clarificationQuestion()).contains("分别负责");

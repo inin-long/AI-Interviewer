@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.inin.aiinterviewer.ui.controller.DomainPackManagerController"
+      spacing="14" prefWidth="780" prefHeight="680">
+    <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+    <Label text="管理岗位知识包" styleClass="module-title"/>
+    <Label text="默认是「无知识包」模式；你可以在这里创建自己的知识包，或让 AI 根据 JD 生成。删除只会移除你自己创建的包。"
+          styleClass="secondary-text" wrapText="true"/>
+    <HBox spacing="14" VBox.vgrow="ALWAYS">
+        <VBox spacing="8" prefWidth="300" minWidth="280" styleClass="content-card" VBox.vgrow="ALWAYS">
+            <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+            <Label text="已有知识包" styleClass="field-label"/>
+            <ListView fx:id="packListView" VBox.vgrow="ALWAYS"/>
+            <Button fx:id="deleteButton" text="删除选中（仅自建）" styleClass="danger-button"
+                    onAction="#onDeleteSelected" maxWidth="Infinity"/>
+        </VBox>
+        <VBox spacing="10" prefWidth="420" minWidth="380">
+            <Label text="手动创建知识包" styleClass="field-label"/>
+            <TextField fx:id="nameField" promptText="知识包名称，如：Go 后端专家"/>
+            <TextField fx:id="roleField" promptText="岗位方向（选填），如：golang-backend"/>
+            <TextField fx:id="industryField" promptText="行业（选填），如：电商"/>
+            <Label text="领域知识要点（每行一条）" styleClass="field-label"/>
+            <TextArea fx:id="knowledgeArea" prefRowCount="6" wrapText="true"
+                      promptText="例如：&#10;- 高并发下的连接池与超时治理&#10;- 分布式事务与最终一致性"
+                      VBox.vgrow="ALWAYS"/>
+            <Button fx:id="createButton" text="创建并保存" styleClass="primary-button"
+                    onAction="#onCreate" maxWidth="Infinity"/>
+            <Separator/>
+            <Label text="AI 根据 JD 生成知识包" styleClass="field-label"/>
+            <TextArea fx:id="jdArea" prefRowCount="5" wrapText="true"
+                      promptText="粘贴岗位 JD / 职责要求"/>
+            <Button fx:id="aiGenerateButton" text="AI 生成并保存" styleClass="secondary-button"
+                    onAction="#onAiGenerate" maxWidth="Infinity"/>
+        </VBox>
+    </HBox>
+    <Label fx:id="statusLabel" styleClass="local-data-note" wrapText="true" minHeight="22"/>
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="关闭" styleClass="secondary-button" onAction="#onClose"/>
+    </HBox>
+</VBox>

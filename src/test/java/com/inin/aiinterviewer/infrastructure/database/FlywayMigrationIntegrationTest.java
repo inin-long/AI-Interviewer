@@ -59,7 +59,7 @@ class FlywayMigrationIntegrationTest {
                 .load();
         latest.migrate();
 
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("28");
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("39");
         try (var connection = DriverManager.getConnection(url);
              var statement = connection.createStatement();
              var result = statement.executeQuery("""

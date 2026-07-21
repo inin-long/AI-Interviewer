@@ -21,8 +21,6 @@ import com.inin.aiinterviewer.agent.stage.StageManager;
 import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
 import com.inin.aiinterviewer.agent.support.PressureController;
 import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
-import com.inin.aiinterviewer.application.exception.AIException;
-import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.domain.model.Message;
@@ -38,7 +36,6 @@ import java.util.Map;
 import java.util.Queue;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InterviewGraphTest {
 
@@ -85,7 +82,7 @@ class InterviewGraphTest {
                 .satisfies(claim -> assertThat(claim.content()).contains("事务"));
         assertThat(result.probePlan().targetClaimId()).isEqualTo("current-answer");
         assertThat(result.logicChainResult().gaps()).singleElement();
-        assertThat(result.questionPrompt()).contains("一次只提出一个清晰的中文问题", "Java 工程师",
+        assertThat(result.questionPrompt()).contains("只抛出一个清晰的问题", "Java 工程师",
                 "结构化追问计划", "使用事务保证数据库操作一致性");
     }
 
@@ -100,17 +97,15 @@ class InterviewGraphTest {
     }
 
     @Test
-    void rejectsMalformedAnalysisAndIllegalStageSkip() {
+    void handlesMalformedAnalysisWithSafeFallback() {
+        // malformed 分析响应会走"重试一次 → 安全降级"，不再中断面试；补齐追问决策后流程继续
         chatService.enqueue("not-json");
-        assertThatThrownBy(() -> graph.plan(input()))
-                .satisfies(throwable -> assertThat(hasCause(throwable, AIException.class)).isTrue());
-
-        chatService.enqueue(validAnalysis());
+        chatService.enqueue("not-json");
         chatService.enqueue("""
-                {"action":"NEXT_STAGE","nextStage":"COMPLETED","reason":"尝试跳过流程"}
+                {"action":"FOLLOW_UP","reason":"继续追问"}
                 """);
-        assertThatThrownBy(() -> graph.plan(input()))
-                .satisfies(throwable -> assertThat(hasCause(throwable, BusinessException.class)).isTrue());
+        var degraded = graph.plan(input());
+        assertThat(degraded.analysis().feedback()).contains("回答分析暂不可用");
     }
 
     private InterviewTurnInput input() {
@@ -130,15 +125,6 @@ class InterviewGraphTest {
         return """
                 {"correctness":80,"depth":70,"missingPoints":[],"feedback":"回答有效"}
                 """;
-    }
-
-    private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {
-        Throwable current = throwable;
-        while (current != null) {
-            if (type.isInstance(current)) return true;
-            current = current.getCause();
-        }
-        return false;
     }
 
     private static class QueueChatService implements ChatService {

@@ -104,6 +104,16 @@ public class ResumeService {
         return new ResumeDetailDto(toDto(entity), entity.getParsedText());
     }
 
+    /**
+     * 解析出简历原始文件在本机磁盘上的绝对路径（供“查看原文”功能用系统默认程序打开）。
+     */
+    @Transactional(readOnly = true)
+    public Path resolveOriginalFile(long userId, long resumeId) {
+        ResumeEntity entity = resumeMapper.findByIdAndUserId(resumeId, userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.FILE_NOT_FOUND));
+        return pathService.resolveStoredPath(userId, StorageCategory.RESUMES, entity.getStorageName());
+    }
+
     @Transactional
     public void delete(long userId, long resumeId) {
         ResumeEntity entity = resumeMapper.findByIdAndUserId(resumeId, userId)

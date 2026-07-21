@@ -5,9 +5,11 @@ import com.inin.aiinterviewer.ui.component.AppDialog;
 import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -36,8 +38,8 @@ public class JavaFxViewManager implements ViewManager {
 
     public void attachStage(Stage stage) {
         this.primaryStage = Objects.requireNonNull(stage, "stage");
-        stage.setMinWidth(1024);
-        stage.setMinHeight(720);
+        stage.setMinWidth(900);
+        stage.setMinHeight(680);
         URL icon = getClass().getResource("/images/home/app-icon.png");
         if (icon != null) {
             stage.getIcons().setAll(new Image(icon.toExternalForm()));
@@ -55,17 +57,20 @@ public class JavaFxViewManager implements ViewManager {
 
         try {
             Parent root = load(route);
-            Scene scene = primaryStage.getScene();
-            if (scene == null) {
-                scene = new Scene(root, 1440, 820);
-                URL stylesheet = getClass().getResource("/css/app.css");
-                if (stylesheet != null) {
-                    scene.getStylesheets().add(stylesheet.toExternalForm());
-                }
-                primaryStage.setScene(scene);
-            } else {
-                scene.setRoot(root);
+            Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+            double scaleX = Screen.getPrimary().getOutputScaleX();
+            double maxWidth = Math.min(1440, screen.getWidth() * 0.95);
+            double maxHeight = (route == Route.LOGIN || route == Route.REGISTER) ? 760 : 820;
+            double width = maxWidth;
+            double height = Math.min(maxHeight, screen.getHeight() * 0.95);
+            Scene scene = new Scene(root, width, height);
+            URL stylesheet = getClass().getResource("/css/app.css");
+            if (stylesheet != null) {
+                scene.getStylesheets().add(stylesheet.toExternalForm());
             }
+            primaryStage.setScene(scene);
+            primaryStage.setWidth(width);
+            primaryStage.setHeight(height);
             primaryStage.setTitle("AI Interviewer");
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to load view: " + route, exception);
@@ -90,11 +95,26 @@ public class JavaFxViewManager implements ViewManager {
     }
 
     private Parent load(Route route) throws IOException {
-        URL location = Objects.requireNonNull(getClass().getResource(route.fxmlPath()),
-                () -> "Missing FXML resource: " + route.fxmlPath());
+        URL location = classLoaderResource(route.fxmlPath());
+        if (location == null) {
+            throw new IOException("Missing FXML resource: " + route.fxmlPath());
+        }
         FXMLLoader loader = new FXMLLoader(location);
         loader.setControllerFactory(applicationContext::getBean);
         return loader.load();
+    }
+
+    private URL classLoaderResource(String path) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+        String normalized = path.startsWith("/") ? path.substring(1) : path;
+        URL resource = classLoader.getResource(normalized);
+        if (resource == null) {
+            resource = getClass().getResource(path);
+        }
+        return resource;
     }
 
     private Route authorize(Route requestedRoute) {

@@ -26,7 +26,7 @@ public interface QuestionTagRelMapper {
             SELECT r.question_id AS questionId, t.name AS tagName
             FROM question_tag_rel r
             JOIN question_tag t ON t.id = r.tag_id
-            WHERE r.user_id = #{userId} AND t.deleted = 0
+            WHERE (r.user_id = #{userId} OR r.user_id = 1) AND t.deleted = 0
             """)
     List<QuestionTagRelDto> findAllByUserId(long userId);
 

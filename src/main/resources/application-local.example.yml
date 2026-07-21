@@ -10,5 +10,7 @@ llm:
   # Persisted background tasks own retry; avoid multiplying SDK and task retries.
   max-retries: 0
   max-tokens: 2048
+  # Optional. Sampling temperature; 0.1 keeps scoring stable.
+  # temperature: 0.1
   # Optional. SiliconFlow DeepSeek V4 defaults to false for desktop latency.
   # thinking-enabled: false

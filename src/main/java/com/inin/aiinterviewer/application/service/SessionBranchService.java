@@ -183,6 +183,7 @@ public class SessionBranchService {
         messages.add(new Message(Message.Role.USER, answer, LocalDateTime.now()));
         String profile = session.profileSnapshot() == null ? "" : session.profileSnapshot().toString();
         String domainPack = sessionService.domainPackSnapshot(source.userId(), source.sessionId())
+                .filter(snapshot -> snapshot.content() != null)
                 .map(snapshot -> Map.of(
                         "id", snapshot.id(), "version", snapshot.version(),
                         "displayName", snapshot.content().displayName(),

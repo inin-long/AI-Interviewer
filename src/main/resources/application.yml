@@ -30,6 +30,10 @@ llm:
   max-retries: 0
   max-tokens: 2048
   thinking-enabled: ${AI_LLM_THINKING_ENABLED:}
+  # Sampling temperature for chat completions. 0.1 keeps scoring/extraction
+  # stable; raise it (e.g. 0.7) for more creative职业规划 outputs.
+  # Override via env AI_LLM_TEMPERATURE.
+  temperature: ${AI_LLM_TEMPERATURE:0.1}
 
 task:
   enabled: true

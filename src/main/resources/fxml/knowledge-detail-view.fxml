@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.KnowledgeDetailController"
@@ -14,12 +15,23 @@
                 <tooltip><Tooltip text="返回知识库"/></tooltip>
             </Button>
             <VBox spacing="4">
-                <Label fx:id="nameLabel" text="知识文档" styleClass="page-title"/>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label fx:id="nameLabel" text="知识文档" styleClass="page-title"/>
+                    <TextField fx:id="nameField" visible="false" managed="false"
+                               promptText="文档名称" HBox.hgrow="ALWAYS"/>
+                </HBox>
                 <HBox spacing="10">
                     <Label fx:id="metadataLabel" text="文档信息" styleClass="secondary-text"/>
                     <Label fx:id="statusLabel" text="状态" styleClass="status-tag"/>
+                    <AppSelect fx:id="categoryBox" visible="false" managed="false" maxWidth="140"/>
                 </HBox>
             </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <HBox fx:id="editActions" spacing="8" visible="false" managed="false">
+                <Button fx:id="cancelEditButton" text="取消" onAction="#cancelEdit" styleClass="secondary-button"/>
+                <Button fx:id="saveButton" text="保存修改" onAction="#saveChanges" styleClass="primary-button"/>
+            </HBox>
+            <Button fx:id="enterEditButton" text="编辑" onAction="#enterEditMode" styleClass="secondary-button"/>
         </HBox>
     </top>
     <center>
@@ -28,9 +40,11 @@
             <Label fx:id="errorLabel" text="处理失败" styleClass="form-error" visible="false" managed="false"/>
             <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
                 <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
-                <Label text="解析与切片内容" styleClass="module-title"/>
+                <Label fx:id="chunkTitle" text="解析与切片内容" styleClass="module-title"/>
                 <TextArea fx:id="chunksArea" editable="false" wrapText="true" VBox.vgrow="ALWAYS"
                           styleClass="monospace-text"/>
+                <Label fx:id="editHintLabel" text="💡 编辑模式下可直接修改片段内容，修改后点击「保存修改」即可更新知识库（含重新向量化）"
+                       styleClass="secondary-text" visible="false" managed="false" wrapText="true"/>
             </VBox>
         </VBox>
     </center>

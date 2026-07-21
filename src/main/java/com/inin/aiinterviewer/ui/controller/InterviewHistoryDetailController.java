@@ -8,7 +8,9 @@ import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
+import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
+import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -25,6 +27,8 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     private final InterviewHistoryService historyService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
+    private final JavaFxViewManager viewManager;
+    private final GlobalExceptionHandler exceptionHandler;
 
     @FXML private Label titleLabel;
     @FXML private Label jobLabel;
@@ -42,15 +46,28 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     public InterviewHistoryDetailController(
             InterviewHistoryService historyService,
             UserSessionState sessionState,
-            ContentNavigator contentNavigator
+            ContentNavigator contentNavigator,
+            JavaFxViewManager viewManager,
+            GlobalExceptionHandler exceptionHandler
     ) {
         this.historyService = historyService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
+        this.viewManager = viewManager;
+        this.exceptionHandler = exceptionHandler;
     }
 
     @Override
     public void initializeContext(Object context) {
+        try {
+            doInitializeContext(context);
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+            throw exception;
+        }
+    }
+
+    private void doInitializeContext(Object context) {
         if (context == null) throw new IllegalArgumentException("Interview history detail requires a session id");
         int targetQuestion = 0;
         if (context instanceof InterviewTranscriptContext target) {
@@ -96,26 +113,30 @@ public class InterviewHistoryDetailController implements ContextAwareController<
     private long userId() { return sessionState.requireCurrentUser().id(); }
 
     private String statusText(InterviewStatus status) {
-        return switch (status) {
-            case CREATED -> "待开始";
-            case RUNNING -> "进行中";
-            case PAUSED -> "已暂停";
-            case COMPLETED -> "已完成";
-            case FAILED -> "异常中止";
-        };
+        if (status == null) return "—";
+        switch (status) {
+            case CREATED: return "待开始";
+            case RUNNING: return "进行中";
+            case PAUSED: return "已暂停";
+            case COMPLETED: return "已完成";
+            case FAILED: return "异常中止";
+            default: return "未知";
+        }
     }
 
     private String stageText(InterviewStage stage) {
-        return switch (stage) {
-            case INTRODUCTION -> "开场介绍";
-            case RESUME_REVIEW -> "简历回顾";
-            case PROJECT_EXPERIENCE -> "项目经历";
-            case TECHNICAL_DEEP_DIVE -> "技术深挖";
-            case SYSTEM_DESIGN -> "系统设计";
-            case CODING -> "编码能力";
-            case BEHAVIORAL -> "行为面试";
-            case SUMMARY -> "总结";
-            case COMPLETED -> "已完成";
-        };
+        if (stage == null) return "—";
+        switch (stage) {
+            case INTRODUCTION: return "开场介绍";
+            case RESUME_REVIEW: return "简历回顾";
+            case PROJECT_EXPERIENCE: return "项目经历";
+            case TECHNICAL_DEEP_DIVE: return "技术深挖";
+            case SYSTEM_DESIGN: return "系统设计";
+            case CODING: return "编码能力";
+            case BEHAVIORAL: return "行为面试";
+            case SUMMARY: return "总结";
+            case COMPLETED: return "已完成";
+            default: return "未知";
+        }
     }
 }

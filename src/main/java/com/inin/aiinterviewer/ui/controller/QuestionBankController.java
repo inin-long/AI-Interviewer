@@ -11,6 +11,7 @@ import com.inin.aiinterviewer.ui.component.AppDialogs;
 import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.fxml.FXML;
@@ -18,6 +19,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
@@ -26,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 @Component
 @Scope("prototype")
@@ -45,11 +48,12 @@ public class QuestionBankController {
     @FXML private AppSelect<String> tagFilterCombo;
     @FXML private TableView<InterviewQuestionDto> questionTable;
     @FXML private TableColumn<InterviewQuestionDto, String> jobColumn;
-    @FXML private TableColumn<InterviewQuestionDto, String> categoryColumn;
-    @FXML private TableColumn<InterviewQuestionDto, String> difficultyColumn;
+    @FXML private TableColumn<InterviewQuestionDto, QuestionCategory> categoryColumn;
+    @FXML private TableColumn<InterviewQuestionDto, InterviewDifficulty> difficultyColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> titleColumn;
     @FXML private TableColumn<InterviewQuestionDto, String> tagsColumn;
     @FXML private Button deleteQuestionButton;
+    @FXML private Button practiceButton;
 
     private List<InterviewQuestionDto> allQuestions = new ArrayList<>();
     private List<QuestionTagDto> allTags = new ArrayList<>();
@@ -90,13 +94,35 @@ public class QuestionBankController {
 
         jobColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(
                 cell.getValue().jobTitle() == null ? "（未归类）" : cell.getValue().jobTitle()));
-        categoryColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().category().label()));
-        difficultyColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(difficultyText(cell.getValue().difficulty())));
+        categoryColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().category()));
+        difficultyColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().difficulty()));
         titleColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(cell.getValue().title()));
         tagsColumn.setCellValueFactory(cell -> new ReadOnlyObjectWrapper<>(String.join("、", cell.getValue().tags())));
 
+        categoryColumn.setCellFactory(col -> coloredBadgeCell(
+                cat -> switch (cat) {
+                    case TECHNICAL -> "badge-tech";
+                    case BEHAVIORAL -> "badge-behavior";
+                    case SCENARIO -> "badge-scenario";
+                },
+                QuestionCategory::label));
+        difficultyColumn.setCellFactory(col -> coloredBadgeCell(
+                dif -> switch (dif) {
+                    case JUNIOR -> "badge-junior";
+                    case MEDIUM -> "badge-medium";
+                    case SENIOR -> "badge-senior";
+                    case EXPERT -> "badge-expert";
+                },
+                dif -> switch (dif) {
+                    case JUNIOR -> "初级";
+                    case MEDIUM -> "中级";
+                    case SENIOR -> "高级";
+                    case EXPERT -> "专家";
+                }));
+
         deleteJobButton.disableProperty().bind(jobListView.getSelectionModel().selectedItemProperty().isNull());
         deleteQuestionButton.disableProperty().bind(questionTable.getSelectionModel().selectedItemProperty().isNull());
+        practiceButton.disableProperty().bind(questionTable.getSelectionModel().selectedItemProperty().isNull());
 
         questionTable.setOnMouseClicked(event -> {
             if (event.getClickCount() == 2 && questionTable.getSelectionModel().getSelectedItem() != null) {
@@ -188,6 +214,16 @@ public class QuestionBankController {
         loadAll();
     }
 
+    @FXML
+    private void practiceSelectedQuestion() {
+        InterviewQuestionDto selected = questionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            viewManager.showError("请先在列表中选择一道题目");
+            return;
+        }
+        contentNavigator.showSubRoute(Route.QUESTION_PRACTICE, selected.id());
+    }
+
     private void loadAll() {
         try {
             long userId = sessionState.requireCurrentUser().id();
@@ -228,12 +264,31 @@ public class QuestionBankController {
         questionTable.getItems().setAll(filtered);
     }
 
-    private String difficultyText(InterviewDifficulty difficulty) {
-        return switch (difficulty) {
-            case JUNIOR -> "初级";
-            case MEDIUM -> "中级";
-            case SENIOR -> "高级";
-            case EXPERT -> "专家";
+    /**
+     * 生成「圆角色块徽标」单元格：依据枚举值套用对应的 .badge-* 配色类。
+     */
+    private <T> TableCell<InterviewQuestionDto, T> coloredBadgeCell(
+            Function<T, String> badgeFn,
+            Function<T, String> labelFn) {
+        return new TableCell<>() {
+            private final Label label = new Label();
+            {
+                label.getStyleClass().add("badge");
+                setStyle("-fx-alignment: CENTER;");
+            }
+            @Override
+            protected void updateItem(T item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                    setText(null);
+                    return;
+                }
+                label.getStyleClass().setAll("badge", badgeFn.apply(item));
+                label.setText(labelFn.apply(item));
+                setGraphic(label);
+                setText(null);
+            }
         };
     }
 }

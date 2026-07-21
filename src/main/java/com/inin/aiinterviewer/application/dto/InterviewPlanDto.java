@@ -4,6 +4,7 @@ import com.inin.aiinterviewer.domain.enums.InterviewDifficulty;
 
 import java.time.LocalDateTime;
 import java.io.Serializable;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +30,8 @@ public record InterviewPlanDto(
     public InterviewPlanDto {
         knowledgeDocumentIds = knowledgeDocumentIds == null ? List.of() : List.copyOf(knowledgeDocumentIds);
         knowledgeCategories = knowledgeCategories == null ? List.of() : List.copyOf(knowledgeCategories);
+        rules = rules == null ? Map.of() : new LinkedHashMap<>(rules);
+        stages = stages == null ? List.of() : List.copyOf(stages);
     }
 
     public InterviewPlanDto(

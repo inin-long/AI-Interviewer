@@ -35,7 +35,7 @@ public interface InterviewQuestionMapper {
             SELECT id, user_id, job_id, category, title, content, reference_answer, difficulty,
                    create_time, update_time, deleted
             FROM interview_question
-            WHERE user_id = #{userId} AND deleted = 0
+            WHERE (user_id = #{userId} OR user_id = 1) AND deleted = 0
             ORDER BY update_time DESC, id DESC
             """)
     List<InterviewQuestionEntity> findAllByUserId(long userId);

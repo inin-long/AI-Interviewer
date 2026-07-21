@@ -15,16 +15,17 @@ public enum Route {
     SETTING(null, "/fxml/settings-view.fxml", "设置"),
     // 新增模块路由
     QUESTION_BANK(null, "/fxml/question-bank-view.fxml", "题库"),
-    QUESTION_EDITOR(null, null, "题目编辑"),
-    SKILL_LIBRARY(null, "/fxml/skills-library-view.fxml", "技能库"),
-    SKILL_ARTICLE_DETAIL(null, "/fxml/skill-article-detail.fxml", "技能文章详情"),
-    SKILL_ARTICLE_EDITOR(null, "/fxml/skill-article-editor.fxml", "技能文章编辑"),
+    QUESTION_EDITOR(null, "/fxml/question-editor-view.fxml", "题目编辑"),
+    QUESTION_PRACTICE(null, "/fxml/question-practice-view.fxml", "题目练习"),
+    SKILLS_LIBRARY(null, "/fxml/skills-library-view.fxml", "面试技巧"),
+    SKILL_ARTICLE_DETAIL(null, "/fxml/skill-article-detail-view.fxml", "技能文章详情"),
+    SKILL_ARTICLE_EDITOR(null, "/fxml/skill-article-editor-view.fxml", "技能文章编辑"),
     CAREER_ASSESSMENT(null, "/fxml/career-assessment-view.fxml", "职业评估"),
     CAREER_PLANNING(null, "/fxml/career-planning-view.fxml", "职业规划"),
-    CAREER_PLAN_HISTORY(null, "/fxml/career-plan-history.fxml", "规划历史"),
-    CAREER_REPORT(null, "/fxml/career-report.fxml", "评估报告"),
-    CAREER_HISTORY(null, "/fxml/career-history.fxml", "评估历史"),
-    RESUME_OPTIMIZATION_HISTORY(null, "/fxml/resume-optimization-history.fxml", "简历优化记录");
+    CAREER_PLAN_HISTORY(null, "/fxml/career-plan-history-view.fxml", "规划历史"),
+    CAREER_REPORT(null, "/fxml/career-report-view.fxml", "评估报告"),
+    CAREER_HISTORY(null, "/fxml/career-history-view.fxml", "评估历史"),
+    RESUME_OPTIMIZATION_HISTORY(null, "/fxml/resume-optimization-history-view.fxml", "简历优化记录");
 
     private final String fxmlPath;
     private final String contentPath;

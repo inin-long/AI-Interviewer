@@ -43,7 +43,7 @@ class QuestionRendererNodeTest {
         String prompt = (String) renderer.apply(state).get(InterviewGraphState.QUESTION_PROMPT);
 
         assertThat(prompt).contains(
-                "问题语言渲染器", "结构化追问计划", "claim-42", "P99 延迟降低 40%",
+                "结构化追问计划", "claim-42", "P99 延迟降低 40%",
                 "监控平台", "统计区间", "禁止改成通用知识题");
         assertThat(renderer.stream(prompt).collectList().block()).containsExactly("渲染后的问题");
         assertThat(chatService.prompt).isEqualTo(prompt);

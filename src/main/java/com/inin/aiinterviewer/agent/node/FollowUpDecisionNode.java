@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.agent.model.AgentAction;
 import com.inin.aiinterviewer.agent.model.AgentDecision;
 import com.inin.aiinterviewer.agent.prompt.AgentPrompts;
+import com.inin.aiinterviewer.domain.enums.InterviewStage;
 import com.inin.aiinterviewer.agent.stage.StageManager;
 import com.inin.aiinterviewer.agent.state.InterviewGraphState;
 import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
@@ -37,17 +38,53 @@ public class FollowUpDecisionNode implements NodeAction<InterviewGraphState> {
 
     @Override
     public Map<String, Object> apply(InterviewGraphState state) {
-        AgentDecision decision = parser.parse(
-                chatService.chat(AgentPrompts.decision(state, objectMapper)), AgentDecision.class);
+        return Map.of(InterviewGraphState.DECISION, resolveDecision(state));
+    }
+
+    private AgentDecision resolveDecision(InterviewGraphState state) {
+        String response = chatService.chat(AgentPrompts.decision(state, objectMapper));
+        AgentDecision decision = tryParse(response);
+        if (decision != null && isValid(decision, state)) {
+            return decision;
+        }
+        // 修复一次：让模型再决策一次，避免单条畸形 JSON 直接终结整轮面试。
+        response = chatService.chat(AgentPrompts.decision(state, objectMapper));
+        decision = tryParse(response);
+        if (decision != null && isValid(decision, state)) {
+            return decision;
+        }
+        // 安全降级：默认继续追问，保证面试不中断。
+        return new AgentDecision(AgentAction.FOLLOW_UP, null, "模型决策解析失败，已默认继续追问");
+    }
+
+    private AgentDecision tryParse(String response) {
+        try {
+            AgentDecision decision = parser.parse(response, AgentDecision.class);
+            if (decision != null && decision.action() != null) {
+                return decision;
+            }
+        } catch (Exception ignored) {
+            // 解析失败则进入重试 / 降级分支
+        }
+        return null;
+    }
+
+    private boolean isValid(AgentDecision decision, InterviewGraphState state) {
         if (decision.action() == null) {
-            throw new BusinessException(ErrorCode.INVALID_STATE);
+            return false;
         }
-        if (decision.action() == AgentAction.NEXT_STAGE
-                && (decision.nextStage() == null
-                || !state.plan().stages().contains(decision.nextStage().name())
-                || !stageManager.canTransition(state.stage(), decision.nextStage()))) {
-            throw new BusinessException(ErrorCode.INVALID_STATE);
+        if (decision.action() != AgentAction.NEXT_STAGE) {
+            return true;
         }
-        return Map.of(InterviewGraphState.DECISION, decision);
+        InterviewStage next = decision.nextStage();
+        if (next == null) {
+            return false;
+        }
+        // COMPLETED 为终态，允许从任意阶段提前结束面试。
+        if (next == InterviewStage.COMPLETED) {
+            return true;
+        }
+        return state.plan().stages().contains(next.name())
+                && stageManager.canTransition(state.stage(), next);
     }
 }

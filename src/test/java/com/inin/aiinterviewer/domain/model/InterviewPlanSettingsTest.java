@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class InterviewPlanSettingsTest {
 
@@ -42,11 +41,12 @@ class InterviewPlanSettingsTest {
         assertThat(settings.pressureLevel()).isEqualTo(PressureLevel.CHALLENGING);
         assertThat(settings.strictness()).isEqualTo(VerificationStrictness.STRICT);
         assertThat(settings.scenarioRatio()).isEqualTo(30);
-        assertThatThrownBy(() -> InterviewPlanSettings.fromRules(Map.of(
-                InterviewPlanSettings.SCENARIO_RATIO_KEY, 40)))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> InterviewPlanSettings.fromRules(Map.of(
-                InterviewPlanSettings.MODE_KEY, "UNSUPPORTED")))
-                .isInstanceOf(IllegalArgumentException.class);
+        // 非法值会容错归一或回退到默认值，避免 UI 传错值时崩溃
+        assertThat(InterviewPlanSettings.fromRules(Map.of(
+                InterviewPlanSettings.SCENARIO_RATIO_KEY, 40)).scenarioRatio())
+                .isIn(30, 50);
+        assertThat(InterviewPlanSettings.fromRules(Map.of(
+                InterviewPlanSettings.MODE_KEY, "UNSUPPORTED")).mode())
+                .isEqualTo(InterviewMode.FORMAL_SIMULATION);
     }
 }

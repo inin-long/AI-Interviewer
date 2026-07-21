@@ -79,8 +79,10 @@
                           styleClass="content-card settings-form">
                         <VBox spacing="8" styleClass="settings-section">
                             <Label text="Provider 与模型" styleClass="module-title"/>
-                            <Label text="配置从 Windows 环境变量或数据目录下的外部配置文件读取；修改后需重启应用。"
+                            <Label text="配置从 Windows 环境变量或数据目录下的外部配置文件读取。"
                                    wrapText="true" styleClass="secondary-text"/>
+                            <Label text="注意：当前输入框内容可直接用于测试连接；点保存后，配置会写入文件，下次启动时自动生效。"
+                                   wrapText="true" styleClass="local-data-note"/>
                             <GridPane hgap="18" vgap="12" styleClass="settings-grid">
                                 <columnConstraints>
                                     <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
@@ -127,6 +129,8 @@
                                 <Button fx:id="testConnectionButton" text="测试连接" onAction="#testConnection"
                                         styleClass="primary-button"/>
                             </HBox>
+                            <Label fx:id="saveStatusLabel" text="" wrapText="true" maxWidth="Infinity"
+                                   styleClass="secondary-text"/>
                             <HBox alignment="CENTER_LEFT" spacing="12" styleClass="connection-status-row">
                                 <Label fx:id="connectionStatusLabel" text="● 未检测" styleClass="status-neutral"/>
                                 <Label fx:id="connectionDetailLabel" text="点击测试连接" wrapText="true"

@@ -28,10 +28,36 @@ public class StructuredAiResponseParser {
             throw new IllegalArgumentException("AI response is empty");
         }
         int start = response.indexOf('{');
-        int end = response.lastIndexOf('}');
-        if (start < 0 || end <= start) {
+        if (start < 0) {
             throw new IllegalArgumentException("AI response does not contain a JSON object");
         }
-        return response.substring(start, end + 1);
+        // 括号配平：从第一个 '{' 起，按深度匹配到对应的 '}'，
+        // 忽略字符串内的括号，避免尾随文本（如"仅供参考 {...}"）污染 JSON。
+        int depth = 0;
+        boolean inString = false;
+        for (int i = start; i < response.length(); i++) {
+            char c = response.charAt(i);
+            if (inString) {
+                if (c == '\\') {
+                    i++; // 跳过被转义的字符
+                    continue;
+                }
+                if (c == '"') {
+                    inString = false;
+                }
+            } else {
+                if (c == '"') {
+                    inString = true;
+                } else if (c == '{') {
+                    depth++;
+                } else if (c == '}') {
+                    depth--;
+                    if (depth == 0) {
+                        return response.substring(start, i + 1);
+                    }
+                }
+            }
+        }
+        throw new IllegalArgumentException("AI response does not contain a balanced JSON object");
     }
 }

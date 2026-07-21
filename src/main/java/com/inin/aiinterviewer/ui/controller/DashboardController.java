@@ -153,8 +153,8 @@ public class DashboardController {
         VBox copy = new VBox(3,
                 label(textOr(item.title(), "未命名面试"), "dashboard-row-title"),
                 label(textOr(item.jobTitle(), "通用技术岗位"), "dashboard-row-meta"));
-        copy.setMinWidth(230);
-        copy.setPrefWidth(230);
+        copy.setMinWidth(200);
+        copy.setPrefWidth(200);
 
         Label date = label(timeText(item.updateTime()), "dashboard-row-date");
         Label status = label(statusText(item.status()), "dashboard-status-chip");

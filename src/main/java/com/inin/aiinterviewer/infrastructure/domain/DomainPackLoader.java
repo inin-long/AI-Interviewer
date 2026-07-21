@@ -2,6 +2,8 @@ package com.inin.aiinterviewer.infrastructure.domain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inin.aiinterviewer.domain.enums.ScenarioEventType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import com.inin.aiinterviewer.domain.enums.SimulationType;
 import com.inin.aiinterviewer.domain.model.DomainPack;
 import org.springframework.core.io.Resource;
@@ -19,6 +21,7 @@ import java.util.regex.Pattern;
 
 @Component
 public class DomainPackLoader {
+    private static final Logger log = LoggerFactory.getLogger(DomainPackLoader.class);
     private static final String RESOURCE_PATTERN = "classpath*:domain-packs/*.json";
     private static final Pattern SAFE_CODE = Pattern.compile("[a-z0-9][a-z0-9._-]{1,63}");
     private static final Pattern COMPETENCY_CODE = Pattern.compile("[A-Z][A-Z0-9_]{1,63}");
@@ -46,7 +49,11 @@ public class DomainPackLoader {
                     packs.add(pack);
                 }
             }
-            if (packs.isEmpty()) throw new IllegalStateException("No built-in DomainPack resources were found");
+            if (packs.isEmpty()) {
+                // 允许没有任何内置知识包（例如只保留用户自建包，或整体走「无知识包」模式）。
+                log.warn("No built-in DomainPack resources found under {}", RESOURCE_PATTERN);
+                return List.of();
+            }
             return packs.stream().sorted(java.util.Comparator.comparing(DomainPack::id)).toList();
         } catch (IOException exception) {
             throw new IllegalStateException("Cannot load built-in DomainPack resources", exception);

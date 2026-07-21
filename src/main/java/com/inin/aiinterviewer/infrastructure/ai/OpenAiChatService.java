@@ -78,7 +78,7 @@ public class OpenAiChatService implements ChatService {
                 .timeout(llm.effectiveTimeout())
                 .maxRetries(llm.effectiveMaxRetries())
                 .maxTokens(llm.effectiveMaxTokens())
-                .temperature(0.1);
+                .temperature(llm.effectiveTemperature());
         if (llm.effectiveThinkingEnabled() != null) {
             builder.extraBody(Map.of("enable_thinking", llm.effectiveThinkingEnabled()));
         }

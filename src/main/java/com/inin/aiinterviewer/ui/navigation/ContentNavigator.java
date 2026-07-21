@@ -6,9 +6,12 @@ import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
+import java.net.URL;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Objects;
@@ -16,6 +19,8 @@ import java.util.function.Consumer;
 
 @Component
 public class ContentNavigator {
+
+    private static final Logger log = LoggerFactory.getLogger(ContentNavigator.class);
 
     private final ApplicationContext applicationContext;
     private final Deque<PageDescriptor> history = new ArrayDeque<>();
@@ -84,7 +89,11 @@ public class ContentNavigator {
             return;
         }
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(descriptor.fxmlPath()));
+            URL location = classLoaderResource(descriptor.fxmlPath());
+            if (location == null) {
+                throw new IllegalStateException("FXML resource not found on classpath: " + descriptor.fxmlPath());
+            }
+            FXMLLoader loader = new FXMLLoader(location);
             loader.setControllerFactory(applicationContext::getBean);
             Parent content = loader.load();
             Object controller = loader.getController();
@@ -94,8 +103,22 @@ public class ContentNavigator {
             contentHost.getChildren().setAll(content);
             currentPage = descriptor;
         } catch (Exception exception) {
+            log.error("Failed to load content page: {} (context={})", descriptor.fxmlPath(), descriptor.context(), exception);
             throw new IllegalStateException("Cannot load content page: " + descriptor.fxmlPath(), exception);
         }
+    }
+
+    private URL classLoaderResource(String path) {
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader == null) {
+            classLoader = getClass().getClassLoader();
+        }
+        String normalized = path.startsWith("/") ? path.substring(1) : path;
+        URL resource = classLoader.getResource(normalized);
+        if (resource == null) {
+            resource = getClass().getResource(path);
+        }
+        return resource;
     }
 
     private VBox placeholder(String titleText) {

@@ -26,6 +26,7 @@ import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
+import com.inin.aiinterviewer.ui.navigation.Route;
 import com.inin.aiinterviewer.ui.state.UserSessionState;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -71,6 +72,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private Label scenarioLabel;
     @FXML private Label progressLabel;
     @FXML private Label remainingTimeLabel;
+    @FXML private Label answerTimeLimitLabel;
     @FXML private Label aiNoticeLabel;
     @FXML private Label citationCountLabel;
     @FXML private VBox citationContainer;
@@ -88,6 +90,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML private InterviewTranscriptView transcriptView;
     @FXML private TextArea answerArea;
     @FXML private Button pauseButton;
+    @FXML private Button endButton;
     @FXML private Button submitButton;
     @FXML private Button retryQuestionButton;
     @FXML private Button retryReportButton;
@@ -100,6 +103,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private boolean generationInProgress;
     private Timeline reportStatePoller;
     private Timeline workspaceClock;
+    private Timeline answerTimer;
+    private int answerRemainingSeconds;
+    private int answerTotalSeconds;
+    private int lastTimerQuestionCount = -1;
     private CoachingFeedbackDto currentCoachingFeedback = CoachingFeedbackDto.unavailable();
 
     public InterviewWorkspaceController(
@@ -150,6 +157,10 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     @FXML
     private void submitAnswer() {
         String answer = answerArea.getText();
+        if (answer == null || answer.isBlank()) {
+            viewManager.showInfo("请输入回答", "请先填写你的回答再提交。");
+            return;
+        }
         if (llmProperties.isConfigured()) {
             boolean expectsNextQuestion = currentSession != null
                     && transcriptView.getQuestionCount() < currentSession.planSnapshot().questionCount();
@@ -211,13 +222,58 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         contentNavigator.back();
     }
 
+    @FXML
+    private void endInterview() {
+        if (generationInProgress) {
+            viewManager.showInfo("正在生成", "请等待本轮 AI 输出完成后再结束面试。");
+            return;
+        }
+        if (currentSession == null
+                || (currentSession.status() != InterviewStatus.RUNNING
+                    && currentSession.status() != InterviewStatus.PAUSED)) {
+            return;
+        }
+        if (!com.inin.aiinterviewer.ui.component.AppDialogs.confirm(
+                answerArea.getScene() == null ? null : answerArea.getScene().getWindow(),
+                "结束面试",
+                "确认结束面试",
+                "结束面试后将保存当前进度，并在后台生成报告（可稍后在「面试记录」中查看）。是否继续？",
+                "结束面试", false)) {
+            return;
+        }
+        try {
+            if (currentSession.status() == InterviewStatus.PAUSED) {
+                sessionService.resume(userId(), sessionId);
+            }
+            String pending = answerArea.getText();
+            if (pending != null && !pending.isBlank()) {
+                sessionService.appendUserAnswer(userId(), sessionId, pending.strip());
+                answerArea.clear();
+            }
+            sessionService.endInterview(userId(), sessionId);
+            try {
+                reportTaskService.enqueue(userId(), sessionId);
+                viewManager.showInfo("面试已结束", "报告正在后台生成，你可以稍后在「面试记录」中查看。");
+            } catch (RuntimeException enqueueFailure) {
+                viewManager.showInfo("面试已结束",
+                        "当前回答较少，未能生成评分报告；你仍可在「面试记录」中查看本次对话。");
+            }
+            stopWorkspaceTimers();
+            contentNavigator.showRoute(Route.DASHBOARD);
+        } catch (RuntimeException exception) {
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
     private void refresh() {
         currentSession = sessionService.require(userId(), sessionId);
         List<InterviewMessageDto> messages = sessionService.messages(userId(), sessionId);
+        ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
+        boolean reportReady = reportTaskState.completion().reportStatus() == ReportStatus.COMPLETED;
         titleLabel.setText(currentSession.title());
         jobLabel.setText(currentSession.jobTitle());
         stageLabel.setText(stageText(currentSession.stage()));
-        statusLabel.setText(statusText(currentSession.status()));
+        statusLabel.setText(reportReady ? "已完成" : statusText(currentSession.status()));
         InterviewPlanSettings settings = InterviewPlanSettings.fromRules(
                 currentSession.planSnapshot().rules());
         modeLabel.setText(modeText(settings.mode()));
@@ -239,7 +295,6 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         renderModeDetails(settings, latestState.orElse(null));
         transcriptView.setMessages(messages);
         renderCitations(messages);
-        ReportGenerationTaskStateDto reportTaskState = reportTaskService.state(userId(), sessionId);
         var completionState = reportTaskState.completion();
         long askedQuestions = messages.stream().filter(message -> message.role() == Message.Role.ASSISTANT).count();
         progressLabel.setText("第 " + Math.min(askedQuestions, currentSession.planSnapshot().questionCount())
@@ -252,14 +307,18 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                 .orElse(false);
         boolean awaitingReport = completionState.finalAnswerSaved()
                 && currentSession.status() != InterviewStatus.COMPLETED;
-        boolean canAnswer = running && !generationInProgress && !awaitingReport
+        boolean canAnswer = running && !generationInProgress && !awaitingReport && !reportReady
                 && (!llmProperties.isConfigured() || hasQuestion);
+        updateAnswerTimerForTurn(canAnswer);
         answerArea.setDisable(!canAnswer);
         submitButton.setDisable(!canAnswer);
         pauseButton.setDisable(generationInProgress);
         pauseButton.setText(running ? "暂停面试" : "继续面试");
-        pauseButton.setVisible(currentSession.status() != InterviewStatus.COMPLETED && !awaitingReport);
+        pauseButton.setVisible(currentSession.status() != InterviewStatus.COMPLETED && !awaitingReport && !reportReady);
         pauseButton.setManaged(pauseButton.isVisible());
+        boolean canEnd = running && !awaitingReport && !generationInProgress && !reportReady;
+        endButton.setVisible(canEnd);
+        endButton.setManaged(canEnd);
         retryQuestionButton.setVisible(llmProperties.isConfigured() && running && !hasQuestion);
         retryQuestionButton.setManaged(retryQuestionButton.isVisible());
         retryQuestionButton.setDisable(generationInProgress || !messages.isEmpty());
@@ -269,9 +328,11 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
                 || !llmProperties.isConfigured()
                 || reportTaskState.active());
         retryReportButton.setText(reportActionText(reportTaskState));
-        reportButton.setVisible(currentSession.status() == InterviewStatus.COMPLETED);
-        reportButton.setManaged(reportButton.isVisible());
-        if (awaitingReport) {
+        reportButton.setVisible(reportReady);
+        reportButton.setManaged(reportReady);
+        if (reportReady) {
+            aiNoticeLabel.setText("面试已结束，六维评分和 Markdown 报告已生成。可点击上方「查看报告」，或稍后在「面试记录」中查看。");
+        } else if (awaitingReport) {
             aiNoticeLabel.setText(completionNotice(reportTaskState));
         } else if (currentSession.status() == InterviewStatus.COMPLETED) {
             aiNoticeLabel.setText("面试已完成，六维评分和 Markdown 报告已保存。可从面试记录进入报告页查看。 ");
@@ -345,6 +406,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     }
 
     private void setBusyState(String progressText) {
+        stopAnswerTimer();
         aiNoticeLabel.setText(progressText);
         answerArea.setDisable(true);
         submitButton.setDisable(true);
@@ -445,6 +507,71 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
     private void stopWorkspaceTimers() {
         stopReportStatePolling();
         stopWorkspaceClock();
+        stopAnswerTimer();
+    }
+
+    private void updateAnswerTimerForTurn(boolean canAnswer) {
+        Integer limit = InterviewPlanSettings.answerTimeLimitSecondsOf(
+                currentSession.planSnapshot().rules());
+        if (limit == null || !canAnswer) {
+            stopAnswerTimer();
+            lastTimerQuestionCount = -1;
+            if (answerTimeLimitLabel != null) {
+                answerTimeLimitLabel.setVisible(false);
+                answerTimeLimitLabel.setManaged(false);
+            }
+            return;
+        }
+        int questionCount = transcriptView.getQuestionCount();
+        if (questionCount != lastTimerQuestionCount) {
+            lastTimerQuestionCount = questionCount;
+            answerTotalSeconds = limit;
+            answerRemainingSeconds = limit;
+        }
+        if (answerTimeLimitLabel != null) {
+            answerTimeLimitLabel.setVisible(true);
+            answerTimeLimitLabel.setManaged(true);
+        }
+        updateAnswerTimerLabel();
+        startAnswerTimer();
+    }
+
+    private void startAnswerTimer() {
+        if (answerTimer != null) return;
+        answerTimer = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            if (answerRemainingSeconds > 0) answerRemainingSeconds--;
+            updateAnswerTimerLabel();
+        }));
+        answerTimer.setCycleCount(Timeline.INDEFINITE);
+        answerTimer.play();
+    }
+
+    private void stopAnswerTimer() {
+        if (answerTimer == null) return;
+        answerTimer.stop();
+        answerTimer = null;
+    }
+
+    private void updateAnswerTimerLabel() {
+        if (answerTimeLimitLabel == null) return;
+        String total = formatSeconds(answerTotalSeconds);
+        if (answerRemainingSeconds <= 0) {
+            answerTimeLimitLabel.setText("⏰ 本题作答已超时（限时 " + total + "），仍可继续作答后提交");
+            answerTimeLimitLabel.setStyle("-fx-text-fill: #d9534f; -fx-font-weight: bold; -fx-font-size: 13px;");
+        } else {
+            String remaining = formatSeconds(answerRemainingSeconds);
+            int threshold = Math.max(10, answerTotalSeconds / 10);
+            boolean urgent = answerRemainingSeconds <= threshold;
+            String color = urgent ? "#d9534f" : "#e08a1e";
+            answerTimeLimitLabel.setText("⏳ 本题作答倒计时 " + remaining + " / " + total);
+            answerTimeLimitLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-weight: bold; -fx-font-size: 13px;");
+        }
+    }
+
+    private String formatSeconds(int seconds) {
+        int minutes = seconds / 60;
+        int secs = seconds % 60;
+        return minutes + ":" + (secs < 10 ? "0" : "") + secs;
     }
 
     private void refreshRemainingTime() {
@@ -664,7 +791,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             case FUTURE_PEER -> "未来同事";
             case TECH_LEAD -> "技术负责人";
             case ARCHITECT -> "架构师";
-            case INCIDENT_COMMANDER -> "故障指挥者";
+            case INCIDENT_COMMANDER -> "事故指挥者";
             case PRODUCT_LEADER -> "产品负责人";
         };
     }

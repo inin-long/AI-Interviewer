@@ -238,6 +238,12 @@ public class KnowledgeDocumentService {
                 mapper.findChunks(documentId, userId).stream().map(DocumentChunkEntity::getContent).toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<Long> findChunkIds(long documentId, long userId) {
+        return mapper.findChunks(documentId, userId).stream()
+                .map(DocumentChunkEntity::getId).toList();
+    }
+
     public List<KnowledgeSearchResultDto> search(long userId, String query, int limit) {
         return searchInternal(userId, query, limit, null);
     }
@@ -265,6 +271,33 @@ public class KnowledgeDocumentService {
                         String.valueOf(result.metadata().getOrDefault("documentName", "知识文档")),
                         result.content(), result.score()))
                 .toList();
+    }
+
+    @Transactional
+    public void updateMetadata(long userId, long documentId, String newName, String newCategory) {
+        require(userId, documentId);
+        if (newName == null || newName.isBlank()) throw new BusinessException(ErrorCode.VALIDATION_FAILED);
+        mapper.updateDocumentMeta(documentId, userId,
+                newName.strip(),
+                (newCategory == null || newCategory.isBlank()) ? "技术资料" : newCategory.strip());
+    }
+
+    @Transactional
+    public void updateChunk(long userId, long chunkId, String newContent) {
+        var chunks = mapper.findChunksByChunkId(chunkId, userId);
+        if (chunks.isEmpty()) throw new BusinessException(ErrorCode.FILE_NOT_FOUND);
+        DocumentChunkEntity entity = chunks.get(0);
+        int estimatedTokens = Math.max(1, newContent.length() / 3);
+        mapper.updateChunkContent(chunkId, userId, newContent.strip(), estimatedTokens);
+        try {
+            float[] embedding = embeddingService.embed(newContent.strip());
+            List<VectorDocument> vectors = List.of(new VectorDocument(
+                    entity.getVectorId(), newContent.strip(), embedding,
+                    readJson(entity.getMetadataJson())));
+            vectorStore.upsert(userId, vectors);
+        } catch (RuntimeException ignored) {
+            // Re-embedding failure should not block content save.
+        }
     }
 
     @Transactional
@@ -326,6 +359,15 @@ public class KnowledgeDocumentService {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException exception) {
             throw new SystemException(ErrorCode.SYSTEM_ERROR, exception);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> readJson(String json) {
+        try {
+            return objectMapper.readValue(json, Map.class);
+        } catch (Exception e) {
+            return Map.of();
         }
     }
 

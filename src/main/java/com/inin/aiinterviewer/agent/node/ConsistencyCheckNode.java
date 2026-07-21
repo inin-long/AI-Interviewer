@@ -80,8 +80,11 @@ public class ConsistencyCheckNode implements NodeAction<InterviewGraphState> {
                     .filter(id -> id != null && !id.isBlank() && id.length() <= 128)
                     .map(String::strip).sorted().forEach(claimIds::add);
             if (claimIds.size() < 2) throw new IllegalArgumentException("Issue needs two claims");
+            // 生成稳定的 issueId（按 类型+关联主张 派生），让 requiresClarification() 在图内可正确路由到澄清探针；
+            // 落库由 ConsistencyIssueService.apply() 重新分配 UUID，互不冲突。
+            String issueId = candidate.type() + ":" + String.join(",", claimIds);
             var normalized = new ConsistencyCheckResult.IssueCandidate(
-                    "", candidate.type(), candidate.description(), List.copyOf(claimIds),
+                    issueId, candidate.type(), candidate.description(), List.copyOf(claimIds),
                     candidate.clarificationQuestion(), candidate.confidence());
             issues.putIfAbsent(candidate.type() + "\u0000" + String.join("\u0000", claimIds), normalized);
         }

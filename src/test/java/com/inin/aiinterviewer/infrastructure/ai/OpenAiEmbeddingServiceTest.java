@@ -15,7 +15,7 @@ class OpenAiEmbeddingServiceTest {
     @Test
     void startsWithoutEmbeddingConfigurationAndFailsOnlyWhenCalled() {
         OpenAiEmbeddingService service = assertDoesNotThrow(() -> new OpenAiEmbeddingService(
-                new LlmProperties("https://example.invalid/v1", "", "", "", Duration.ofSeconds(30), 0, 2048, null)));
+                new LlmProperties("https://example.invalid/v1", "", "", "", Duration.ofSeconds(30), 0, 2048, null, null)));
         assertThrows(AIException.class, () -> service.embed("hello"));
     }
 
@@ -23,7 +23,7 @@ class OpenAiEmbeddingServiceTest {
     void buildsCompatibleClientAndRejectsBlankInputLocally() {
         OpenAiEmbeddingService service = assertDoesNotThrow(() -> new OpenAiEmbeddingService(
                 new LlmProperties("https://example.invalid/v1", "test-key", "chat", "embedding",
-                        Duration.ofSeconds(30), 0, 2048, null)));
+                        Duration.ofSeconds(30), 0, 2048, null, null)));
         assertThrows(BusinessException.class, () -> service.embed("  "));
     }
 }

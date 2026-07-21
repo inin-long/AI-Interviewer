@@ -48,6 +48,7 @@ public record InterviewReportDto(
     }
 
     public InterviewReportDto {
+        dimensions = dimensions == null ? Map.of() : Map.copyOf(dimensions);
         confidence = confidence == null ? Map.of() : Map.copyOf(confidence);
         evidence = evidence == null ? List.of() : List.copyOf(evidence);
         scoreEvidence = scoreEvidence == null ? Map.of() : Map.copyOf(scoreEvidence);

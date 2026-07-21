@@ -86,7 +86,8 @@ public class CareerPlanningController implements ContextAwareController<Object> 
                         currentStatusArea.getText().strip(),
                         position,
                         "",  // industry - optional field not in UI
-                        ""   // experienceYears - optional
+                        "",  // experienceYears - optional
+                        careerGoalArea.getText().strip()  // 职业目标/愿景（选填）
                 );
                 return careerPlanningService.generatePlan(userId, cmd);
             }
@@ -133,7 +134,11 @@ public class CareerPlanningController implements ContextAwareController<Object> 
         Task<ResumeOptimizationDto> task = new Task<>() {
             @Override
             protected ResumeOptimizationDto call() {
-                OptimizeResumeCommand cmd = new OptimizeResumeCommand(original);
+                OptimizeResumeCommand cmd = new OptimizeResumeCommand(
+                        original,
+                        resumeTargetField.getText().strip(),
+                        optimizeDirectionArea.getText().strip()
+                );
                 return careerPlanningService.optimizeResume(userId, cmd);
             }
         };
