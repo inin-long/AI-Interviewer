@@ -1,0 +1,16 @@
+{
+  "name": "ai-interviewer-acceptance-deck",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "packageManager": "pnpm@11.15.1",
+  "scripts": {
+    "dev": "slidev --open",
+    "build": "slidev build --base ./"
+  },
+  "dependencies": {
+    "@slidev/cli": "52.18.0",
+    "@slidev/theme-default": "0.25.0",
+    "vue": "3.5.40"
+  }
+}
