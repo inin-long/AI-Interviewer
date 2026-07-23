@@ -49,14 +49,16 @@ public record LlmProperties(
     }
 
     /**
-     * SiliconFlow DeepSeek V4 enables expensive reasoning by default. Desktop
-     * interview requests favor bounded latency unless the user opts in.
+     * DeepSeek / SiliconFlow 的思考模式会显著增加首 token 延迟。
+     * 除非用户显式开启，否则默认关闭 SiliconFlow 上所有 DeepSeek 模型的 thinking。
      */
     public Boolean effectiveThinkingEnabled() {
         if (thinkingEnabled != null) return thinkingEnabled;
         String provider = baseUrl == null ? "" : baseUrl.toLowerCase(java.util.Locale.ROOT);
         String model = chatModel == null ? "" : chatModel.toLowerCase(java.util.Locale.ROOT);
-        if (provider.contains("siliconflow.cn") && model.contains("deepseek-v4")) return false;
+        boolean isSiliconFlow = provider.contains("siliconflow.cn");
+        boolean isDeepSeek = model.contains("deepseek");
+        if (isSiliconFlow && isDeepSeek) return false;
         return null;
     }
 }

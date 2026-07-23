@@ -3,61 +3,120 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <?import com.inin.aiinterviewer.ui.component.AppSelect?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.QuestionBankController"
-      spacing="18" styleClass="page-content">
+      styleClass="qb-page">
     <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
+
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="qb-header">
+        <VBox fx:id="headerIconWrap" styleClass="qb-header-icon-wrap">
+            <FontIcon iconLiteral="mdi2f-file-question-outline" iconSize="22" styleClass="qb-header-icon"/>
+        </VBox>
+        <VBox spacing="3">
             <Label text="岗位库与面试题库" styleClass="page-title"/>
-            <Label text="按岗位维护题库，技术 / 行为 / 场景题分别归类，并用标签检索" styleClass="secondary-text"/>
+            <Label text="按岗位维护题库，用关键词和难度检索" styleClass="secondary-text"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="refreshButton" text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+        <Button fx:id="refreshButton" text="刷新" onAction="#refresh" styleClass="ghost-button">
+            <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="16"/></graphic>
+        </Button>
     </HBox>
+
     <HBox spacing="18" VBox.vgrow="ALWAYS">
-        <VBox spacing="10" prefWidth="276" minWidth="240" styleClass="content-card">
-            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-            <Label text="岗位" styleClass="module-title"/>
-            <ListView fx:id="jobListView" VBox.vgrow="ALWAYS" styleClass="data-table"/>
-            <HBox spacing="6">
-                <TextField fx:id="newJobTitleField" promptText="岗位名称，如 Java 后端" HBox.hgrow="ALWAYS"/>
+        <!-- Left Sidebar: Position List -->
+        <VBox spacing="16" prefWidth="240" minWidth="220" maxWidth="280" styleClass="content-card qb-sidebar">
+            <padding><Insets top="18" right="14" bottom="16" left="14"/></padding>
+            <!-- Section Title with accent bar -->
+            <HBox alignment="CENTER_LEFT" spacing="0">
+                <Region prefWidth="3" styleClass="qb-section-bar"/>
+                <Label text="岗位列表" styleClass="module-title" style="-fx-padding: 0 0 0 8;"/>
             </HBox>
-            <HBox spacing="6">
-                <TextField fx:id="newJobDeptField" promptText="方向 / 部门（可选）" HBox.hgrow="ALWAYS"/>
-                <Button fx:id="addJobButton" text="添加" onAction="#addJob" styleClass="primary-button"/>
-            </HBox>
-            <Button fx:id="deleteJobButton" text="删除所选岗位" onAction="#deleteSelectedJob" styleClass="danger-button"/>
+
+            <!-- Quick-add typical positions -->
+            <VBox spacing="8">
+                <Label text="典型岗位" styleClass="qb-link-title" style="-fx-font-size: 12px;"/>
+                <FlowPane fx:id="quickJobPane" hgap="8" vgap="8" prefWrapLength="220" styleClass="qb-quick-job-pane">
+                    <Button text="Java后端" onAction="#addQuickJavaJob" styleClass="qb-quick-job-chip"/>
+                    <Button text="前端" onAction="#addQuickFrontendJob" styleClass="qb-quick-job-chip"/>
+                    <Button text="产品经理" onAction="#addQuickPmJob" styleClass="qb-quick-job-chip"/>
+                    <Button text="数据分析师" onAction="#addQuickDataJob" styleClass="qb-quick-job-chip"/>
+                    <Button text="医疗卫生" onAction="#addQuickMedicalJob" styleClass="qb-quick-job-chip"/>
+                </FlowPane>
+            </VBox>
+
+            <ListView fx:id="jobListView" VBox.vgrow="ALWAYS" styleClass="qb-position-list"/>
+            <Separator styleClass="sidebar-divider"/>
+            <!-- New Job Section -->
+            <Label text="新建岗位" styleClass="qb-link-title"/>
+            <VBox spacing="8">
+                <HBox spacing="6">
+                    <TextField fx:id="newJobTitleField" promptText="岗位名称" styleClass="field-input-sm" HBox.hgrow="ALWAYS"/>
+                    <TextField fx:id="newJobDeptField" promptText="方向（可选）" styleClass="field-input-sm" HBox.hgrow="ALWAYS"/>
+                </HBox>
+                <Button fx:id="addJobButton" text="添加" onAction="#addJob" styleClass="primary-button" maxWidth="Infinity"/>
+                <Button fx:id="deleteJobButton" text="删除所选岗位" onAction="#deleteSelectedJob" styleClass="qb-link-danger" maxWidth="Infinity" alignment="CENTER"/>
+            </VBox>
         </VBox>
-        <VBox spacing="10" HBox.hgrow="ALWAYS">
-            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="section-summary">
-                <Label text="面试题" styleClass="module-title"/>
+
+        <!-- Right Main Area: Table -->
+        <VBox HBox.hgrow="ALWAYS" spacing="0" styleClass="content-card qb-main-card">
+            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+            <!-- Toolbar Row -->
+            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="qb-table-toolbar">
+                <HBox alignment="CENTER_LEFT" spacing="0">
+                    <Region prefWidth="3" styleClass="qb-section-bar"/>
+                    <Label text="面试题" styleClass="module-title" style="-fx-padding: 0 0 0 8;"/>
+                </HBox>
                 <Region HBox.hgrow="ALWAYS"/>
-                <AppSelect fx:id="categoryFilterCombo" prefWidth="120"/>
-                <AppSelect fx:id="tagFilterCombo" prefWidth="150"/>
-                <Button fx:id="newQuestionButton" text="新建题目" onAction="#newQuestion" styleClass="primary-button"/>
-                <Button fx:id="practiceButton" text="练习答题" onAction="#practiceSelectedQuestion" styleClass="secondary-button"/>
-                <Button fx:id="deleteQuestionButton" text="删除所选" onAction="#deleteSelectedQuestion" styleClass="danger-button"/>
+                <AppSelect fx:id="categoryFilterCombo" prefWidth="110"/>
+                <HBox fx:id="searchBox" styleClass="qb-search-box" prefWidth="200">
+                    <StackPane alignment="CENTER_LEFT" prefWidth="32" minWidth="32">
+                        <padding><Insets left="8"/></padding>
+                        <FontIcon iconLiteral="mdi2m-magnify" iconSize="14" styleClass="qb-search-icon"/>
+                    </StackPane>
+                    <TextField fx:id="searchField" promptText="搜索题干 / 正文 / 岗位 / 标签..." HBox.hgrow="ALWAYS" styleClass="field-input-sm qb-search-input"/>
+                </HBox>
+                <Button fx:id="practiceButton" text="练习答题" onAction="#practiceSelectedQuestion" styleClass="primary-button">
+                    <graphic><FontIcon iconLiteral="mdi2p-play-circle-outline" iconSize="16"/></graphic>
+                </Button>
+                <Button fx:id="newQuestionButton" text="添加试题" onAction="#newQuestion" styleClass="secondary-button">
+                    <graphic><FontIcon iconLiteral="mdi2p-plus-circle-outline" iconSize="16"/></graphic>
+                </Button>
+                <Button fx:id="deleteQuestionButton" text="删除所选" onAction="#deleteSelectedQuestion" styleClass="secondary-button">
+                    <graphic><FontIcon iconLiteral="mdi2t-trash-can-outline" iconSize="16"/></graphic>
+                </Button>
             </HBox>
-            <TableView fx:id="questionTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-                <placeholder>
-                    <VBox styleClass="empty-state">
-                        <Label text="🗂" styleClass="empty-icon"/>
+
+            <!-- Scrollable Table: GridPane for absolute column alignment -->
+            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="qb-table-scroll">
+                <VBox spacing="0" maxWidth="Infinity">
+                    <GridPane fx:id="questionTableGrid" styleClass="qb-table-grid" maxWidth="Infinity" VBox.vgrow="ALWAYS">
+                        <columnConstraints>
+                            <ColumnConstraints prefWidth="100" minWidth="80" maxWidth="120" hgrow="NEVER"/>
+                            <ColumnConstraints prefWidth="72" minWidth="64" maxWidth="88" hgrow="NEVER"/>
+                            <ColumnConstraints prefWidth="260" minWidth="180" maxWidth="340" hgrow="SOMETIMES"/>
+                            <ColumnConstraints minWidth="280" hgrow="ALWAYS"/>
+                        </columnConstraints>
+
+                        <!-- Header row -->
+                        <Label text="岗位" styleClass="qb-table-header-cell qb-th" GridPane.columnIndex="0" GridPane.rowIndex="0" alignment="CENTER_LEFT"/>
+                        <Label text="难度" styleClass="qb-table-header-cell qb-th qb-th-center" GridPane.columnIndex="1" GridPane.rowIndex="0" alignment="CENTER"/>
+                        <Label text="题干" styleClass="qb-table-header-cell qb-th" GridPane.columnIndex="2" GridPane.rowIndex="0" alignment="CENTER_LEFT"/>
+                        <Label text="标签" styleClass="qb-table-header-cell qb-th qb-th-right" GridPane.columnIndex="3" GridPane.rowIndex="0" alignment="CENTER_LEFT"/>
+                    </GridPane>
+
+                    <!-- Empty State -->
+                    <VBox fx:id="emptyStateContainer" alignment="CENTER" spacing="14" maxHeight="300" styleClass="empty-state qb-empty-state" maxWidth="Infinity">
+                        <FontIcon iconLiteral="mdi2f-file-question-outline" iconSize="48" styleClass="empty-state-icon"/>
                         <Label text="还没有面试题" styleClass="empty-title"/>
-                        <Label text="选择岗位后点击「新建题目」，按技术 / 行为 / 场景归类并打标签。" styleClass="empty-hint"/>
+                        <Label text="选择左侧岗位后点击「新建题目」，按技术 / 行为 / 场景归类并打标签。" styleClass="empty-hint" wrapText="true" style="-fx-max-width:360;-fx-text-alignment:center;"/>
                     </VBox>
-                </placeholder>
-                <columns>
-                    <TableColumn fx:id="jobColumn" text="岗位" prefWidth="130"/>
-                    <TableColumn fx:id="categoryColumn" text="类别" prefWidth="80"/>
-                    <TableColumn fx:id="difficultyColumn" text="难度" prefWidth="100"/>
-                    <TableColumn fx:id="titleColumn" text="题干" prefWidth="300"/>
-                    <TableColumn fx:id="tagsColumn" text="标签" prefWidth="160"/>
-                </columns>
-            </TableView>
+                </VBox>
+            </ScrollPane>
         </VBox>
     </HBox>
 </VBox>

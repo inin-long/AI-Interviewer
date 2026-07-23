@@ -17,6 +17,9 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Component
@@ -123,6 +126,8 @@ public class BackgroundTaskDetailController implements ContextAwareController<Lo
     }
 
     private String time(LocalDateTime value) {
-        return value == null ? "—" : TIME_FORMAT.format(value);
+        if (value == null) return "—";
+        ZonedDateTime local = value.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault());
+        return TIME_FORMAT.format(local);
     }
 }

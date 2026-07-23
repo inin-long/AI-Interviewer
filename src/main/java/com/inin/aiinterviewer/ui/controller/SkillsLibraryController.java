@@ -4,7 +4,6 @@ import com.inin.aiinterviewer.application.dto.SkillArticleDto;
 import com.inin.aiinterviewer.application.service.SkillsLibraryService;
 import com.inin.aiinterviewer.ui.component.AppDialog;
 import com.inin.aiinterviewer.ui.component.AppDialogs;
-import com.inin.aiinterviewer.ui.component.AppSelect;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
 import com.inin.aiinterviewer.ui.navigation.ContextAwareController;
 import com.inin.aiinterviewer.ui.navigation.Route;
@@ -13,13 +12,17 @@ import jakarta.annotation.Resource;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import org.kordamp.ikonli.javafx.FontIcon;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Component
 @Scope("prototype")
@@ -34,26 +37,21 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
     @Resource
     private SkillsLibraryService skillsLibraryService;
 
-    @FXML
-    private AppSelect<String> categoryFilter;
+    @FXML private ToggleButton allFilterButton;
+    @FXML private ToggleButton starFilterButton;
+    @FXML private ToggleButton behaviorFilterButton;
+    @FXML private ToggleButton etiquetteFilterButton;
+    @FXML private ToggleButton generalFilterButton;
 
-    @FXML
-    private ListView<SkillArticleDto> articleList;
+    @FXML private TextField searchField;
+    @FXML private Button addButton;
+
+    @FXML private ListView<SkillArticleDto> articleList;
 
     private final ObservableList<SkillArticleDto> items = FXCollections.observableArrayList();
+    private final List<SkillArticleDto> allItems = new ArrayList<>();
 
-    /**
-     * 筛选下拉选项 → 数据库英文值（一一对应，无重复映射）
-     * 只有 4 个真实分类 + "全部分类"
-     */
-    private static final Map<String, String> FILTER_MAP = Map.of(
-            "STAR 法则", "STAR",
-            "行为面试", "BEHAVIOR",
-            "礼仪指南", "ETIQUETTE",
-            "通用技巧", "GENERAL"
-    );
-
-    /** 数据库英文值 → 中文显示名（用于列表项徽标） */
+    /** 分类英文值 → 中文显示名 */
     private static final Map<String, String> CATEGORY_LABEL_MAP = Map.of(
             "STAR", "STAR 法则",
             "BEHAVIOR", "行为面试",
@@ -61,7 +59,15 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
             "GENERAL", "通用技巧"
     );
 
-    /** 数据库英文值 → 徽标样式类 */
+    /** 分类英文值 → 图标 */
+    private static final Map<String, String> CATEGORY_ICON_MAP = Map.of(
+            "STAR", "mdi2s-star-outline",
+            "BEHAVIOR", "mdi2a-account-group-outline",
+            "ETIQUETTE", "mdi2h-handshake-outline",
+            "GENERAL", "mdi2l-lightbulb-on-outline"
+    );
+
+    /** 分类英文值 → 徽标样式类 */
     private static final Map<String, String> CATEGORY_BADGE_MAP = Map.of(
             "STAR", "badge-info",
             "BEHAVIOR", "badge-tech",
@@ -75,77 +81,11 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
 
     @FXML
     public void initialize() {
-        // 筛选项与数据库分类 1:1 对应——不会出现"不同筛选项显示相同内容"
-        categoryFilter.getItems().addAll(
-                "全部分类", "STAR 法则", "行为面试", "礼仪指南", "通用技巧");
-        categoryFilter.setValue("全部分类");
-
         articleList.setItems(items);
-        articleList.setCellFactory(list -> new ListCell<>() {
-            @Override
-            protected void updateItem(SkillArticleDto item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    return;
-                }
+        articleList.setCellFactory(list -> new SkillArticleCardCell());
 
-                // 标题
-                Label title = new Label(item.title());
-                title.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #171a21;");
-                title.setWrapText(true);
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> applyFilters());
 
-                // 分类徽标
-                String catKey = item.category();
-                String catLabel = CATEGORY_LABEL_MAP.getOrDefault(catKey, catKey);
-                String catBadge = CATEGORY_BADGE_MAP.getOrDefault(catKey, "badge-neutral");
-                Label category = new Label("  " + catLabel + "  ");
-                category.setStyle("-fx-font-size: 11px; -fx-font-weight: 700;");
-                category.getStyleClass().addAll("badge", catBadge);
-
-                // 摘要（200 字符）
-                String summaryRaw = item.summary() != null ? item.summary() : "";
-                String summaryText = summaryRaw.length() > 200
-                        ? summaryRaw.substring(0, 200) + "…" : summaryRaw;
-                Label summary = new Label(summaryText);
-                summary.setWrapText(true);
-                summary.setStyle("-fx-font-size: 13px; -fx-text-fill: #4a5568;");
-
-                // 正文预览（Markdown → 纯文本，去掉所有语法符号）
-                String contentPreview = "";
-                if (item.contentMarkdown() != null && !item.contentMarkdown().isBlank()) {
-                    String raw = stripMarkdown(item.contentMarkdown());
-                    // 去掉首行（通常与 title 重复）
-                    raw = raw.trim();
-                    int firstNl = raw.indexOf('\n');
-                    if (firstNl > 0) raw = raw.substring(firstNl).trim();
-                    contentPreview = raw.length() > 180 ? raw.substring(0, 180) + "…" : raw;
-                }
-                if (!contentPreview.isBlank()) {
-                    Label preview = new Label(contentPreview);
-                    preview.setWrapText(true);
-                    preview.setStyle("-fx-font-size: 12px; -fx-text-fill: #718096; -fx-padding: 4 0 0 0;");
-
-                    // 阅读提示
-                    Label hint = new Label("📖 点击查看完整内容");
-                    hint.setStyle("-fx-font-size: 11px; -fx-text-fill: #7382e8; "
-                            + "-fx-font-weight: 600; -fx-padding: 6 0 2 0;");
-
-                    VBox box = new VBox(6, title, category, summary, preview, hint);
-                    box.setStyle("-fx-background-color: transparent; -fx-padding: 8 4 8 4;");
-                    box.setFillWidth(true);
-                    setGraphic(box);
-                } else {
-                    VBox box = new VBox(6, title, category, summary);
-                    box.setStyle("-fx-background-color: transparent; -fx-padding: 8 4 8 4;");
-                    box.setFillWidth(true);
-                    setGraphic(box);
-                }
-            }
-        });
-
-        // 单击即打开详情
         articleList.setOnMouseClicked(e -> {
             if (e.getClickCount() >= 1) {
                 SkillArticleDto selected = articleList.getSelectionModel().getSelectedItem();
@@ -155,70 +95,87 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
             }
         });
 
-        categoryFilter.setOnAction(e -> loadData());
-
         loadData();
     }
 
-    /**
-     * 将 Markdown 原文转为纯文本预览。
-     * 去掉标题标记、加粗/斜体、引用、表格语法、代码块、链接等，
-     * 只保留可阅读的文本内容。
-     */
-    private static String stripMarkdown(String md) {
-        String text = md;
-        // 代码块 ```...``` → 整块替换为占位符
-        text = text.replaceAll("```[\\s\\S]*?```", "[代码示例]");
-        // 行内代码 `xxx` → xxx
-        text = text.replaceAll("`([^`]*)`", "$1");
-        // 标题 ### ## # → 去掉井号和前后空格
-        text = text.replaceAll("^#{1,6}\\s+", "");
-        text = text.replaceAll("(?m)\n#{1,6}\\s+", "\n");
-        // 加粗 **text** → text
-        text = text.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
-        // 斜体 *text* 或 _text_ → text（注意：在加粗之后处理）
-        text = text.replaceAll("\\*([^*]+)\\*", "$1");
-        text = text.replaceAll("_([^_]+)_", "$1");
-        // 引用 > text → text
-        text = text.replaceAll("(?m)^>\\s?", "");
-        // 无序列表 - [ ] → 去掉标记
-        text = text.replaceAll("(?m)^[\\-\\*+]\\s+", "");
-        // 有序列表 1. → 去掉数字编号
-        text = text.replaceAll("(?m)^\\d+\\.\\s+", "");
-        // 分隔线 --- *** ___ → 空行
-        text = text.replaceAll("(?m)^[-*_]{3,}\\s*$", "");
-        // 链接 [text](url) → text
-        text = text.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
-        // 图片 ![alt](url) → [图片]
-        text = text.replaceAll("!\\[[^\\]]*\\]\\([^)]+\\)", "[图片]");
-        // 表格 | ... | 行 → 去掉管道符号，合并空格
-        text = text.replaceAll("\\|", " ");
-        // 分隔线 ---|=== 等
-        text = text.replaceAll("(?m)^\\s*[\\-:=]{3,}\\s*$", "");
-        // HTML 标签 <br> <p> 等 → 去掉
-        text = text.replaceAll("<[^>]+>", "");
-        // 合并多余空行（超过2个连续换行压缩成2个）
-        text = text.replaceAll("\n{3,}", "\n\n");
-        return text.trim();
+    @FXML
+    private void applyFilters() {
+        if (articleList == null) return;
+        if (!allFilterButton.isSelected() && !starFilterButton.isSelected()
+                && !behaviorFilterButton.isSelected() && !etiquetteFilterButton.isSelected()
+                && !generalFilterButton.isSelected()) {
+            allFilterButton.setSelected(true);
+        }
+
+        String keyword = searchField == null || searchField.getText() == null
+                ? "" : searchField.getText().strip().toLowerCase(Locale.ROOT);
+
+        List<SkillArticleDto> filtered = allItems.stream()
+                .filter(this::matchesSelectedCategory)
+                .filter(item -> matchesKeyword(item, keyword))
+                .sorted(Comparator.comparing(SkillArticleDto::createTime, Comparator.reverseOrder()))
+                .toList();
+
+        items.setAll(filtered);
+    }
+
+    @FXML
+    private void refresh() {
+        loadData();
+    }
+
+    @FXML
+    private void handleImport() {
+        AppDialogs.showMessage(
+                articleList.getScene() == null ? null : articleList.getScene().getWindow(),
+                "批量导入",
+                "批量导入",
+                "批量导入功能开发中，请使用「新增文章」逐篇添加。",
+                AppDialog.Tone.INFORMATION);
+    }
+
+    @FXML
+    private void handleAdd() {
+        navigator.showSubRoute(Route.SKILL_ARTICLE_EDITOR, null);
+    }
+
+    private boolean matchesSelectedCategory(SkillArticleDto item) {
+        String category = item.category();
+        if (allFilterButton.isSelected()) return true;
+        if (starFilterButton.isSelected()) return "STAR".equalsIgnoreCase(category);
+        if (behaviorFilterButton.isSelected()) return "BEHAVIOR".equalsIgnoreCase(category);
+        if (etiquetteFilterButton.isSelected()) return "ETIQUETTE".equalsIgnoreCase(category);
+        if (generalFilterButton.isSelected()) return "GENERAL".equalsIgnoreCase(category);
+        return true;
+    }
+
+    private boolean matchesKeyword(SkillArticleDto item, String keyword) {
+        if (keyword.isEmpty()) return true;
+        String title = item.title() == null ? "" : item.title().toLowerCase(Locale.ROOT);
+        String summary = item.summary() == null ? "" : item.summary().toLowerCase(Locale.ROOT);
+        String category = item.category() == null ? "" : item.category().toLowerCase(Locale.ROOT);
+        String content = item.contentMarkdown() == null ? "" : item.contentMarkdown().toLowerCase(Locale.ROOT);
+        boolean tagMatch = item.tags() != null && item.tags().stream()
+                .anyMatch(tag -> tag.toLowerCase(Locale.ROOT).contains(keyword));
+        return title.contains(keyword)
+                || summary.contains(keyword)
+                || category.contains(keyword)
+                || content.contains(keyword)
+                || tagMatch;
     }
 
     private void loadData() {
         try {
-            String filter = categoryFilter.getValue();
-            Long userId = userSessionState.requireCurrentUser().id();
-            List<SkillArticleDto> articles;
-            if (filter == null || "全部分类".equals(filter)) {
-                articles = skillsLibraryService.listArticles(userId);
-            } else {
-                String dbCategory = FILTER_MAP.getOrDefault(filter, filter);
-                articles = skillsLibraryService.listByCategory(userId, dbCategory);
-            }
-            items.setAll(articles);
+            long userId = userSessionState.requireCurrentUser().id();
+            List<SkillArticleDto> articles = skillsLibraryService.listArticles(userId);
+            allItems.clear();
+            allItems.addAll(articles);
+            applyFilters();
         } catch (RuntimeException ex) {
             Throwable root = ex;
             while (root.getCause() != null && root.getCause() != root) root = root.getCause();
             AppDialogs.showMessage(
-                    categoryFilter.getScene() == null ? null : categoryFilter.getScene().getWindow(),
+                    articleList.getScene() == null ? null : articleList.getScene().getWindow(),
                     "加载失败",
                     "面试技巧加载失败",
                     root.getMessage() != null ? root.getMessage() : ex.getMessage(),
@@ -226,8 +183,124 @@ public class SkillsLibraryController implements ContextAwareController<Object> {
         }
     }
 
-    @FXML
-    private void handleAdd() {
-        navigator.showSubRoute(Route.SKILL_ARTICLE_EDITOR, null);
+    /**
+     * 将 Markdown 原文转为纯文本预览。
+     */
+    private static String stripMarkdown(String md) {
+        String text = md;
+        text = text.replaceAll("```[\\s\\S]*?```", "[代码示例]");
+        text = text.replaceAll("`([^`]*)`", "$1");
+        text = text.replaceAll("^#{1,6}\\s+", "");
+        text = text.replaceAll("(?m)\n#{1,6}\\s+", "\n");
+        text = text.replaceAll("\\*\\*([^*]+)\\*\\*", "$1");
+        text = text.replaceAll("\\*([^*]+)\\*", "$1");
+        text = text.replaceAll("_([^_]+)_", "$1");
+        text = text.replaceAll("(?m)^>\\s?", "");
+        text = text.replaceAll("(?m)^[\\-\\*+]\\s+", "");
+        text = text.replaceAll("(?m)^\\d+\\.\\s+", "");
+        text = text.replaceAll("(?m)^[-*_]{3,}\\s*$", "");
+        text = text.replaceAll("\\[([^\\]]+)\\]\\([^)]+\\)", "$1");
+        text = text.replaceAll("!\\[[^\\]]*\\]\\([^)]+\\)", "[图片]");
+        text = text.replaceAll("\\|", " ");
+        text = text.replaceAll("(?m)^\\s*[\\-:=]{3,}\\s*$", "");
+        text = text.replaceAll("<[^>]+>", "");
+        text = text.replaceAll("\n{3,}", "\n\n");
+        return text.trim();
+    }
+
+    private final class SkillArticleCardCell extends ListCell<SkillArticleDto> {
+        @Override
+        protected void updateItem(SkillArticleDto item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty || item == null) {
+                setText(null);
+                setGraphic(null);
+                return;
+            }
+            setText(null);
+            setGraphic(buildCard(item));
+        }
+
+        private HBox buildCard(SkillArticleDto item) {
+            // Category badge icon box
+            String categoryKey = item.category() == null ? "GENERAL" : item.category().toUpperCase(Locale.ROOT);
+            String catLabel = CATEGORY_LABEL_MAP.getOrDefault(categoryKey, categoryKey);
+            String catIconLiteral = CATEGORY_ICON_MAP.getOrDefault(categoryKey, "mdi2b-book-open-outline");
+            String catBadgeClass = CATEGORY_BADGE_MAP.getOrDefault(categoryKey, "badge-neutral");
+
+            StackPane iconBox = new StackPane(new FontIcon(catIconLiteral));
+            iconBox.getStyleClass().addAll("skills-card-icon-box", categoryKey.toLowerCase(Locale.ROOT));
+
+            // Title
+            Label title = new Label(item.title());
+            title.getStyleClass().add("skills-card-title");
+            title.setWrapText(true);
+
+            // Category label badge
+            Label categoryLabel = new Label(catLabel);
+            categoryLabel.getStyleClass().addAll("badge", catBadgeClass, "skills-card-category");
+
+            // Summary
+            String summaryText = item.summary() != null && !item.summary().isBlank()
+                    ? item.summary()
+                    : stripMarkdown(item.contentMarkdown());
+            if (summaryText.length() > 160) {
+                summaryText = summaryText.substring(0, 160) + "…";
+            }
+            Label summary = new Label(summaryText);
+            summary.getStyleClass().add("skills-card-summary");
+            summary.setWrapText(true);
+
+            // Tags
+            FlowPane tagsFlow = new FlowPane(6, 4);
+            tagsFlow.getStyleClass().add("skills-card-tags");
+            if (item.tags() != null) {
+                for (String tag : item.tags()) {
+                    Label tagLabel = new Label(tag);
+                    tagLabel.getStyleClass().add("skills-card-tag");
+                    tagsFlow.getChildren().add(tagLabel);
+                }
+            }
+
+            // Meta info: date
+            String dateStr = item.createTime() != null
+                    ? item.createTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+                    : "";
+            Label dateLabel = new Label(dateStr);
+            dateLabel.getStyleClass().add("skills-card-date");
+
+            HBox metaRow = new HBox(12, categoryLabel, dateLabel);
+            metaRow.setAlignment(Pos.CENTER_LEFT);
+
+            VBox content = new VBox(5, title, metaRow, summary, tagsFlow);
+            content.setFillWidth(true);
+            HBox.setHgrow(content, Priority.ALWAYS);
+
+            // Action buttons
+            Button viewButton = new Button("查看", new FontIcon("mdi2e-eye-outline"));
+            viewButton.getStyleClass().addAll("skills-card-action", "skills-card-action-primary");
+            viewButton.setOnAction(event -> navigator.showSubRoute(Route.SKILL_ARTICLE_DETAIL, item));
+
+            Button editButton = new Button("编辑", new FontIcon("mdi2p-pencil-outline"));
+            editButton.getStyleClass().addAll("skills-card-action", "skills-card-action-secondary");
+            editButton.setOnAction(event -> navigator.showSubRoute(Route.SKILL_ARTICLE_EDITOR, item));
+
+            VBox actions = new VBox(6, viewButton, editButton);
+            actions.setAlignment(Pos.CENTER);
+
+            HBox card = new HBox(14, iconBox, content, actions);
+            card.setAlignment(Pos.CENTER_LEFT);
+            card.setPadding(new Insets(12, 14, 12, 14));
+            card.getStyleClass().add("skills-card");
+            card.setOnMouseClicked(event -> {
+                if (event.getButton() == javafx.scene.input.MouseButton.PRIMARY) {
+                    getListView().getSelectionModel().select(item);
+                    navigator.showSubRoute(Route.SKILL_ARTICLE_DETAIL, item);
+                }
+            });
+            viewButton.setOnMouseClicked(event -> event.consume());
+            editButton.setOnMouseClicked(event -> event.consume());
+            return card;
+        }
     }
 }

@@ -512,32 +512,61 @@ public class KnowledgeController {
         private final Label name = new Label();
         private final Label category = new Label();
         private final Label metadata = new Label();
-        private final Label updated = new Label();
         private final Label status = new Label();
-        private final Button action = new Button();
+        private final StackPane statusDot = new StackPane();
+        private final Button viewBtn = new Button();
+        private final Button deleteBtn = new Button();
+        private final HBox actionsBox = new HBox(6);
         private final HBox root;
+        private final StackPane iconBox;
 
         private DocumentCell() {
-            fileIcon.setIconSize(29);
-            StackPane iconBox = new StackPane(fileIcon);
+            fileIcon.setIconSize(30);
+            iconBox = new StackPane(fileIcon);
             iconBox.getStyleClass().add("knowledge-file-icon-box");
             name.getStyleClass().add("knowledge-document-name");
             category.getStyleClass().add("knowledge-category-chip");
-            HBox titleRow = new HBox(9, name, category);
+            HBox titleRow = new HBox(8, name, category);
             titleRow.setAlignment(Pos.CENTER_LEFT);
             metadata.getStyleClass().add("knowledge-document-meta");
-            VBox identity = new VBox(8, titleRow, metadata);
+            VBox identity = new VBox(5, titleRow, metadata);
             HBox.setHgrow(identity, Priority.ALWAYS);
-            updated.getStyleClass().add("knowledge-document-updated");
+
             status.getStyleClass().add("knowledge-status-chip");
-            VBox state = new VBox(9, updated, status);
+            statusDot.getStyleClass().add("knowledge-status-dot");
+            statusDot.setMinSize(6, 6);
+            statusDot.setPrefSize(6, 6);
+            statusDot.setMaxSize(6, 6);
+            HBox statusRow = new HBox(5, statusDot, status);
+            statusRow.setAlignment(Pos.CENTER_RIGHT);
+
+            viewBtn.setText("查看报告");
+            viewBtn.getStyleClass().add("knowledge-action-btn");
+            viewBtn.setAccessibleText("查看文档");
+            viewBtn.setTooltip(new Tooltip("查看文档"));
+            viewBtn.setOnAction(event -> {
+                KnowledgeDocumentDto document = getItem();
+                if (document != null) showDocument(document);
+            });
+
+            deleteBtn.setText("删除文档");
+            deleteBtn.getStyleClass().addAll("knowledge-action-btn", "danger");
+            deleteBtn.setAccessibleText("删除文档");
+            deleteBtn.setTooltip(new Tooltip("删除文档"));
+            deleteBtn.setOnAction(event -> {
+                KnowledgeDocumentDto document = getItem();
+                if (document != null) deleteDocument(document);
+            });
+
+            actionsBox.getChildren().addAll(viewBtn, deleteBtn);
+            actionsBox.setAlignment(Pos.CENTER_RIGHT);
+            actionsBox.setSpacing(10);
+
+            HBox state = new HBox(16, statusRow, actionsBox);
             state.setAlignment(Pos.CENTER_RIGHT);
-            state.setMinWidth(136);
-            action.setGraphic(new FontIcon("mdi2d-dots-horizontal"));
-            action.getStyleClass().add("knowledge-row-action");
-            action.setAccessibleText("文档操作");
-            action.setOnAction(event -> showActions());
-            root = new HBox(13, iconBox, identity, state, action);
+            state.setMinWidth(Region.USE_COMPUTED_SIZE);
+
+            root = new HBox(16, iconBox, identity, state);
             root.setAlignment(Pos.CENTER_LEFT);
             root.getStyleClass().add("knowledge-document-row");
             setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
@@ -550,29 +579,21 @@ public class KnowledgeController {
                 setGraphic(null);
                 return;
             }
+            String typeStyle = fileTypeStyle(document.fileType());
             fileIcon.setIconLiteral(fileIconLiteral(document.fileType()));
-            fileIcon.getStyleClass().setAll("knowledge-file-icon", fileTypeStyle(document.fileType()));
+            fileIcon.getStyleClass().setAll("knowledge-file-icon", typeStyle);
+            iconBox.getStyleClass().setAll("knowledge-file-icon-box", typeStyle);
             name.setText(document.name());
             category.setText(document.category());
             metadata.setText(document.originalName() + "  ·  " + document.fileType().toUpperCase(Locale.ROOT)
-                    + "  ·  " + sizeText(document.fileSize()));
-            updated.setText(timeText(document.updateTime()));
+                    + "  ·  " + sizeText(document.fileSize()) + "  ·  " + timeText(document.updateTime()));
+            String statusStyle = statusStyle(document.status());
             status.setText(statusText(document));
-            status.getStyleClass().setAll("knowledge-status-chip", statusStyle(document.status()));
+            status.getStyleClass().setAll("knowledge-status-chip", statusStyle);
+            statusDot.getStyleClass().setAll("knowledge-status-dot", statusStyle);
             setGraphic(root);
         }
 
-        private void showActions() {
-            KnowledgeDocumentDto document = getItem();
-            if (document == null) return;
-            documentList.getSelectionModel().select(document);
-            MenuItem view = new MenuItem("查看文档", new FontIcon("mdi2e-eye-outline"));
-            view.setOnAction(event -> showDocument(document));
-            MenuItem delete = new MenuItem("删除文档", new FontIcon("mdi2d-delete-outline"));
-            delete.setOnAction(event -> deleteDocument(document));
-            ContextMenu menu = new ContextMenu(view, new SeparatorMenuItem(), delete);
-            menu.show(action, javafx.geometry.Side.BOTTOM, 0, 4);
-        }
     }
 
     private static final class CategoryCell extends ListCell<CategoryFilterItem> {

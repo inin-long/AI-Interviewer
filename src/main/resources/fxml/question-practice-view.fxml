@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -23,76 +24,89 @@
     <center>
         <ScrollPane fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll">
             <content>
-                <VBox spacing="16" styleClass="editor-page">
-                    <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
+                <VBox spacing="20" styleClass="practice-page">
+                    <padding><Insets top="24" right="28" bottom="32" left="28"/></padding>
 
-                    <!-- 题目展示区 -->
-                    <VBox spacing="12" styleClass="content-card">
-                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                        <HBox alignment="CENTER_LEFT" spacing="10">
-                            <Label text="题目" styleClass="module-title"/>
+                    <!-- ========== 题目展示区 ========== -->
+                    <VBox spacing="14" styleClass="content-card practice-section">
+                        <padding><Insets top="22" right="22" bottom="18" left="22"/></padding>
+                        <!-- Section Header: Title + Badges -->
+                        <HBox alignment="CENTER_LEFT" spacing="0">
+                            <Region prefWidth="3" styleClass="practice-section-bar"/>
+                            <Label text="题目" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
                             <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="jobBadge" styleClass="badge"/>
+                            <Label fx:id="jobBadge" styleClass="badge badge-job"/>
                             <Label fx:id="difficultyBadge" styleClass="badge"/>
                         </HBox>
-                        <Label fx:id="titleLabel" wrapText="true" styleClass="practice-question-title"/>
-                        <Label fx:id="contentLabel" wrapText="true" styleClass="practice-question-content"/>
-                        <FlowPane fx:id="tagPane" hgap="8" vgap="8"/>
+                        <!-- Question Title -->
+                        <Label fx:id="titleLabel" wrapText="true" styleClass="practice-q-title"/>
+                        <!-- Question Content / Description -->
+                        <Label fx:id="contentLabel" wrapText="true" styleClass="practice-q-content"/>
+                        <!-- Tags -->
+                        <FlowPane fx:id="tagPane" hgap="7" vgap="6"/>
                     </VBox>
 
-                    <!-- 作答区 -->
-                    <VBox spacing="12" styleClass="content-card">
-                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                        <Label text="我的作答" styleClass="module-title"/>
-                        <TextArea fx:id="answerArea" prefRowCount="6" wrapText="true"
-                                  promptText="在此写下你的思考与答案，尽量条理清晰、覆盖要点..."/>
-                        <HBox alignment="CENTER_LEFT" spacing="12">
+                    <!-- ========== 作答区 ========== -->
+                    <VBox spacing="14" styleClass="content-card practice-section">
+                        <padding><Insets top="22" right="22" bottom="18" left="22"/></padding>
+                        <!-- Section Header -->
+                        <HBox alignment="CENTER_LEFT" spacing="0">
+                            <Region prefWidth="3" styleClass="practice-section-bar"/>
+                            <Label text="我的作答" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
+                        </HBox>
+                        <!-- Answer Text Area -->
+                        <TextArea fx:id="answerArea" prefRowCount="8" wrapText="true"
+                                  promptText="在此写下你的思考与答案，尽量条理清晰、覆盖要点..."
+                                  styleClass="practice-answer-area"/>
+                        <!-- Action Buttons (right-aligned) -->
+                        <HBox alignment="CENTER_RIGHT" spacing="10">
                             <Label fx:id="statusLabel" styleClass="secondary-text"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Button fx:id="clearButton" text="清空" onAction="#clearAnswer" styleClass="secondary-button"/>
+                            <Region HBox.hgrow="ALWAYS" minWidth="40"/>
+                            <Button fx:id="clearButton" text="清空" onAction="#clearAnswer" styleClass="ghost-button"/>
                             <Button fx:id="submitButton" text="提交评分" onAction="#submit" styleClass="primary-button"/>
                         </HBox>
                     </VBox>
 
-                    <!-- 评分结果区（默认隐藏，提交后显示） -->
-                    <VBox fx:id="scoreCard" spacing="10" styleClass="content-card" visible="false" managed="false">
-                        <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                        <Label text="AI 评分与点评" styleClass="module-title"/>
-                        <HBox spacing="16">
-                            <!-- 左侧：分数 + 维度进度条 -->
-                            <VBox spacing="14" minWidth="220" maxWidth="240" styleClass="score-sidebar">
-                                <VBox alignment="CENTER" spacing="2" styleClass="score-badge">
-                                    <Label fx:id="scoreValueLabel" styleClass="score-value"/>
-                                    <Label text="综合得分" styleClass="score-caption"/>
+                    <!-- ========== AI 评分与点评（默认隐藏） ========== -->
+                    <VBox fx:id="scoreCard" spacing="0" styleClass="content-card practice-section" visible="false" managed="false">
+                        <padding><Insets top="16" right="18" bottom="18" left="18"/></padding>
+                        <!-- Section Header -->
+                        <HBox alignment="CENTER_LEFT" spacing="0" style="-fx-padding: 0 0 10 0;">
+                            <Region prefWidth="3" styleClass="practice-section-bar"/>
+                            <Label text="AI 评分与点评" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
+                        </HBox>
+                        <!-- Score Content: Left (Score Card) + Right (Feedback) -->
+                        <HBox spacing="16" alignment="TOP_CENTER">
+                            <!-- Left: Score Card + Dimension Scores -->
+                            <VBox spacing="12" minWidth="130" maxWidth="150" alignment="TOP_CENTER">
+                                <!-- Score Card (rounded rectangle) -->
+                                <VBox alignment="CENTER" spacing="2" styleClass="practice-score-card">
+                                    <Label fx:id="scoreValueLabel" styleClass="practice-score-value"/>
+                                    <Label text="综合得分" styleClass="practice-score-caption"/>
                                 </VBox>
-                                <VBox spacing="10">
-                                    <VBox spacing="4">
-                                        <HBox spacing="8" alignment="CENTER_LEFT">
-                                            <Label text="正确性" styleClass="field-label" minWidth="52"/>
-                                            <Region HBox.hgrow="ALWAYS"/>
-                                            <Label fx:id="correctnessLabel" styleClass="secondary-text"/>
-                                        </HBox>
-                                        <ProgressBar fx:id="correctnessBar"/>
-                                    </VBox>
-                                    <VBox spacing="4">
-                                        <HBox spacing="8" alignment="CENTER_LEFT">
-                                            <Label text="深度" styleClass="field-label" minWidth="52"/>
-                                            <Region HBox.hgrow="ALWAYS"/>
-                                            <Label fx:id="depthLabel" styleClass="secondary-text"/>
-                                        </HBox>
-                                        <ProgressBar fx:id="depthBar"/>
-                                    </VBox>
+                                <!-- Dimension Rows -->
+                                <VBox spacing="8">
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Label text="正确性" styleClass="practice-dim-label" prefWidth="52"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="correctnessLabel" styleClass="practice-dim-value"/>
+                                    </HBox>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Label text="深度" styleClass="practice-dim-label" prefWidth="52"/>
+                                        <Region HBox.hgrow="ALWAYS"/>
+                                        <Label fx:id="depthLabel" styleClass="practice-dim-value"/>
+                                    </HBox>
                                 </VBox>
                             </VBox>
-                            <!-- 右侧：详细点评（直接平铺展开，不内嵌滚动条；过长由整页外层滚动条统一接管） -->
-                            <VBox fx:id="feedbackContainer" spacing="6" HBox.hgrow="ALWAYS" minHeight="160"/>
+                            <!-- Right: Detailed Feedback -->
+                            <VBox fx:id="feedbackContainer" HBox.hgrow="ALWAYS" minHeight="100"/>
                         </HBox>
                     </VBox>
 
-                    <!-- 参考答案区（默认折叠） -->
+                    <!-- ========== 参考答案区（默认折叠） ========== -->
                     <TitledPane fx:id="referencePane" text="查看参考答案" expanded="false" styleClass="content-card">
                         <content>
-                            <VBox fx:id="referenceContainer" spacing="2" styleClass="reference-content"/>
+                            <VBox fx:id="referenceContainer" styleClass="reference-content"/>
                         </content>
                     </TitledPane>
                 </VBox>

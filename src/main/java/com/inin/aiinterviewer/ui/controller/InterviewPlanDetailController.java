@@ -454,7 +454,7 @@ public class InterviewPlanDetailController implements ContextAwareController<Lon
     }
 
     private String modeText(InterviewMode value) {
-        return switch (value) { case FORMAL_SIMULATION -> "正式模拟"; case COACHING -> "教练训练"; case SCENARIO_SIMULATION -> "情境沙盘"; };
+        return switch (value) { case FORMAL_SIMULATION -> "正式模拟"; case COACHING -> "教练训练"; case SCENARIO_SIMULATION -> "情境沙盘"; case RE_TEST -> "复试"; };
     }
 
     private String pressureText(PressureLevel value) {

@@ -4,14 +4,12 @@ import com.inin.aiinterviewer.application.dto.InterviewPlanDto;
 import com.inin.aiinterviewer.application.dto.ResumeDto;
 import com.inin.aiinterviewer.application.dto.SaveInterviewPlanCommand;
 import com.inin.aiinterviewer.application.dto.CandidateProfileListItemDto;
-import com.inin.aiinterviewer.application.dto.DomainPackDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.exception.GlobalExceptionHandler;
 import com.inin.aiinterviewer.application.service.InterviewPlanService;
 import com.inin.aiinterviewer.application.service.ResumeService;
 import com.inin.aiinterviewer.application.service.CandidateProfileService;
-import com.inin.aiinterviewer.application.service.DomainPackService;
 import com.inin.aiinterviewer.application.service.KnowledgeDocumentService;
 import com.inin.aiinterviewer.application.service.InterviewPlanAssetService;
 import com.inin.aiinterviewer.application.service.InterviewPlanTransferService;
@@ -62,7 +60,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     private final ResumeService resumeService;
     private final CandidateProfileService profileService;
     private final KnowledgeDocumentService knowledgeService;
-    private final DomainPackService domainPackService;
     private final InterviewPlanAssetService assetService;
     private final InterviewPlanTransferService transferService;
     private final InterviewSessionService sessionService;
@@ -82,7 +79,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private AppSelect<CandidateProfileListItemDto> profileBox;
     @FXML private AppMultiSelect<String> knowledgeSelect;
     @FXML private TextField focusField;
-    @FXML private AppSelect<DomainPackDto> domainPackBox;
     @FXML private AppSelect<InterviewMode> modeBox;
     @FXML private AppSelect<InterviewerPersona> personaBox;
     @FXML private AppSelect<PressureLevel> pressureBox;
@@ -95,7 +91,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
     @FXML private Label summaryQuestionsLabel;
     @FXML private Label summaryProfileLabel;
     @FXML private Label summaryKnowledgeLabel;
-    @FXML private Label summaryDomainPackLabel;
     @FXML private Label summaryModeLabel;
     @FXML private Label summaryPressureLabel;
     @FXML private Label summaryScenarioRatioLabel;
@@ -127,7 +122,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             ResumeService resumeService,
             CandidateProfileService profileService,
             KnowledgeDocumentService knowledgeService,
-            DomainPackService domainPackService,
             InterviewPlanAssetService assetService,
             InterviewPlanTransferService transferService,
             InterviewSessionService sessionService,
@@ -141,7 +135,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         this.resumeService = resumeService;
         this.profileService = profileService;
         this.knowledgeService = knowledgeService;
-        this.domainPackService = domainPackService;
         this.assetService = assetService;
         this.transferService = transferService;
         this.sessionService = sessionService;
@@ -189,14 +182,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             }
             @Override public CandidateProfileListItemDto fromString(String value) { return null; }
         });
-        domainPackBox.setConverter(new StringConverter<>() {
-            @Override
-            public String toString(DomainPackDto value) {
-                return value == null ? "请选择岗位知识包" : value.displayName() + " · v" + value.version();
-            }
-            @Override public DomainPackDto fromString(String value) { return null; }
-        });
-        domainPackBox.getItems().setAll(domainPackService.list());
         resumeBox.getItems().setAll(resumeService.list(sessionState.requireCurrentUser().id()));
         profileBox.getItems().setAll(profileService.listConfirmed(sessionState.requireCurrentUser().id()));
         knowledgeSelect.getItems().setAll(knowledgeService.listCategories(
@@ -205,8 +190,13 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         jobTitleField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
         difficultyBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
         durationField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
+        durationField.focusedProperty().addListener((observable, oldValue, focused) -> {
+            if (!focused) rebalanceStages();
+        });
         questionCountField.textProperty().addListener((observable, oldValue, value) -> refreshSummary());
-        domainPackBox.valueProperty().addListener((observable, oldValue, value) -> refreshSummary());
+        questionCountField.focusedProperty().addListener((observable, oldValue, focused) -> {
+            if (!focused) rebalanceStages();
+        });
         modeBox.valueProperty().addListener((observable, oldValue, value) -> {
             if (value == InterviewMode.SCENARIO_SIMULATION
                     && Integer.valueOf(0).equals(scenarioRatioBox.getValue())) {
@@ -254,9 +244,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             durationField.setText("45");
             questionCountField.setText("15");
             applySettings(InterviewPlanSettings.defaults());
-            domainPackBox.getItems().stream()
-                    .filter(pack -> DomainPackService.DEFAULT_PACK_ID.equals(pack.id()))
-                    .findFirst().ifPresent(domainPackBox::setValue);
             applyStages(List.of("INTRODUCTION", "RESUME_REVIEW", "PROJECT_EXPERIENCE",
                     "TECHNICAL_DEEP_DIVE", "SYSTEM_DESIGN", "SUMMARY"));
             rebalanceStages();
@@ -411,8 +398,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         applyStages(plan.stages());
         if (!applyStageBlueprint(plan.rules().get("stageBlueprint"))) rebalanceStages();
         applySettings(InterviewPlanSettings.fromRules(plan.rules()));
-        domainPackBox.getItems().stream().filter(pack -> pack.id().equals(plan.domainPackId()))
-                .findFirst().ifPresent(domainPackBox::setValue);
     }
 
     private SaveInterviewPlanCommand commandFromForm() {
@@ -444,11 +429,10 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
                     strictnessBox.getValue(), scenarioRatioBox.getValue() == null
                     ? 0 : scenarioRatioBox.getValue());
             Map<String, Object> rules = settings.mergeInto(baseRules);
-            DomainPackDto domainPack = domainPackBox.getValue();
             return new SaveInterviewPlanCommand(nameField.getText(), jobTitleField.getText(),
                     jobDescriptionArea.getText(), difficultyBox.getValue(), duration, questions,
                     resume == null ? null : resume.id(), profile == null ? null : profile.id(),
-                    List.of(), rules, selectedStages(), domainPack == null ? null : domainPack.id(), categories);
+                    List.of(), rules, selectedStages(), null, categories);
         } catch (NumberFormatException exception) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED);
         }
@@ -467,10 +451,6 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
         if (summaryKnowledgeLabel != null && knowledgeSelect != null) {
             int count = knowledgeSelect.getSelectedItems().size();
             summaryKnowledgeLabel.setText(count == 0 ? "未选择" : count + " 个分类");
-        }
-        if (summaryDomainPackLabel != null && domainPackBox != null) {
-            DomainPackDto pack = domainPackBox.getValue();
-            summaryDomainPackLabel.setText(pack == null ? "待选择" : pack.displayName() + " · v" + pack.version());
         }
         if (summaryModeLabel != null) {
             summaryModeLabel.setText(modeBox.getValue() == null ? "待选择" : modeText(modeBox.getValue()));
@@ -771,6 +751,7 @@ public class InterviewPlanEditorController implements ContextAwareController<Lon
             case FORMAL_SIMULATION -> "正式模拟";
             case COACHING -> "教练训练";
             case SCENARIO_SIMULATION -> "情境沙盘";
+            case RE_TEST -> "复试";
         };
     }
 

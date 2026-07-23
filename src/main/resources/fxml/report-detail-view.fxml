@@ -4,80 +4,151 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import com.inin.aiinterviewer.ui.component.MarkdownView?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.InterviewReportController"
             styleClass="page-content">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
-            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header report-header">
+            <padding><Insets top="18" right="28" bottom="16" left="28"/></padding>
             <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回面试">
                 <tooltip><Tooltip text="返回面试"/></tooltip>
             </Button>
-            <VBox spacing="4">
-                <Label fx:id="titleLabel" text="面试报告" styleClass="page-title"/>
+            <VBox spacing="3">
+                <HBox alignment="CENTER_LEFT" spacing="9">
+                    <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="22" styleClass="report-header-icon"/>
+                    <Label fx:id="titleLabel" text="面试报告" styleClass="page-title"/>
+                </HBox>
                 <Label text="评分与报告均基于本次已保存问答" styleClass="secondary-text"/>
             </VBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Button text="查看本次问答" onAction="#openTranscript" styleClass="secondary-button"/>
-            <Button text="复制 Markdown" onAction="#copyMarkdown" styleClass="secondary-button"/>
-            <Button text="导出 .md" onAction="#exportMarkdown" styleClass="primary-button"/>
+            <Button text="查看本次问答" onAction="#openTranscript" styleClass="secondary-button">
+                <graphic><FontIcon iconLiteral="mdi2c-chat-outline" iconSize="17"/></graphic>
+            </Button>
+            <Button text="复制 Markdown" onAction="#copyMarkdown" styleClass="secondary-button">
+                <graphic><FontIcon iconLiteral="mdi2c-content-copy" iconSize="17"/></graphic>
+            </Button>
+            <Button text="导出 .md" onAction="#exportMarkdown" styleClass="primary-button">
+                <graphic><FontIcon iconLiteral="mdi2d-download-outline" iconSize="17"/></graphic>
+            </Button>
         </HBox>
     </top>
     <center>
         <HBox spacing="20" styleClass="editor-page">
             <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
             <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
-                        minWidth="320" prefWidth="320" maxWidth="360"
+                        minWidth="336" prefWidth="336" maxWidth="380"
                         maxHeight="Infinity" HBox.hgrow="NEVER"
                         styleClass="content-card report-directory-scroll">
-                <VBox spacing="14" prefWidth="300" minWidth="280" styleClass="report-directory">
-                    <padding><Insets top="22" right="22" bottom="22" left="22"/></padding>
-                <Label text="报告目录" styleClass="module-title"/>
-                <Button text="报告首页" onAction="#scrollHome" maxWidth="Infinity" styleClass="report-directory-button"/>
-                <Button text="能力评分" onAction="#scrollScores" maxWidth="Infinity" styleClass="report-directory-button"/>
-                <Button text="综合评价" onAction="#scrollSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
-                <Button text="问答摘要" onAction="#scrollTranscriptSummary" maxWidth="Infinity" styleClass="report-directory-button"/>
-                <Button fx:id="sourceDirectoryButton" text="参考依据" onAction="#scrollSources"
-                        maxWidth="Infinity" styleClass="report-directory-button"/>
-                <Separator/>
-                <Label text="综合得分" styleClass="summary-label"/>
-                <Label fx:id="overallScoreLabel" text="0 / 100" styleClass="report-score" wrapText="true"/>
-                <Label fx:id="overallConfidenceLabel" text="" styleClass="secondary-text"/>
-                <Separator/>
-                <GridPane hgap="18" vgap="14">
-                    <Label text="技术基础" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="technicalScoreLabel" text="0 分" GridPane.rowIndex="0" GridPane.columnIndex="1" styleClass="summary-value"/>
-                    <Label text="问题解决" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="problemSolvingScoreLabel" text="0 分" GridPane.rowIndex="1" GridPane.columnIndex="1" styleClass="summary-value"/>
-                    <Label text="项目经验" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="projectScoreLabel" text="0 分" GridPane.rowIndex="2" GridPane.columnIndex="1" styleClass="summary-value"/>
-                    <Label text="系统设计" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="systemDesignScoreLabel" text="0 分" GridPane.rowIndex="3" GridPane.columnIndex="1" styleClass="summary-value"/>
-                    <Label text="沟通表达" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="communicationScoreLabel" text="0 分" GridPane.rowIndex="4" GridPane.columnIndex="1" styleClass="summary-value"/>
-                    <Label text="综合能力" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="summary-label"/>
-                    <Label fx:id="comprehensiveScoreLabel" text="0 分" GridPane.rowIndex="5" GridPane.columnIndex="1" styleClass="summary-value"/>
-                </GridPane>
-                <Separator/>
-                <Label text="评分证据定位" styleClass="summary-label"/>
-                <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="150" maxHeight="190"
-                            VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
-                    <content>
-                        <VBox fx:id="evidenceNavigationContainer" spacing="6" fillWidth="true"/>
-                    </content>
-                </ScrollPane>
-                <Separator/>
-                <Label text="分支复盘" styleClass="summary-label"/>
-                <VBox fx:id="branchNavigationContainer" spacing="6" fillWidth="true"/>
-                <Separator/>
-                <Label text="专项训练建议" styleClass="summary-label"/>
-                <VBox fx:id="trainingRecommendationContainer" spacing="5" fillWidth="true"/>
-                <Button fx:id="trainingPlanButton" text="创建专项训练方案" onAction="#createTrainingPlan"
-                        maxWidth="Infinity" styleClass="primary-button"/>
-                <Separator/>
-                    <Label text="引用定位" styleClass="summary-label"/>
+                <VBox spacing="14" prefWidth="312" minWidth="292" styleClass="report-directory">
+                    <padding><Insets top="22" right="20" bottom="22" left="20"/></padding>
+
+                    <Label text="报告目录" styleClass="module-title"/>
+                    <Button text="报告首页" onAction="#scrollHome" maxWidth="Infinity" styleClass="report-directory-button">
+                        <graphic><FontIcon iconLiteral="mdi2h-home-outline" iconSize="17" styleClass="dir-icon"/></graphic>
+                    </Button>
+                    <Button text="能力评分" onAction="#scrollScores" maxWidth="Infinity" styleClass="report-directory-button">
+                        <graphic><FontIcon iconLiteral="mdi2c-chart-bar" iconSize="17" styleClass="dir-icon"/></graphic>
+                    </Button>
+                    <Button text="综合评价" onAction="#scrollSummary" maxWidth="Infinity" styleClass="report-directory-button">
+                        <graphic><FontIcon iconLiteral="mdi2c-comment-text-outline" iconSize="17" styleClass="dir-icon"/></graphic>
+                    </Button>
+                    <Button text="问答摘要" onAction="#scrollTranscriptSummary" maxWidth="Infinity" styleClass="report-directory-button">
+                        <graphic><FontIcon iconLiteral="mdi2m-message-text-outline" iconSize="17" styleClass="dir-icon"/></graphic>
+                    </Button>
+                    <Button fx:id="sourceDirectoryButton" text="参考依据" onAction="#scrollSources" maxWidth="Infinity" styleClass="report-directory-button">
+                        <graphic><FontIcon iconLiteral="mdi2b-bookmark-outline" iconSize="17" styleClass="dir-icon"/></graphic>
+                    </Button>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <!-- 综合得分卡片 -->
+                    <VBox spacing="10" styleClass="report-score-card">
+                        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
+                        <Label text="综合得分" styleClass="report-score-card-title"/>
+                        <HBox alignment="CENTER_LEFT" spacing="14">
+                            <StackPane styleClass="report-score-ring">
+                                <Label fx:id="overallScoreLabel" text="0" styleClass="report-score"/>
+                            </StackPane>
+                            <VBox spacing="4">
+                                <Label text="/ 100" styleClass="report-score-denominator"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <!-- 五维能力 -->
+                    <Label text="能力维度" styleClass="report-section-title">
+                        <graphic><FontIcon iconLiteral="mdi2c-chart-donut" iconSize="16" styleClass="section-icon"/></graphic>
+                    </Label>
+                    <VBox fx:id="dimensionContainer" spacing="10" fillWidth="true" styleClass="report-dimensions">
+                        <HBox styleClass="report-dimension-row">
+                            <Label text="技术基础" styleClass="report-dimension-name"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="technicalScoreLabel" text="0 分" styleClass="report-dimension-value"/>
+                        </HBox>
+                        <HBox styleClass="report-dimension-row">
+                            <Label text="问题解决" styleClass="report-dimension-name"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="problemSolvingScoreLabel" text="0 分" styleClass="report-dimension-value"/>
+                        </HBox>
+                        <HBox styleClass="report-dimension-row">
+                            <Label text="项目经验" styleClass="report-dimension-name"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="projectScoreLabel" text="0 分" styleClass="report-dimension-value"/>
+                        </HBox>
+                        <HBox styleClass="report-dimension-row">
+                            <Label text="沟通表达" styleClass="report-dimension-name"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="communicationScoreLabel" text="0 分" styleClass="report-dimension-value"/>
+                        </HBox>
+                        <HBox styleClass="report-dimension-row">
+                            <Label text="综合能力" styleClass="report-dimension-name"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label fx:id="comprehensiveScoreLabel" text="0 分" styleClass="report-dimension-value"/>
+                        </HBox>
+                    </VBox>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <Label text="评分证据定位" styleClass="report-section-title">
+                        <graphic><FontIcon iconLiteral="mdi2m-magnify-plus-outline" iconSize="16" styleClass="section-icon"/></graphic>
+                    </Label>
+                    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="150" maxHeight="190"
+                                VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
+                        <content>
+                            <VBox fx:id="evidenceNavigationContainer" spacing="6" fillWidth="true"/>
+                        </content>
+                    </ScrollPane>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <Label text="分支复盘" styleClass="report-section-title">
+                        <graphic><FontIcon iconLiteral="mdi2s-source-branch" iconSize="16" styleClass="section-icon"/></graphic>
+                    </Label>
+                    <VBox fx:id="branchNavigationContainer" spacing="6" fillWidth="true"/>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <Label text="专项训练建议" styleClass="report-section-title">
+                        <graphic><FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="16" styleClass="section-icon"/></graphic>
+                    </Label>
+                    <VBox fx:id="trainingRecommendationContainer" spacing="5" fillWidth="true"/>
+                    <Button fx:id="trainingPlanButton" text="创建专项训练方案" onAction="#createTrainingPlan"
+                            maxWidth="Infinity" styleClass="primary-button"/>
+                    <Button fx:id="reTestButton" text="进入复试" onAction="#createReTestPlan"
+                            maxWidth="Infinity" styleClass="primary-button" managed="false" visible="false"/>
+                    <Label fx:id="reTestHintLabel" text="" styleClass="secondary-text" wrapText="true"
+                           managed="false" visible="false"/>
+
+                    <Separator styleClass="report-divider"/>
+
+                    <Label text="引用定位" styleClass="report-section-title">
+                        <graphic><FontIcon iconLiteral="mdi2l-link-variant" iconSize="16" styleClass="section-icon"/></graphic>
+                    </Label>
                     <ScrollPane fitToWidth="true" hbarPolicy="NEVER" prefHeight="130" maxHeight="160"
                                 VBox.vgrow="ALWAYS" styleClass="report-citation-scroll">
                         <content>

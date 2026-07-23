@@ -17,6 +17,7 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Scope;
@@ -38,7 +39,13 @@ public class CareerPlanningController implements ContextAwareController<Object> 
     private CareerPlanningService careerPlanningService;
 
     @FXML
-    private TabPane tabPane;
+    private VBox tabPlanHeader;
+    @FXML
+    private VBox tabResumeHeader;
+    @FXML
+    private VBox planTabContent;
+    @FXML
+    private VBox resumeTabContent;
 
     // --- Career Planning fields ---
     @FXML
@@ -164,6 +171,34 @@ public class CareerPlanningController implements ContextAwareController<Object> 
     }
 
     @FXML
+    private void switchToPlanTab() {
+        planTabContent.setVisible(true);
+        planTabContent.setManaged(true);
+        planTabContent.getStyleClass().remove("career-tab-content-hidden");
+        planTabContent.getStyleClass().add("career-tab-content-visible");
+        resumeTabContent.setVisible(false);
+        resumeTabContent.setManaged(false);
+        resumeTabContent.getStyleClass().remove("career-tab-content-visible");
+        resumeTabContent.getStyleClass().add("career-tab-content-hidden");
+        tabPlanHeader.getStyleClass().add("career-tab-active");
+        tabResumeHeader.getStyleClass().remove("career-tab-active");
+    }
+
+    @FXML
+    private void switchToResumeTab() {
+        resumeTabContent.setVisible(true);
+        resumeTabContent.setManaged(true);
+        resumeTabContent.getStyleClass().remove("career-tab-content-hidden");
+        resumeTabContent.getStyleClass().add("career-tab-content-visible");
+        planTabContent.setVisible(false);
+        planTabContent.setManaged(false);
+        planTabContent.getStyleClass().remove("career-tab-content-visible");
+        planTabContent.getStyleClass().add("career-tab-content-hidden");
+        tabResumeHeader.getStyleClass().add("career-tab-active");
+        tabPlanHeader.getStyleClass().remove("career-tab-active");
+    }
+
+    @FXML
     private void showPlanHistory() {
         navigator.showSubRoute(Route.CAREER_PLAN_HISTORY, null);
     }
@@ -175,7 +210,7 @@ public class CareerPlanningController implements ContextAwareController<Object> 
 
     private void showWarning(String message) {
         AppDialogs.showMessage(
-                tabPane.getScene() == null ? null : tabPane.getScene().getWindow(),
+                planTabContent.getScene() == null ? null : planTabContent.getScene().getWindow(),
                 "请检查输入",
                 "需要补充信息",
                 message,

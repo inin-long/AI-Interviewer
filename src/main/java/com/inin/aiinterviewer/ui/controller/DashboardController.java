@@ -247,7 +247,6 @@ public class DashboardController {
         dimensions.put("technical", "技术能力");
         dimensions.put("problemSolving", "问题解决");
         dimensions.put("project", "项目经验");
-        dimensions.put("systemDesign", "系统设计");
         dimensions.put("communication", "沟通能力");
 
         dimensionList.getChildren().clear();

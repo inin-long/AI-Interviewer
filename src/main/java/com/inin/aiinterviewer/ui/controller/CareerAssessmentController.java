@@ -16,7 +16,11 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.kordamp.ikonli.javafx.FontIcon;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -39,6 +43,9 @@ public class CareerAssessmentController {
     @FXML private VBox questionHost;
     @FXML private Button submitButton;
     @FXML private Label hintLabel;
+    @FXML private Label progressLabel;
+    @FXML private VBox emptyState;
+    @FXML private VBox hintBar;
 
     private final Map<Long, ToggleGroup> groups = new LinkedHashMap<>();
     private List<AssessmentQuestionDto> currentQuestions = new ArrayList<>();
@@ -61,15 +68,49 @@ public class CareerAssessmentController {
     @FXML
     private void initialize() {
         templateListView.setCellFactory(list -> new ListCell<>() {
+            private final VBox root = new VBox(4);
+            private final HBox titleRow = new HBox(8);
+            private final FontIcon icon = new FontIcon();
+            private final Label titleLabel = new Label();
+            private final Label descLabel = new Label();
+
+            {
+                root.getStyleClass().add("assessment-template-cell");
+                titleRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                titleRow.getChildren().addAll(icon, titleLabel);
+                root.getChildren().addAll(titleRow, descLabel);
+                icon.setIconSize(20);
+                icon.getStyleClass().add("assessment-template-icon");
+                titleLabel.getStyleClass().add("assessment-template-title");
+                descLabel.getStyleClass().add("assessment-template-desc");
+                descLabel.setWrapText(true);
+                descLabel.setMaxWidth(Region.USE_PREF_SIZE);
+                descLabel.prefWidthProperty().bind(list.widthProperty().subtract(52));
+                root.setFillWidth(true);
+                root.setMaxWidth(Region.USE_PREF_SIZE);
+                root.prefWidthProperty().bind(list.widthProperty().subtract(8));
+            }
+
             @Override
             protected void updateItem(AssessmentTemplateDto item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty || item == null) {
                     setText(null);
+                    setGraphic(null);
                     return;
                 }
-                setText(item.title());
-                setWrapText(true);
+                // Choose icon based on code
+                String code = item.code();
+                if (code != null && code.toLowerCase().contains("mbti")) {
+                    icon.setIconLiteral("mdi2b-brain");
+                } else if (code != null && (code.toLowerCase().contains("holland") || code.toLowerCase().contains("riasec"))) {
+                    icon.setIconLiteral("mdi2c-compass-outline");
+                } else {
+                    icon.setIconLiteral("mdi2c-clipboard-text-outline");
+                }
+                titleLabel.setText(item.title());
+                descLabel.setText(item.description() != null ? item.description() : "");
+                setGraphic(root);
             }
         });
         templateListView.getSelectionModel().selectedItemProperty().addListener((obs, old, value) -> {
@@ -99,7 +140,7 @@ public class CareerAssessmentController {
             }
         }
         if (indices.contains(-1)) {
-            hintLabel.setText("还有题目未作答，请完成全部题目后再提交。");
+            showHint("还有题目未作答，请完成全部题目后再提交。");
             return;
         }
         try {
@@ -116,27 +157,94 @@ public class CareerAssessmentController {
         currentQuestions = assessmentService.getQuestions(template.code());
         groups.clear();
         questionHost.getChildren().clear();
-        hintLabel.setText(template.description());
+
+        // Hide empty state
+        emptyState.setVisible(false);
+        emptyState.setManaged(false);
+
+        // Show hint bar with template description
+        if (template.description() != null && !template.description().isBlank()) {
+            hintLabel.setText(template.description());
+            hintBar.setVisible(true);
+            hintBar.setManaged(true);
+        } else {
+            hintBar.setVisible(false);
+            hintBar.setManaged(false);
+        }
+
+        int total = currentQuestions.size();
+        progressLabel.setText("共 " + total + " 题");
+
         int index = 1;
         for (AssessmentQuestionDto question : currentQuestions) {
             ToggleGroup group = new ToggleGroup();
             groups.put(question.id(), group);
+
+            // Question card with left accent border
             VBox block = new VBox(8);
-            block.getStyleClass().add("content-card");
-            block.setPadding(new javafx.geometry.Insets(16, 18, 16, 18));
-            Label prompt = new Label(index + ". " + question.content());
-            prompt.getStyleClass().add("field-label");
+            block.getStyleClass().addAll("content-card", "question-card");
+            block.setPadding(new javafx.geometry.Insets(12, 16, 10, 16));
+
+            // Question number + prompt row
+            HBox headerRow = new HBox(10);
+            headerRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+            // Number badge
+            VBox numBadge = new VBox();
+            numBadge.setAlignment(javafx.geometry.Pos.CENTER);
+            numBadge.setPrefSize(24, 24);
+            numBadge.setMinSize(24, 24);
+            numBadge.setMaxSize(24, 24);
+            numBadge.getStyleClass().add("question-number-badge");
+            Label numLabel = new Label(String.valueOf(index));
+            numLabel.getStyleClass().add("question-number-text");
+            numBadge.getChildren().add(numLabel);
+
+            Label prompt = new Label(question.content());
+            prompt.getStyleClass().add("question-prompt-text");
             prompt.setWrapText(true);
-            block.getChildren().add(prompt);
+            HBox.setHgrow(prompt, Priority.ALWAYS);
+
+            headerRow.getChildren().addAll(numBadge, prompt);
+            block.getChildren().add(headerRow);
+
+            // Options
+            VBox optionsBox = new VBox(4);
+            optionsBox.getStyleClass().add("question-options-box");
             for (int i = 0; i < question.options().size(); i++) {
+                HBox optionRow = new HBox(10);
+                optionRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                optionRow.getStyleClass().add("question-option-row");
+
                 RadioButton option = new RadioButton(question.options().get(i).label());
                 option.setToggleGroup(group);
                 option.setWrapText(true);
-                block.getChildren().add(option);
+                option.getStyleClass().add("question-option-radio");
+                HBox.setHgrow(option, Priority.ALWAYS);
+
+                option.selectedProperty().addListener((obs, oldVal, selected) -> {
+                    if (Boolean.TRUE.equals(selected)) {
+                        if (!optionRow.getStyleClass().contains("selected")) {
+                            optionRow.getStyleClass().add("selected");
+                        }
+                    } else {
+                        optionRow.getStyleClass().remove("selected");
+                    }
+                });
+
+                optionRow.getChildren().add(option);
+                optionsBox.getChildren().add(optionRow);
             }
+            block.getChildren().add(optionsBox);
             questionHost.getChildren().add(block);
             index++;
         }
         submitButton.setDisable(false);
+    }
+
+    private void showHint(String message) {
+        hintLabel.setText(message);
+        hintBar.setVisible(true);
+        hintBar.setManaged(true);
     }
 }

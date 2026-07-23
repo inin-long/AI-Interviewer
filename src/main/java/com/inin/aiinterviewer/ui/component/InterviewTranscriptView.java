@@ -17,6 +17,8 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -71,7 +73,7 @@ public class InterviewTranscriptView extends ScrollPane {
         if (questionNumber <= 0) throw new IllegalArgumentException("Question number must be positive");
         removeEmptyState();
         MessageCard card = createCard(new InterviewMessageDto(
-                Integer.MAX_VALUE, Message.Role.ASSISTANT, "", LocalDateTime.now(), false, List.of()),
+                Integer.MAX_VALUE, Message.Role.ASSISTANT, "", LocalDateTime.now(ZoneOffset.UTC), false, List.of()),
                 questionNumber);
         streamingContent = card.content();
         questionNodes.put(questionNumber, card.root());
@@ -84,7 +86,7 @@ public class InterviewTranscriptView extends ScrollPane {
         removeEmptyState();
         MessageCard card = createCard(new InterviewMessageDto(
                 Integer.MAX_VALUE - 1, Message.Role.USER, answer.strip(),
-                LocalDateTime.now(), false, List.of()), questionNodes.size());
+                LocalDateTime.now(ZoneOffset.UTC), false, List.of()), questionNodes.size());
         messageContainer.getChildren().add(card.root());
         scrollToBottom();
     }
@@ -96,7 +98,11 @@ public class InterviewTranscriptView extends ScrollPane {
     }
 
     public void scrollToBottom() {
-        Platform.runLater(() -> setVvalue(1));
+        Platform.runLater(() -> {
+            applyCss();
+            layout();
+            Platform.runLater(() -> setVvalue(1.0));
+        });
     }
 
     public void scrollToQuestion(int questionNumber) {
@@ -153,7 +159,7 @@ public class InterviewTranscriptView extends ScrollPane {
 
         Label author = new Label(assistant ? "AI 面试官" : "你的回答");
         author.getStyleClass().add("transcript-author");
-        Label time = new Label(message.createTime() == null ? "" : TIME_FORMAT.format(message.createTime()));
+        Label time = new Label(formatLocalTime(message.createTime()));
         time.getStyleClass().add("transcript-time");
         HBox header = new HBox(8, author, time);
         header.setAlignment(Pos.CENTER_LEFT);
@@ -217,6 +223,13 @@ public class InterviewTranscriptView extends ScrollPane {
                 && messageContainer.getChildren().getFirst().getStyleClass().contains("transcript-empty")) {
             messageContainer.getChildren().clear();
         }
+    }
+
+    private static String formatLocalTime(LocalDateTime value) {
+        if (value == null) return "";
+        return value.atZone(ZoneOffset.UTC)
+                .withZoneSameInstant(ZoneId.systemDefault())
+                .format(TIME_FORMAT);
     }
 
     private record MessageCard(HBox root, Label content) {

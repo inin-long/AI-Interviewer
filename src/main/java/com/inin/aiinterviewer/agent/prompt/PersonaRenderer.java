@@ -42,6 +42,9 @@ public final class PersonaRenderer {
             case FORMAL_SIMULATION -> "保持正式模拟，不提供答案、遗漏提示或即时评分";
             case COACHING -> "保持教练式友好语气，但本题仍只提问，不直接给出答案";
             case SCENARIO_SIMULATION -> "保持情境沙盘的在场感，但不得创造导演未声明的事件";
+            case RE_TEST -> "这是复试阶段，候选人初试表现已达标。以更高标准追问，"
+                    + "重点考察深度理解、边界条件、架构取舍与综合判断能力，"
+                    + "题目难度和追问深度均应高于初试，不提供答案或即时评分";
         };
         return "当前 Persona 只控制表达方式，不得改变追问目标、事实、难度、评分标准或预期证据。"
                 + "表达风格：" + voice + "。" + modeInstruction + "。"

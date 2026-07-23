@@ -8,7 +8,6 @@ public class EvaluationEntity {
     private int technicalScore;
     private int problemSolvingScore;
     private int projectScore;
-    private int systemDesignScore;
     private int communicationScore;
     private int comprehensiveScore;
     private String contentJson;
@@ -27,8 +26,6 @@ public class EvaluationEntity {
     public void setProblemSolvingScore(int problemSolvingScore) { this.problemSolvingScore = problemSolvingScore; }
     public int getProjectScore() { return projectScore; }
     public void setProjectScore(int projectScore) { this.projectScore = projectScore; }
-    public int getSystemDesignScore() { return systemDesignScore; }
-    public void setSystemDesignScore(int systemDesignScore) { this.systemDesignScore = systemDesignScore; }
     public int getCommunicationScore() { return communicationScore; }
     public void setCommunicationScore(int communicationScore) { this.communicationScore = communicationScore; }
     public int getComprehensiveScore() { return comprehensiveScore; }

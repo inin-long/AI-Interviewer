@@ -22,3 +22,6 @@ Thumbs.db
 # WorkBuddy local data
 .workbuddy/
 
+# Trae / other local IDE config
+.trae/
+

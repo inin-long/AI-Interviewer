@@ -15,11 +15,12 @@
     <center>
         <HBox alignment="CENTER" spacing="0" styleClass="auth-main">
             <padding><Insets right="72" left="72"/></padding>
-            <fx:include fx:id="authShowcase" source="auth-showcase.fxml"/>
             <Region minWidth="36" prefWidth="36" maxWidth="160" HBox.hgrow="ALWAYS"/>
+            <fx:include fx:id="authShowcase" source="auth-showcase.fxml"/>
+            <Region minWidth="36" prefWidth="36" maxWidth="36"/>
 
-            <VBox minWidth="480" prefWidth="480" maxWidth="480"
-                  minHeight="530" prefHeight="530" maxHeight="530"
+            <VBox minWidth="440" prefWidth="440" maxWidth="440"
+                  minHeight="600" prefHeight="600" maxHeight="600"
                   spacing="0" styleClass="auth-form-card, login-form-card">
                 <padding><Insets top="24" right="32" bottom="20" left="32"/></padding>
                 <Label text="登录账户" styleClass="auth-form-title"/>
@@ -86,12 +87,13 @@
                     <FontIcon iconLiteral="mdi2i-information-outline" iconSize="19"/>
                     <Label text="使用本地账号登录，所有数据仅保存在本机。" styleClass="auth-card-note-text"/>
                 </HBox>
+
+                <HBox alignment="CENTER" minHeight="28" prefHeight="28" styleClass="auth-card-footer">
+                    <padding><Insets top="14"/></padding>
+                    <Label text="AI Interviewer   v1.0.0   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
+                </HBox>
             </VBox>
+            <Region minWidth="36" prefWidth="36" maxWidth="160" HBox.hgrow="ALWAYS"/>
         </HBox>
     </center>
-    <bottom>
-        <HBox alignment="CENTER" minHeight="28" prefHeight="28" maxHeight="28">
-            <Label text="AI Interviewer   v1.0.0   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
-        </HBox>
-    </bottom>
 </BorderPane>

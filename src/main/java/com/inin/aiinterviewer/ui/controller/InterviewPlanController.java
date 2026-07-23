@@ -431,18 +431,21 @@ public class InterviewPlanController {
             Button start = action("开始面试", "mdi2p-play-outline", true);
             start.setMinWidth(94);
             start.setOnAction(event -> start(plan));
-            Button edit = action("编辑", "mdi2p-pencil-outline", false);
-            edit.setMinWidth(64);
+            Button edit = new Button("编辑");
+            edit.getStyleClass().add("plan-row-action");
+            edit.setMinWidth(52);
             edit.setOnAction(event -> {
                 getListView().getSelectionModel().select(plan);
                 editSelected();
             });
-            Button detail = action("", "mdi2d-dots-vertical", false);
-            detail.setMinWidth(36);
+            Button detail = new Button("详情");
+            detail.getStyleClass().add("plan-row-action");
+            detail.setMinWidth(52);
+            detail.setOnAction(event -> openDetail(plan));
             detail.setOnAction(event -> openDetail(plan));
             VBox operations = new VBox(13, updated, new HBox(9, start, edit, detail));
             operations.setAlignment(Pos.CENTER_RIGHT);
-            operations.setMinWidth(220);
+            operations.setMinWidth(245);
 
             HBox card = new HBox(14, coverBox, identity, operations);
             card.setAlignment(Pos.CENTER_LEFT);

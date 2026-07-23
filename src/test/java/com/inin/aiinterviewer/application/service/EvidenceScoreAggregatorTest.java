@@ -31,12 +31,11 @@ class EvidenceScoreAggregatorTest {
                 new EvidenceLedger(List.of(positive, insufficient)),
                 ClaimLedger.empty(), "基于证据的评价");
 
-        assertThat(payload.systemDesignScore()).isEqualTo(86);
         assertThat(payload.technicalScore()).isEqualTo(86);
         assertThat(payload.problemSolvingScore()).isEqualTo(50);
         assertThat(payload.overallScore()).isEqualTo(86);
         assertThat(payload.overallScored()).isTrue();
-        assertThat(payload.scoreEvidence().get(EvidenceScoreAggregator.SYSTEM_DESIGN))
+        assertThat(payload.scoreEvidence().get(EvidenceScoreAggregator.TECHNICAL))
                 .satisfies(trace -> {
                     assertThat(trace.scored()).isTrue();
                     assertThat(trace.evidenceIds()).containsExactly("e-positive", "e-insufficient");
@@ -76,7 +75,7 @@ class EvidenceScoreAggregatorTest {
                 ClaimLedger.empty(), "缺少主张关联");
 
         assertThat(payload.overallScored()).isFalse();
-        assertThat(payload.scoreEvidence().get(EvidenceScoreAggregator.SYSTEM_DESIGN))
+        assertThat(payload.scoreEvidence().get(EvidenceScoreAggregator.TECHNICAL))
                 .satisfies(trace -> {
                     assertThat(trace.scored()).isFalse();
                     assertThat(trace.rationale()).contains("缺少主张关联");
