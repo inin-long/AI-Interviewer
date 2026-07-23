@@ -14,22 +14,14 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
-import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
-import org.kordamp.ikonli.javafx.FontIcon;
+import javafx.scene.layout.*;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
@@ -38,6 +30,8 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -87,7 +81,6 @@ public class InterviewHistoryController {
     @FXML private Label detailScoreLabel;
     @FXML private Label detailReportLabel;
     @FXML private Label detailStagesLabel;
-    @FXML private Label detailSummaryLabel;
     @FXML private Button reportDetailButton;
     @FXML private Button continueDialogButton;
 
@@ -222,7 +215,6 @@ public class InterviewHistoryController {
             detailScoreLabel.setText("—");
             detailReportLabel.setText("—");
             detailStagesLabel.setText("—");
-            detailSummaryLabel.setText("请选择一条记录以查看摘要");
             reportDetailButton.setDisable(true);
             continueDialogButton.setDisable(true);
             return;
@@ -238,9 +230,6 @@ public class InterviewHistoryController {
         detailScoreLabel.setText(item.score() == null ? "—" : item.score() + " 分");
         detailReportLabel.setText(Optional.ofNullable(item.reportStatusText()).orElse("未生成"));
         detailStagesLabel.setText(stagesText(item));
-        detailSummaryLabel.setText(Optional.ofNullable(item.interviewSummary())
-                .filter(text -> !text.isBlank())
-                .orElse("本场面试尚未生成结构化摘要。"));
         reportDetailButton.setDisable(!item.reportAvailable());
         continueDialogButton.setDisable(false);
     }
@@ -391,7 +380,8 @@ public class InterviewHistoryController {
     }
 
     private String timeText(LocalDateTime time) {
-        return time == null ? "—" : TIME_FORMAT.format(time);
+        if (time == null) return "—";
+        return TIME_FORMAT.format(time.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault()));
     }
 
     private String stagesText(InterviewHistoryItemDto item) {
@@ -418,10 +408,10 @@ public class InterviewHistoryController {
 
     private String relativeDate(LocalDateTime time) {
         if (time == null) return "—";
-        LocalDate date = time.toLocalDate();
+        LocalDate date = time.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault()).toLocalDate();
         if (date.equals(LocalDate.now())) return "今天";
         if (date.equals(LocalDate.now().minusDays(1))) return "昨天";
-        return DATE_FORMAT.format(date);
+        return DATE_FORMAT.format(time.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault()));
     }
 
     private void showError(RuntimeException exception) {
@@ -455,7 +445,48 @@ public class InterviewHistoryController {
             Label statusLabel = new Label(statusText(item.status()));
             statusLabel.getStyleClass().add("history-row-status");
             applyStatusTone(statusLabel, statusText(item.status()));
-            HBox titleRow = new HBox(8, title, statusLabel);
+
+            Button recordButton = new Button("查看记录");
+            recordButton.getStyleClass().add("history-row-action");
+            recordButton.setOnAction(event -> {
+                event.consume();
+                getListView().getSelectionModel().select(item);
+                openDetail();
+            });
+
+            Button reportButton = new Button("查看报告");
+            reportButton.getStyleClass().add("history-row-action");
+            reportButton.setDisable(!item.reportAvailable());
+            reportButton.setOnAction(event -> {
+                event.consume();
+                getListView().getSelectionModel().select(item);
+                openReport();
+            });
+
+            Button continueButton = new Button("继续面试");
+            continueButton.getStyleClass().add("history-row-action");
+            boolean canContinue = item.status() == InterviewStatus.RUNNING
+                    || item.status() == InterviewStatus.PAUSED
+                    || item.status() == InterviewStatus.CREATED;
+            continueButton.setDisable(!canContinue);
+            continueButton.setOnAction(event -> {
+                event.consume();
+                getListView().getSelectionModel().select(item);
+                continueInterview();
+            });
+
+            Button deleteButton = new Button("删除记录");
+            deleteButton.getStyleClass().addAll("history-row-action", "history-row-danger");
+            deleteButton.setOnAction(event -> {
+                event.consume();
+                getListView().getSelectionModel().select(item);
+                deleteRecord();
+            });
+
+            HBox actionRow = new HBox(8, recordButton, reportButton, continueButton, deleteButton);
+            actionRow.setAlignment(Pos.CENTER_RIGHT);
+
+            HBox titleRow = new HBox(8, title);
             titleRow.setAlignment(Pos.CENTER_LEFT);
             titleRow.setMinWidth(0);
             titleRow.setMaxWidth(Double.MAX_VALUE);
@@ -468,6 +499,18 @@ public class InterviewHistoryController {
             meta.setTextOverrun(OverrunStyle.ELLIPSIS);
             meta.setMinWidth(0);
             meta.setMaxWidth(Double.MAX_VALUE);
+
+            HBox leftPart = new HBox(meta);
+            leftPart.setAlignment(Pos.CENTER_LEFT);
+            HBox.setHgrow(leftPart, Priority.ALWAYS);
+
+            HBox rightPart = new HBox(8, statusLabel, actionRow);
+            rightPart.setAlignment(Pos.CENTER_RIGHT);
+
+            HBox metaRow = new HBox(0, leftPart, rightPart);
+            metaRow.setAlignment(Pos.CENTER);
+            metaRow.setMinWidth(0);
+            metaRow.setMaxWidth(Double.MAX_VALUE);
 
             Label resume = new Label("使用简历：" + (item.resumeName() == null ? "未关联" : item.resumeName()));
             resume.getStyleClass().add("history-row-resume");
@@ -504,61 +547,14 @@ public class InterviewHistoryController {
             scoreAndTags.setMinWidth(0);
             scoreAndTags.setMaxWidth(Double.MAX_VALUE);
 
-            VBox identity = new VBox(5, titleRow, meta, resume, scoreAndTags);
+            VBox identity = new VBox(3, titleRow, metaRow, resume, scoreAndTags);
             identity.setMinWidth(0);
             identity.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(identity, Priority.ALWAYS);
 
-            Button reportButton = new Button("查看报告", new FontIcon("mdi2f-file-document-outline"));
-            reportButton.getStyleClass().add("history-row-primary");
-            reportButton.setDisable(!item.reportAvailable());
-            reportButton.setOnAction(event -> {
-                getListView().getSelectionModel().select(item);
-                openReport();
-            });
-
-            Button continueButton = new Button("继续面试", new FontIcon("mdi2p-play-outline"));
-            continueButton.getStyleClass().add("history-row-action");
-            boolean canContinue = item.status() == InterviewStatus.RUNNING
-                    || item.status() == InterviewStatus.PAUSED
-                    || item.status() == InterviewStatus.CREATED;
-            continueButton.setDisable(!canContinue);
-            continueButton.setOnAction(event -> {
-                getListView().getSelectionModel().select(item);
-                continueInterview();
-            });
-
-            Button recordButton = new Button("查看记录", new FontIcon("mdi2c-comment-text-outline"));
-            recordButton.getStyleClass().add("history-row-action");
-            recordButton.setOnAction(event -> {
-                getListView().getSelectionModel().select(item);
-                openDetail();
-            });
-
-            Button moreButton = new Button("", new FontIcon("mdi2d-dots-horizontal"));
-            moreButton.getStyleClass().add("history-row-more");
-            moreButton.setOnAction(event -> {
-                getListView().getSelectionModel().select(item);
-                showItemMenu(moreButton, item);
-            });
-
-            HBox operations = new HBox(8);
-            operations.setAlignment(Pos.CENTER_RIGHT);
-            operations.setMinWidth(186);
-            if (item.reportAvailable()) {
-                operations.getChildren().add(reportButton);
-            } else if (canContinue) {
-                VBox actionStack = new VBox(6, continueButton, recordButton);
-                actionStack.setAlignment(Pos.CENTER_RIGHT);
-                operations.getChildren().add(actionStack);
-            } else {
-                operations.getChildren().add(recordButton);
-            }
-            operations.getChildren().add(moreButton);
-
-            HBox card = new HBox(14, coverBox, identity, operations);
+            HBox card = new HBox(14, coverBox, identity);
             card.setAlignment(Pos.CENTER_LEFT);
-            card.setPadding(new Insets(12, 14, 12, 12));
+            card.setPadding(new Insets(8, 10, 8, 10));
             card.getStyleClass().add("history-row-card");
             card.setMinWidth(0);
             card.setMaxWidth(Double.MAX_VALUE);
@@ -567,31 +563,11 @@ public class InterviewHistoryController {
                 getListView().getSelectionModel().select(item);
                 if (event.getClickCount() == 2) openDetail();
             });
-            continueButton.setOnMouseClicked(event -> event.consume());
-            reportButton.setOnMouseClicked(event -> event.consume());
             recordButton.setOnMouseClicked(event -> event.consume());
-            moreButton.setOnMouseClicked(event -> event.consume());
+            reportButton.setOnMouseClicked(event -> event.consume());
+            continueButton.setOnMouseClicked(event -> event.consume());
+            deleteButton.setOnMouseClicked(event -> event.consume());
             return card;
-        }
-
-        private void showItemMenu(Button anchor, InterviewHistoryItemDto item) {
-            ContextMenu menu = new ContextMenu();
-            MenuItem openDetail = new MenuItem("查看记录");
-            openDetail.setOnAction(event -> openDetail());
-            MenuItem openReport = new MenuItem("查看报告");
-            openReport.setDisable(!item.reportAvailable());
-            openReport.setOnAction(event -> openReport());
-            if (item.status() == InterviewStatus.RUNNING || item.status() == InterviewStatus.PAUSED
-                    || item.status() == InterviewStatus.CREATED) {
-                MenuItem cont = new MenuItem("继续面试");
-                cont.setOnAction(event -> continueInterview());
-                menu.getItems().add(cont);
-            }
-            menu.getItems().addAll(openDetail, openReport, new SeparatorMenuItem());
-            MenuItem delete = new MenuItem("删除记录");
-            delete.setOnAction(event -> deleteRecord());
-            menu.getItems().add(delete);
-            menu.show(anchor, javafx.geometry.Side.BOTTOM, 0, 4);
         }
 
         private void applyStatusTone(Label label, String text) {

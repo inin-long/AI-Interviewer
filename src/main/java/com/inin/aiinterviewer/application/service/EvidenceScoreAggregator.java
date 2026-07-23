@@ -20,7 +20,6 @@ public class EvidenceScoreAggregator {
     public static final String TECHNICAL = "technical";
     public static final String PROBLEM_SOLVING = "problemSolving";
     public static final String PROJECT = "project";
-    public static final String SYSTEM_DESIGN = "systemDesign";
     public static final String COMMUNICATION = "communication";
     public static final String COMPREHENSIVE = "comprehensive";
     public static final String OVERALL = "overall";
@@ -36,13 +35,12 @@ public class EvidenceScoreAggregator {
         scores.put(TECHNICAL, dimension(evidence, safeClaims, this::technical));
         scores.put(PROBLEM_SOLVING, dimension(evidence, safeClaims, this::problemSolving));
         scores.put(PROJECT, dimension(evidence, safeClaims, this::project));
-        scores.put(SYSTEM_DESIGN, dimension(evidence, safeClaims, this::systemDesign));
         scores.put(COMMUNICATION, dimension(evidence, safeClaims, this::communication));
         scores.put(COMPREHENSIVE, dimension(evidence, safeClaims, ignored -> true));
 
         List<DimensionScore> primary = List.of(
                 scores.get(TECHNICAL), scores.get(PROBLEM_SOLVING), scores.get(PROJECT),
-                scores.get(SYSTEM_DESIGN), scores.get(COMMUNICATION)).stream()
+                scores.get(COMMUNICATION)).stream()
                 .filter(DimensionScore::scored).toList();
         boolean overallScored = !primary.isEmpty();
         int overall = overallScored
@@ -64,7 +62,6 @@ public class EvidenceScoreAggregator {
                 scores.get(TECHNICAL).score(),
                 scores.get(PROBLEM_SOLVING).score(),
                 scores.get(PROJECT).score(),
-                scores.get(SYSTEM_DESIGN).score(),
                 scores.get(COMMUNICATION).score(),
                 scores.get(COMPREHENSIVE).score(),
                 narrative,
@@ -136,10 +133,6 @@ public class EvidenceScoreAggregator {
 
     private boolean project(String code) {
         return contains(code, "PROJECT", "DELIVERY", "OWNERSHIP", "EXPERIENCE", "EXECUTION");
-    }
-
-    private boolean systemDesign(String code) {
-        return contains(code, "SYSTEM", "ARCHITECT", "DISTRIBUTED");
     }
 
     private boolean communication(String code) {

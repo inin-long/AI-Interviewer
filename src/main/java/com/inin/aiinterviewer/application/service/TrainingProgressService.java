@@ -23,7 +23,6 @@ public class TrainingProgressService {
         values.put(EvidenceScoreAggregator.TECHNICAL, "技术能力");
         values.put(EvidenceScoreAggregator.PROBLEM_SOLVING, "问题解决");
         values.put(EvidenceScoreAggregator.PROJECT, "项目经验");
-        values.put(EvidenceScoreAggregator.SYSTEM_DESIGN, "系统设计");
         values.put(EvidenceScoreAggregator.COMMUNICATION, "沟通能力");
         values.put(EvidenceScoreAggregator.COMPREHENSIVE, "综合评价");
         DIMENSIONS = java.util.Collections.unmodifiableMap(values);

@@ -14,11 +14,11 @@
             fx:controller="com.inin.aiinterviewer.ui.controller.DashboardController"
             fitToWidth="true" hbarPolicy="NEVER" styleClass="content-scroll, dashboard-scroll">
     <content>
-        <VBox spacing="14" styleClass="dashboard-page">
-            <padding><Insets top="18" right="90" bottom="6" left="16"/></padding>
+        <VBox spacing="10" styleClass="dashboard-page">
+            <padding><Insets top="14" right="4" bottom="6" left="4"/></padding>
 
-            <StackPane minHeight="104" prefHeight="104" maxHeight="104" styleClass="dashboard-hero-card">
-                <VBox.margin><Insets right="32"/></VBox.margin>
+            <StackPane minHeight="88" prefHeight="88" maxHeight="88" styleClass="dashboard-hero-card">
+                <VBox.margin><Insets right="0"/></VBox.margin>
                 <ImageView fitWidth="570" fitHeight="112" preserveRatio="false" smooth="true" opacity="0.82"
                            StackPane.alignment="CENTER_RIGHT">
                     <image><Image url="@../images/home/dashboard-hero.png"/></image>
@@ -42,7 +42,7 @@
             </StackPane>
 
             <HBox spacing="14">
-                <VBox.margin><Insets right="32"/></VBox.margin>
+                <VBox.margin><Insets right="0"/></VBox.margin>
                 <HBox minHeight="96" prefHeight="96" maxWidth="Infinity" alignment="CENTER_LEFT" spacing="18"
                       HBox.hgrow="ALWAYS" styleClass="dashboard-summary-card">
                     <padding><Insets top="16" right="20" bottom="16" left="18"/></padding>
@@ -107,8 +107,8 @@
 
             <GridPane hgap="0" vgap="14">
                 <columnConstraints>
-                    <ColumnConstraints percentWidth="63"/>
-                    <ColumnConstraints percentWidth="34"/>
+                    <ColumnConstraints percentWidth="64"/>
+                    <ColumnConstraints percentWidth="36"/>
                 </columnConstraints>
                 <rowConstraints>
                     <RowConstraints minHeight="296" prefHeight="296"/>
@@ -117,7 +117,7 @@
 
                 <VBox minHeight="296" prefHeight="296" maxHeight="296" styleClass="dashboard-panel"
                       GridPane.columnIndex="0" GridPane.rowIndex="0">
-                    <GridPane.margin><Insets right="20"/></GridPane.margin>
+                    <GridPane.margin><Insets right="4"/></GridPane.margin>
                     <HBox alignment="CENTER_LEFT" minHeight="48" prefHeight="48" styleClass="dashboard-panel-header">
                         <padding><Insets left="20" right="16"/></padding>
                         <Label text="最近面试" styleClass="dashboard-panel-title"/>
@@ -137,7 +137,7 @@
 
                 <StackPane minHeight="204" prefHeight="204" styleClass="dashboard-panel, dashboard-score-panel"
                            GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.columnSpan="2">
-                    <GridPane.margin><Insets right="16"/></GridPane.margin>
+                    <GridPane.margin><Insets right="0"/></GridPane.margin>
                     <ImageView fitWidth="500" fitHeight="200" preserveRatio="false" opacity="0.62"
                                StackPane.alignment="CENTER_RIGHT">
                         <image><Image url="@../images/home/dashboard-score.png"/></image>
@@ -171,7 +171,7 @@
                 <VBox minHeight="296" prefHeight="296" maxHeight="296"
                       styleClass="dashboard-panel, dashboard-side-panel"
                       GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.valignment="TOP">
-                    <GridPane.margin><Insets left="0" right="16"/></GridPane.margin>
+                    <GridPane.margin><Insets left="0" right="0"/></GridPane.margin>
                     <HBox alignment="CENTER_LEFT" minHeight="48" prefHeight="48" styleClass="dashboard-panel-header">
                         <padding><Insets left="20" right="16"/></padding>
                         <Label text="最近使用的面试方案" styleClass="dashboard-panel-title"/>

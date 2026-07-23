@@ -173,7 +173,6 @@ public class InterviewResultService {
         entity.setTechnicalScore(payload.technicalScore());
         entity.setProblemSolvingScore(payload.problemSolvingScore());
         entity.setProjectScore(payload.projectScore());
-        entity.setSystemDesignScore(payload.systemDesignScore());
         entity.setCommunicationScore(payload.communicationScore());
         entity.setComprehensiveScore(payload.comprehensiveScore());
         entity.setContentJson(writeJson(payload));
@@ -191,7 +190,7 @@ public class InterviewResultService {
         EvaluationPayload effective = payload.scoreEvidence().isEmpty()
                 ? new EvaluationPayload(
                         payload.overallScore(), payload.technicalScore(), payload.problemSolvingScore(),
-                        payload.projectScore(), payload.systemDesignScore(), payload.communicationScore(),
+                        payload.projectScore(), payload.communicationScore(),
                         payload.comprehensiveScore(), payload.summary(),
                         aggregated.scoreEvidence(), aggregated.overallConfidence(), aggregated.overallScored())
                 : payload;
@@ -234,7 +233,6 @@ public class InterviewResultService {
                 "technical", payload.technicalScore(),
                 "problemSolving", payload.problemSolvingScore(),
                 "project", payload.projectScore(),
-                "systemDesign", payload.systemDesignScore(),
                 "communication", payload.communicationScore(),
                 "comprehensive", payload.comprehensiveScore());
     }
@@ -258,7 +256,7 @@ public class InterviewResultService {
                 return new EvaluationPayload(
                         payload.overallScore(), payload.technicalScore(),
                         payload.problemSolvingScore(), payload.projectScore(),
-                        payload.systemDesignScore(), payload.communicationScore(),
+                        payload.communicationScore(),
                         payload.comprehensiveScore(), payload.summary());
             }
             return payload;

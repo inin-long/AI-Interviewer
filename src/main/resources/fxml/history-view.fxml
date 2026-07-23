@@ -9,8 +9,8 @@
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.InterviewHistoryController"
-      spacing="16" styleClass="history-page">
-    <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+      spacing="10" styleClass="history-page">
+    <padding><Insets top="14" right="16" bottom="12" left="16"/></padding>
 
     <HBox alignment="CENTER_LEFT" spacing="12">
         <VBox spacing="4">
@@ -37,9 +37,9 @@
         <AppSelect fx:id="sortBox" prefWidth="150" styleClass="history-sort-select"/>
     </HBox>
 
-    <HBox spacing="16" VBox.vgrow="ALWAYS">
+    <HBox spacing="18" VBox.vgrow="ALWAYS">
         <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="history-list-panel">
-            <padding><Insets top="14" right="14" bottom="12" left="14"/></padding>
+            <padding><Insets top="12" right="14" bottom="10" left="14"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="8">
                 <Label text="全部记录" styleClass="history-section-title"/>
                 <Label fx:id="summaryLabel" text="（0）" styleClass="history-count-label"/>
@@ -80,15 +80,16 @@
             </HBox>
         </VBox>
 
-        <VBox spacing="10" minWidth="320" prefWidth="340" maxWidth="380">
+        <VBox spacing="10" HBox.hgrow="ALWAYS" styleClass="history-side-stack"
+             minWidth="320" prefWidth="340" maxWidth="380">
             <VBox spacing="10" styleClass="history-side-card">
-                <padding><Insets top="15" right="16" bottom="15" left="16"/></padding>
+                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
                 <HBox alignment="CENTER_LEFT" spacing="8">
                     <FontIcon iconLiteral="mdi2c-clipboard-text-outline" iconSize="18"
                               styleClass="history-side-icon"/>
                     <Label text="记录详情" styleClass="history-section-title"/>
                 </HBox>
-                <GridPane hgap="10" vgap="8">
+                <GridPane hgap="10" vgap="6">
                     <columnConstraints>
                         <ColumnConstraints minWidth="74" prefWidth="74"/>
                         <ColumnConstraints hgrow="ALWAYS"/>
@@ -124,11 +125,6 @@
                     <Label fx:id="detailStagesLabel" text="—" wrapText="true" styleClass="history-detail-value"
                            GridPane.columnIndex="1" GridPane.rowIndex="9"/>
                 </GridPane>
-                <Separator/>
-                <Label text="面试摘要" styleClass="history-section-subtitle"/>
-                <Label fx:id="detailSummaryLabel"
-                       text="请选择一条记录以查看摘要"
-                       wrapText="true" styleClass="history-summary-text"/>
                 <HBox spacing="10">
                     <Button fx:id="reportDetailButton" text="查看完整报告" onAction="#openReport"
                             maxWidth="Infinity" HBox.hgrow="ALWAYS"
@@ -143,19 +139,19 @@
                 </HBox>
             </VBox>
 
-            <VBox spacing="10" styleClass="history-side-card">
-                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
-                <HBox alignment="CENTER_LEFT" spacing="8">
-                    <FontIcon iconLiteral="mdi2f-filter-variant" iconSize="18" styleClass="history-side-icon"/>
+        <VBox spacing="10" styleClass="history-side-card">
+            <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <FontIcon iconLiteral="mdi2f-filter-variant" iconSize="18" styleClass="history-side-icon"/>
                     <Label text="快速筛选" styleClass="history-section-title"/>
                 </HBox>
                 <FlowPane fx:id="quickFilterPane" hgap="8" vgap="8" styleClass="history-quick-filter-pane"/>
             </VBox>
 
-            <VBox spacing="10" styleClass="history-side-card">
-                <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
-                <HBox alignment="CENTER_LEFT" spacing="8">
-                    <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="18" styleClass="history-side-icon"/>
+        <VBox spacing="10" styleClass="history-side-card">
+            <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <FontIcon iconLiteral="mdi2c-chart-box-outline" iconSize="18" styleClass="history-side-icon"/>
                     <Label text="历史概览" styleClass="history-section-title"/>
                 </HBox>
                 <HBox spacing="8">

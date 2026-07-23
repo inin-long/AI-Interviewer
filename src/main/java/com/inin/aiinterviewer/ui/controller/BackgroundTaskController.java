@@ -19,11 +19,18 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.BorderPane;
+
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 @Component
@@ -50,10 +57,18 @@ public class BackgroundTaskController {
     @FXML private TableColumn<BackgroundTaskDto, String> attemptColumn;
     @FXML private TableColumn<BackgroundTaskDto, LocalDateTime> createTimeColumn;
     @FXML private TableColumn<BackgroundTaskDto, LocalDateTime> updateTimeColumn;
-    @FXML private Label summaryLabel;
+    @FXML private Label totalCountLabel;
+    @FXML private Label runningCountLabel;
+    @FXML private Label successCountLabel;
+    @FXML private Label failedCountLabel;
+    @FXML private ToggleButton allFilterButton;
+    @FXML private ToggleButton runningFilterButton;
+    @FXML private ToggleButton successFilterButton;
+    @FXML private ToggleButton failedFilterButton;
     @FXML private Button detailButton;
     @FXML private Button deleteButton;
 
+    private final List<BackgroundTaskDto> allTasks = new ArrayList<>();
     private TaskNotificationCenter.Registration notificationRegistration;
 
     public BackgroundTaskController(
@@ -98,20 +113,53 @@ public class BackgroundTaskController {
 
     @FXML
     private void refresh() {
+        var tasks = taskService.listDtos(sessionState.requireCurrentUser().id());
+        allTasks.clear();
+        allTasks.addAll(tasks);
+
+        long total = tasks.size();
+        long running = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.PENDING
+                || task.status() == BackgroundTaskStatus.RUNNING).count();
+        long success = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.SUCCESS).count();
+        long failed = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.FAILED).count();
+        totalCountLabel.setText(String.valueOf(total));
+        runningCountLabel.setText(String.valueOf(running));
+        successCountLabel.setText(String.valueOf(success));
+        failedCountLabel.setText(String.valueOf(failed));
+
+        applyFilters();
+    }
+
+    @FXML
+    private void applyFilters() {
         BackgroundTaskDto selected = taskTable.getSelectionModel().getSelectedItem();
         Long selectedId = selected == null ? null : selected.id();
-        var tasks = taskService.listDtos(sessionState.requireCurrentUser().id());
-        taskTable.getItems().setAll(tasks);
+
+        List<BackgroundTaskDto> filtered = new ArrayList<>();
+        for (BackgroundTaskDto task : allTasks) {
+            if (matchesFilter(task.status())) filtered.add(task);
+        }
+        taskTable.getItems().setAll(filtered);
+
         if (selectedId != null) {
-            tasks.stream()
+            filtered.stream()
                     .filter(task -> task.id() == selectedId)
                     .findFirst()
                     .ifPresent(taskTable.getSelectionModel()::select);
         }
-        long unfinished = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.PENDING
-                || task.status() == BackgroundTaskStatus.RUNNING).count();
-        long failed = tasks.stream().filter(task -> task.status() == BackgroundTaskStatus.FAILED).count();
-        summaryLabel.setText("共 " + tasks.size() + " 项 · 进行中 " + unfinished + " 项 · 失败 " + failed + " 项");
+    }
+
+    private boolean matchesFilter(BackgroundTaskStatus status) {
+        if (runningFilterButton != null && runningFilterButton.isSelected()) {
+            return status == BackgroundTaskStatus.PENDING || status == BackgroundTaskStatus.RUNNING;
+        }
+        if (successFilterButton != null && successFilterButton.isSelected()) {
+            return status == BackgroundTaskStatus.SUCCESS;
+        }
+        if (failedFilterButton != null && failedFilterButton.isSelected()) {
+            return status == BackgroundTaskStatus.FAILED;
+        }
+        return true;
     }
 
     @FXML
@@ -197,9 +245,13 @@ public class BackgroundTaskController {
             @Override
             protected void updateItem(LocalDateTime value, boolean empty) {
                 super.updateItem(value, empty);
-                setText(empty || value == null ? null : TIME_FORMAT.format(value));
+                setText(empty || value == null ? null : TIME_FORMAT.format(toLocalTime(value)));
             }
         });
+    }
+
+    private static ZonedDateTime toLocalTime(LocalDateTime value) {
+        return value.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault());
     }
 
     static String typeText(BackgroundTaskType type) {

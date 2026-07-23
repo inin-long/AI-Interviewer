@@ -38,7 +38,7 @@ public class JavaFxViewManager implements ViewManager {
 
     public void attachStage(Stage stage) {
         this.primaryStage = Objects.requireNonNull(stage, "stage");
-        stage.setMinWidth(900);
+        stage.setMinWidth(1200);
         stage.setMinHeight(680);
         URL icon = getClass().getResource("/images/home/app-icon.png");
         if (icon != null) {
@@ -58,11 +58,16 @@ public class JavaFxViewManager implements ViewManager {
         try {
             Parent root = load(route);
             Rectangle2D screen = Screen.getPrimary().getVisualBounds();
-            double scaleX = Screen.getPrimary().getOutputScaleX();
-            double maxWidth = Math.min(1440, screen.getWidth() * 0.95);
-            double maxHeight = (route == Route.LOGIN || route == Route.REGISTER) ? 760 : 820;
-            double width = maxWidth;
-            double height = Math.min(maxHeight, screen.getHeight() * 0.95);
+            double width, height;
+            if (route == Route.LOGIN || route == Route.REGISTER) {
+                // 登录/注册：需容纳左侧展示区(760) + 卡片(440) + 间距，约需 1380 宽
+                width = Math.min(1400, screen.getWidth() * 0.92);
+                height = Math.min(820, screen.getHeight() * 0.88);
+            } else {
+                // 主界面：大窗口，类似浏览器页面尺寸
+                width = Math.min(1480, screen.getWidth() * 0.92);
+                height = Math.min(1060, screen.getHeight() * 0.95);
+            }
             Scene scene = new Scene(root, width, height);
             URL stylesheet = getClass().getResource("/css/app.css");
             if (stylesheet != null) {

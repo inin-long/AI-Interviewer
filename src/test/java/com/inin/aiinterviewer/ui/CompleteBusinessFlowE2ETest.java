@@ -322,7 +322,6 @@ class CompleteBusinessFlowE2ETest {
         assertThat(label(robot, "#overallScoreLabel").getText()).isEqualTo("88 / 100 · 中置信度");
         assertThat(label(robot, "#technicalScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
         assertThat(label(robot, "#problemSolvingScoreLabel").getText()).isEqualTo("证据不足");
-        assertThat(label(robot, "#systemDesignScoreLabel").getText()).isEqualTo("88 分 · 中置信度");
 
         MarkdownView reportView = robot.lookup("#reportView").queryAs(MarkdownView.class);
         assertThat(reportView.getMarkdown())
@@ -331,13 +330,13 @@ class CompleteBusinessFlowE2ETest {
 
         var report = resultService.find(userId, sessionId).orElseThrow();
         assertThat(report.overallScore()).isEqualTo(88);
-        assertThat(report.dimensions()).containsEntry("technical", 88).containsEntry("systemDesign", 88);
+        assertThat(report.dimensions()).containsEntry("technical", 88);
         assertThat(report.scoreEvidence().get("technical").evidenceIds()).hasSize(3);
-        assertThat(label(robot, "#systemDesignScoreLabel").getStyleClass())
+        assertThat(label(robot, "#technicalScoreLabel").getStyleClass())
                 .contains("score-evidence-link");
         assertThat(label(robot, "#problemSolvingScoreLabel").getStyleClass())
                 .doesNotContain("score-evidence-link");
-        Label scoreLink = label(robot, "#systemDesignScoreLabel");
+        Label scoreLink = label(robot, "#technicalScoreLabel");
         robot.interact(() -> scoreLink.getOnMouseClicked().handle(null));
         waitForNode(robot, "#messageCountLabel");
     }

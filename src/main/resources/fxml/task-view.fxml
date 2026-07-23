@@ -3,39 +3,113 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.BackgroundTaskController"
             fx:id="taskRoot"
-            styleClass="page-content">
+            styleClass="resume-page">
+    <fx:define>
+        <ToggleGroup fx:id="statusFilterGroup"/>
+    </fx:define>
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
-            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回首页">
-                <tooltip><Tooltip text="返回首页"/></tooltip>
-            </Button>
-            <VBox spacing="4">
-                <Label text="后台任务" styleClass="page-title"/>
-                <Label text="查看简历解析、画像生成、知识处理和报告生成状态" styleClass="secondary-text"/>
-            </VBox>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
-        </HBox>
-    </top>
-    <center>
-        <VBox spacing="18" styleClass="page-content">
-            <padding><Insets top="22" right="28" bottom="28" left="28"/></padding>
-            <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
-                <Label fx:id="summaryLabel" text="共 0 项" styleClass="summary-value"/>
-                <Label text="失败任务可重新排队；已完成或失败的任务可删除" styleClass="secondary-text"/>
+        <VBox spacing="14">
+            <padding><Insets top="20" right="24" bottom="4" left="24"/></padding>
+
+            <!-- Header -->
+            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="resume-header">
+                <VBox spacing="4">
+                    <Label text="任务中心" styleClass="resume-page-title"/>
+                    <Label text="查看简历解析、画像生成、知识处理和报告生成等后台任务的执行状态"
+                           styleClass="resume-page-subtitle"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="刷新" onAction="#refresh" styleClass="resume-outline-action">
+                    <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="18"/></graphic>
+                </Button>
+            </HBox>
+
+            <!-- Stats Row -->
+            <HBox spacing="12" styleClass="resume-stats-row">
+                <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                    <StackPane styleClass="resume-stat-icon-box,primary">
+                        <FontIcon iconLiteral="mdi2f-format-list-checks" iconSize="27" styleClass="resume-stat-icon"/>
+                    </StackPane>
+                    <VBox spacing="2">
+                        <Label text="任务总数" styleClass="resume-stat-label"/>
+                        <HBox alignment="BASELINE_LEFT" spacing="7">
+                            <Label fx:id="totalCountLabel" text="0" styleClass="resume-stat-value"/>
+                            <Label text="项" styleClass="resume-stat-unit"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                    <StackPane styleClass="resume-stat-icon-box,info">
+                        <FontIcon iconLiteral="mdi2p-progress-clock" iconSize="27" styleClass="resume-stat-icon"/>
+                    </StackPane>
+                    <VBox spacing="2">
+                        <Label text="进行中" styleClass="resume-stat-label"/>
+                        <HBox alignment="BASELINE_LEFT" spacing="7">
+                            <Label fx:id="runningCountLabel" text="0" styleClass="resume-stat-value"/>
+                            <Label text="项" styleClass="resume-stat-unit"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                    <StackPane styleClass="resume-stat-icon-box,success">
+                        <FontIcon iconLiteral="mdi2c-check-circle-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                    </StackPane>
+                    <VBox spacing="2">
+                        <Label text="已完成" styleClass="resume-stat-label"/>
+                        <HBox alignment="BASELINE_LEFT" spacing="7">
+                            <Label fx:id="successCountLabel" text="0" styleClass="resume-stat-value"/>
+                            <Label text="项" styleClass="resume-stat-unit"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+                <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="resume-stat-card">
+                    <StackPane styleClass="resume-stat-icon-box,warning">
+                        <FontIcon iconLiteral="mdi2a-alert-circle-outline" iconSize="27" styleClass="resume-stat-icon"/>
+                    </StackPane>
+                    <VBox spacing="2">
+                        <Label text="失败" styleClass="resume-stat-label"/>
+                        <HBox alignment="BASELINE_LEFT" spacing="7">
+                            <Label fx:id="failedCountLabel" text="0" styleClass="resume-stat-value"/>
+                            <Label text="项" styleClass="resume-stat-unit"/>
+                        </HBox>
+                    </VBox>
+                </HBox>
+            </HBox>
+
+            <!-- Toolbar -->
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="resume-toolbar">
+                <ToggleButton fx:id="allFilterButton" text="全部" selected="true" toggleGroup="$statusFilterGroup"
+                              onAction="#applyFilters" styleClass="resume-filter-button"/>
+                <ToggleButton fx:id="runningFilterButton" text="进行中" toggleGroup="$statusFilterGroup"
+                              onAction="#applyFilters" styleClass="resume-filter-button"/>
+                <ToggleButton fx:id="successFilterButton" text="已完成" toggleGroup="$statusFilterGroup"
+                              onAction="#applyFilters" styleClass="resume-filter-button"/>
+                <ToggleButton fx:id="failedFilterButton" text="失败" toggleGroup="$statusFilterGroup"
+                              onAction="#applyFilters" styleClass="resume-filter-button"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Button fx:id="deleteButton" text="删除任务" onAction="#deleteSelected"
                         styleClass="danger-button" disable="true"/>
                 <Button fx:id="detailButton" text="查看详情" onAction="#viewSelected" styleClass="primary-button"/>
             </HBox>
+        </VBox>
+    </top>
+    <center>
+        <VBox styleClass="resume-page">
+            <padding><Insets top="10" right="24" bottom="20" left="24"/></padding>
             <TableView fx:id="taskTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-                <placeholder><Label text="暂无后台任务" styleClass="secondary-text"/></placeholder>
+                <placeholder>
+                    <VBox spacing="10" alignment="CENTER">
+                        <FontIcon iconLiteral="mdi2c-checkbox-marked-circle-outline" iconSize="38" styleClass="resume-empty-list-icon"/>
+                        <Label text="暂无后台任务" styleClass="resume-empty-list-title"/>
+                        <Label text="上传简历、处理知识文档或生成报告后，任务会在这里显示进度" styleClass="resume-empty-list-hint"/>
+                    </VBox>
+                </placeholder>
                 <columns>
                     <TableColumn fx:id="typeColumn" text="任务类型" prefWidth="250"/>
                     <TableColumn fx:id="statusColumn" text="状态" prefWidth="130"/>

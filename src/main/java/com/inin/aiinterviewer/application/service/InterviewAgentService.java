@@ -1,8 +1,12 @@
 package com.inin.aiinterviewer.application.service;
 
 import com.inin.aiinterviewer.agent.graph.InterviewGraph;
+import com.inin.aiinterviewer.agent.model.ClaimExtractionResult;
+import com.inin.aiinterviewer.agent.model.ConsistencyCheckResult;
+import com.inin.aiinterviewer.agent.model.EvidenceCollectionResult;
 import com.inin.aiinterviewer.agent.model.InterviewTurnInput;
 import com.inin.aiinterviewer.agent.model.InterviewTurnPlan;
+import com.inin.aiinterviewer.agent.model.LogicChainResult;
 import com.inin.aiinterviewer.agent.model.ProbePlan;
 import com.inin.aiinterviewer.agent.model.QuestionQualityContext;
 import com.inin.aiinterviewer.agent.model.ScenarioDirectionResult;
@@ -29,16 +33,31 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
 public class InterviewAgentService {
 
     private static final Logger log = LoggerFactory.getLogger(InterviewAgentService.class);
+
+    /**
+     * 常见无效/过短回答。对这类回答跳过 claims / logic / evidence / consistency 四次 AI 调用，
+     * 直接走 plan + question render，显著降低 DeepSeek 等模型的单轮延迟。
+     */
+    private static final List<String> TRIVIAL_ANSWER_PATTERNS = List.of(
+            "不会", "不知道", "不了解", "不清楚", "没做过", "没有经验", "没有做过", "没有相关",
+            "不记得", "忘记了", "忘了", "跳过", "pass", "略", "不會", "dontknow", "idk",
+            // 常见低信息量回答：无实质内容可供打分，走快速通道跳过四步逐轮评分，缩短面试官响应时间
+            "不太懂", "不太会", "不太清楚", "不太了解", "没接触", "没接触过", "没怎么用过",
+            "记不清", "记不得", "没印象", "不太记得", "换一题", "换个问题", "下一题",
+            "不知道怎么说", "没什么可说", "说不上来", "noidea", "notsure", "skip", "nocomment"
+    );
 
     private final InterviewSessionService sessionService;
     private final InterviewGraph interviewGraph;
@@ -132,24 +151,41 @@ public class InterviewAgentService {
                     evidenceLedgerService.compactSummary(userId, sessionId))
                     .withCoverage(coverage(userId, sessionId, answeredState.coverage()));
 
-            var extraction = interviewGraph.extractClaims(turnInput);
+            boolean trivialAnswer = isTrivialAnswer(answeredState.latestAnswer());
+            if (trivialAnswer) {
+                log.debug("Fast path for trivial answer in session {}: {}",
+                        sessionId, answeredState.latestAnswer());
+            }
+
+            var extraction = trivialAnswer
+                    ? ClaimExtractionResult.degraded("trivial_answer")
+                    : interviewGraph.extractClaims(turnInput);
             var claimLedger = claimLedgerService.recordLatestAnswer(userId, sessionId, extraction);
             sessionService.updateClaimLedger(userId, sessionId, claimLedger);
             turnInput = turnInput.withClaimContext(
                     extraction, claimLedgerService.compactSummary(userId, sessionId));
-            var logicChain = interviewGraph.evaluateLogic(turnInput);
+
+            var logicChain = trivialAnswer
+                    ? LogicChainResult.degraded("trivial_answer")
+                    : interviewGraph.evaluateLogic(turnInput);
             sessionService.updateLogicChain(userId, sessionId, logicChain);
             turnInput = turnInput.withLogicChainResult(logicChain);
-            var evidenceResult = collaborationEvidenceCollector.enrich(
-                    answeredState.latestAnswer(), interviewGraph.collectEvidence(turnInput));
+
+            var evidenceResult = trivialAnswer
+                    ? EvidenceCollectionResult.degraded("trivial_answer")
+                    : collaborationEvidenceCollector.enrich(
+                            answeredState.latestAnswer(), interviewGraph.collectEvidence(turnInput));
             var evidenceLedger = evidenceLedgerService.recordLatestAnswer(userId, sessionId, evidenceResult);
             sessionService.updateEvidenceLedger(userId, sessionId, evidenceLedger);
             turnInput = turnInput.withEvidenceContext(
                     evidenceResult, evidenceLedgerService.compactSummary(userId, sessionId));
+
             var consistencyContext = consistencyIssueService.prepareContext(userId, sessionId);
             turnInput = turnInput.withConsistencyContext(
                     consistencyContext, null, claimLedgerService.compactSummary(userId, sessionId));
-            var consistencyResult = interviewGraph.checkConsistency(turnInput);
+            var consistencyResult = trivialAnswer
+                    ? ConsistencyCheckResult.degraded("trivial_answer")
+                    : interviewGraph.checkConsistency(turnInput);
             var appliedConsistency = consistencyIssueService.apply(userId, sessionId, consistencyResult);
             sessionService.updateClaimLedger(userId, sessionId, appliedConsistency.ledger());
             turnInput = turnInput.withConsistencyContext(
@@ -238,19 +274,23 @@ public class InterviewAgentService {
         StringBuilder generated = new StringBuilder();
         AtomicBoolean persistenceAttempted = new AtomicBoolean(false);
         AtomicBoolean qualityFallbackUsed = new AtomicBoolean(false);
-        return reviewedQuestion(prompt, qualityContext, qualityFallbackUsed)
+        AtomicReference<String> finalQuestionHolder = new AtomicReference<>();
+        return reviewedQuestion(prompt, qualityContext)
                 .filter(chunk -> chunk != null && !chunk.isEmpty())
                 .switchIfEmpty(Flux.error(new AIException(
                         ErrorCode.AI_CALL_FAILED, new IllegalStateException("AI returned an empty stream"))))
                 .doOnNext(generated::append)
                 .doOnComplete(() -> {
-                    if (generated.toString().isBlank()) {
+                    String draft = generated.toString();
+                    if (draft.isBlank()) {
                         throw new AIException(
                                 ErrorCode.AI_CALL_FAILED, new IllegalStateException("AI returned blank content"));
                     }
                     persistenceAttempted.set(true);
+                    String finalQuestion = finalizeQuestion(prompt, draft, qualityContext, qualityFallbackUsed);
+                    finalQuestionHolder.set(finalQuestion);
                     sessionService.saveAssistantOutput(
-                            userId, sessionId, generated.toString(), analysis, false,
+                            userId, sessionId, finalQuestion, analysis, false,
                             qualityFallbackUsed.get() ? List.of() : citations);
                     if (probePlan != null && probePlan.targetsConsistencyIssue()) {
                         var ledger = consistencyIssueService.markClarificationAsked(
@@ -292,8 +332,10 @@ public class InterviewAgentService {
                         return;
                     }
                     try {
+                        String partialDraft = generated.toString();
+                        String finalQuestion = finalizeQuestion(prompt, partialDraft, qualityContext, qualityFallbackUsed);
                         sessionService.saveAssistantOutput(
-                                userId, sessionId, generated.toString(), analysis, true,
+                                userId, sessionId, finalQuestion, analysis, true,
                                 qualityFallbackUsed.get() ? List.of() : citations);
                         eventPublisher.publishEvent(
                                 new InterviewTurnCompletedEvent(userId, sessionId, stage, true));
@@ -303,30 +345,67 @@ public class InterviewAgentService {
                 });
     }
 
-    private Flux<String> reviewedQuestion(
-            String prompt,
+    /**
+     * 直接流式输出原始问题，质量审查在输出完成后在后台进行。
+     */
+    private Flux<String> reviewedQuestion(String prompt, QuestionQualityContext context) {
+        return streamDraft(prompt)
+                .onErrorResume(QuestionRenderingException.class, failure -> {
+                    Flux<String> partial = Flux.fromIterable(failure.partialChunks());
+                    return failure.partialChunks().isEmpty()
+                            ? Flux.error(failure.getCause())
+                            : partial.concatWith(Flux.error(failure.getCause()));
+                });
+    }
+
+    private Flux<String> streamDraft(String prompt) {
+        return interviewGraph.questionRenderer().stream(prompt)
+                .filter(chunk -> chunk != null && !chunk.isEmpty())
+                .onErrorMap(exception -> exception instanceof QuestionRenderingException
+                        ? exception : new QuestionRenderingException(exception, List.of()));
+    }
+
+    /**
+     * 对已经流式输出的问题进行后台质量审查。如果未通过则重试，必要时使用兜底问题。
+     */
+    private String finalizeQuestion(
+            String originalPrompt,
+            String draft,
             QuestionQualityContext context,
             AtomicBoolean fallbackUsed
     ) {
-        return renderDraft(prompt).flatMapMany(draft -> {
-            var firstReview = questionQualityGate.review(context, draft.text());
-            if (firstReview.approved()) return Flux.fromIterable(draft.chunks());
+        try {
+            var firstReview = questionQualityGate.review(context, draft);
+            if (firstReview.approved()) return draft;
             String retryPrompt = AgentPrompts.regenerateQuestion(
-                    prompt, draft.text(), firstReview.issues());
-            return renderDraft(retryPrompt).flatMapMany(retry -> {
-                var secondReview = questionQualityGate.review(context, retry.text());
-                if (secondReview.approved()) return Flux.fromIterable(retry.chunks());
-                log.warn("Question quality gate rejected both drafts for stage {}: first={}, second={}",
-                        context.stage(), firstReview.issues(), secondReview.issues());
+                    originalPrompt, draft, firstReview.issues());
+            String retry = collectDraft(retryPrompt);
+            if (retry.isBlank()) {
+                log.warn("Retry question returned blank for stage {}", context.stage());
                 fallbackUsed.set(true);
-                return Flux.just(questionQualityGate.fallback(context));
-            });
-        }).onErrorResume(QuestionRenderingException.class, failure -> {
-            Flux<String> partial = Flux.fromIterable(failure.partialChunks());
-            return failure.partialChunks().isEmpty()
-                    ? Flux.error(failure.getCause())
-                    : partial.concatWith(Flux.error(failure.getCause()));
-        });
+                return questionQualityGate.fallback(context);
+            }
+            var secondReview = questionQualityGate.review(context, retry);
+            if (secondReview.approved()) return retry;
+            log.warn("Question quality gate rejected both drafts for stage {}: first={}, second={}",
+                    context.stage(), firstReview.issues(), secondReview.issues());
+            fallbackUsed.set(true);
+            return questionQualityGate.fallback(context);
+        } catch (RuntimeException exception) {
+            log.warn("Question finalization failed for stage {}", context.stage(), exception);
+            fallbackUsed.set(true);
+            return questionQualityGate.fallback(context);
+        }
+    }
+
+    private String collectDraft(String prompt) {
+        try {
+            RenderedQuestion rendered = renderDraft(prompt).block(Duration.ofMinutes(2));
+            return rendered == null ? "" : rendered.text();
+        } catch (RuntimeException exception) {
+            log.warn("Failed to render retry draft", exception);
+            return "";
+        }
     }
 
     private reactor.core.publisher.Mono<RenderedQuestion> renderDraft(String prompt) {
@@ -459,6 +538,16 @@ public class InterviewAgentService {
         return sessionService.domainPackSnapshot(userId, sessionId)
                 .map(snapshot -> current.ensureDomainPack(snapshot.content()))
                 .orElse(current);
+    }
+
+    private boolean isTrivialAnswer(String answer) {
+        if (answer == null || answer.isBlank()) return true;
+        String normalized = answer.strip()
+                .replaceAll("[\\s，。！？；：、,.!?;:\\-_'\"“”‘’（）()]+", "");
+        if (normalized.isEmpty()) return true;
+        if (normalized.length() < 6) return true;
+        String lower = normalized.toLowerCase(java.util.Locale.ROOT);
+        return TRIVIAL_ANSWER_PATTERNS.stream().anyMatch(lower::contains);
     }
 
     private record KnowledgeRetrieval(String context, List<KnowledgeCitationDto> citations) {

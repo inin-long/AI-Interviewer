@@ -5,6 +5,7 @@ import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
+import com.inin.aiinterviewer.application.service.ReTestService;
 import com.inin.aiinterviewer.application.service.SessionBranchService;
 import com.inin.aiinterviewer.application.service.TrainingRecommendationService;
 import com.inin.aiinterviewer.application.service.TrainingProgressService;
@@ -46,6 +47,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
     private final SessionBranchService branchService;
     private final TrainingRecommendationService trainingService;
     private final TrainingProgressService trainingProgressService;
+    private final ReTestService reTestService;
     private final UserSessionState sessionState;
     private final ContentNavigator contentNavigator;
     private final JavaFxViewManager viewManager;
@@ -55,11 +57,9 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     @FXML private Label titleLabel;
     @FXML private Label overallScoreLabel;
-    @FXML private Label overallConfidenceLabel;
     @FXML private Label technicalScoreLabel;
     @FXML private Label problemSolvingScoreLabel;
     @FXML private Label projectScoreLabel;
-    @FXML private Label systemDesignScoreLabel;
     @FXML private Label communicationScoreLabel;
     @FXML private Label comprehensiveScoreLabel;
     @FXML private MarkdownView reportView;
@@ -67,6 +67,8 @@ public class InterviewReportController implements ContextAwareController<Long> {
     @FXML private VBox branchNavigationContainer;
     @FXML private VBox trainingRecommendationContainer;
     @FXML private Button trainingPlanButton;
+    @FXML private Button reTestButton;
+    @FXML private Label reTestHintLabel;
     @FXML private VBox citationNavigationContainer;
 
     public InterviewReportController(
@@ -75,6 +77,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
             SessionBranchService branchService,
             TrainingRecommendationService trainingService,
             TrainingProgressService trainingProgressService,
+            ReTestService reTestService,
             UserSessionState sessionState,
             ContentNavigator contentNavigator,
             JavaFxViewManager viewManager,
@@ -85,6 +88,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         this.branchService = branchService;
         this.trainingService = trainingService;
         this.trainingProgressService = trainingProgressService;
+        this.reTestService = reTestService;
         this.sessionState = sessionState;
         this.contentNavigator = contentNavigator;
         this.viewManager = viewManager;
@@ -111,7 +115,6 @@ public class InterviewReportController implements ContextAwareController<Long> {
         configureScore(technicalScoreLabel, report, "technical");
         configureScore(problemSolvingScoreLabel, report, "problemSolving");
         configureScore(projectScoreLabel, report, "project");
-        configureScore(systemDesignScoreLabel, report, "systemDesign");
         configureScore(communicationScoreLabel, report, "communication");
         configureScore(comprehensiveScoreLabel, report, "comprehensive");
         markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
@@ -121,6 +124,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         renderTrainingRecommendation(trainingService.recommend(userId, interviewId));
         renderTrainingProgress(trainingProgressService.find(userId, interviewId));
         renderCitationNavigation(sessionService.messages(userId, interviewId));
+        configureReTestButton(userId);
     }
 
     @FXML
@@ -295,6 +299,41 @@ public class InterviewReportController implements ContextAwareController<Long> {
         }
     }
 
+    private void configureReTestButton(long userId) {
+        var eligibility = reTestService.checkEligibility(userId, interviewId);
+        if (eligibility.isPresent()) {
+            reTestButton.setManaged(true);
+            reTestButton.setVisible(true);
+            reTestHintLabel.setManaged(true);
+            reTestHintLabel.setVisible(true);
+            int score = eligibility.get().overallScore();
+            reTestHintLabel.setText("初试成绩 " + score + " 分（≥" + ReTestService.RE_TEST_THRESHOLD
+                    + "分），已获得复试资格。点击进入复试，题目难度将自动提升。");
+        } else {
+            reTestButton.setManaged(false);
+            reTestButton.setVisible(false);
+            reTestHintLabel.setManaged(false);
+            reTestHintLabel.setVisible(false);
+        }
+    }
+
+    @FXML
+    private void createReTestPlan() {
+        reTestButton.setDisable(true);
+        try {
+            long userId = sessionState.requireCurrentUser().id();
+            var plan = reTestService.createReTestPlan(userId, interviewId);
+            viewManager.showInfo("复试计划已创建",
+                    "复试计划「" + plan.name() + "」已创建，难度：" + plan.difficulty()
+                            + "。可在面试计划列表中启动复试。");
+            contentNavigator.showSubPage(
+                    "/fxml/plan-editor-view.fxml", "复试方案", plan.id());
+        } catch (RuntimeException exception) {
+            reTestButton.setDisable(false);
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
     private String branchStatusText(com.inin.aiinterviewer.domain.enums.SessionBranchStatus status) {
         return switch (status) {
             case DRAFT -> "待重答";
@@ -368,14 +407,10 @@ public class InterviewReportController implements ContextAwareController<Long> {
             Label label,
             com.inin.aiinterviewer.application.dto.InterviewReportDto report
     ) {
-        label.setText(report.overallScore() + " / 100");
-        if (report.scoreEvidence().isEmpty()) {
-            overallConfidenceLabel.setText("");
-            return;
-        }
-        overallConfidenceLabel.setText(report.overallScored()
-                ? confidenceText(report.overallConfidence())
-                : "证据不足");
+        int score = report.overallScore();
+        label.setText(formatScore(score));
+        label.getStyleClass().removeIf(c -> c.startsWith("score-level-"));
+        label.getStyleClass().add("score-level-" + scoreBand(score));
         configureScoreNavigation(label, report, "overall");
     }
 
@@ -385,14 +420,29 @@ public class InterviewReportController implements ContextAwareController<Long> {
             String key
     ) {
         var trace = report.scoreEvidence().get(key);
+        int value = report.dimensions().getOrDefault(key, 0);
         if (trace == null) {
-            label.setText(report.dimensions().getOrDefault(key, 0) + " 分");
+            label.setText(formatScore(value) + " 分");
+            applyDimensionStyle(label, value, true);
             return;
         }
-        label.setText(trace.scored()
-                ? report.dimensions().getOrDefault(key, 0) + " 分 · " + confidenceText(trace.confidence())
-                : "证据不足");
+        if (trace.scored()) {
+            label.setText(formatScore(value) + " 分");
+            applyDimensionStyle(label, value, true);
+        } else {
+            label.setText("证据不足");
+            applyDimensionStyle(label, value, false);
+        }
         configureScoreNavigation(label, report, key);
+    }
+
+    private void applyDimensionStyle(Label label, int value, boolean scored) {
+        label.getStyleClass().removeIf(c -> c.startsWith("score-level-"));
+        if (!scored) {
+            label.getStyleClass().add("score-level-none");
+            return;
+        }
+        label.getStyleClass().add("score-level-" + scoreBand(value));
     }
 
     private void configureScoreNavigation(
@@ -413,9 +463,19 @@ public class InterviewReportController implements ContextAwareController<Long> {
         label.setOnMouseClicked(event -> openTranscriptAt(question));
     }
 
-    private String confidenceText(double value) {
-        if (value >= 0.7) return "高置信度";
-        if (value >= 0.45) return "中置信度";
-        return "低置信度";
+    private String scoreBand(int value) {
+        if (value >= 80) return "excellent";
+        if (value >= 60) return "good";
+        if (value >= 40) return "fair";
+        return "weak";
+    }
+
+    /**
+     * 将分数格式化为保留 1 位小数的字符串，使展示精度更高。
+     * 当前后端分数以整数存储，故多显示为 “20.0” 这类形态；
+     * 若后续后端改为小数（double），此处无需改动即可自动展示真实小数。
+     */
+    private String formatScore(double value) {
+        return String.format(java.util.Locale.ROOT, "%.1f", value);
     }
 }

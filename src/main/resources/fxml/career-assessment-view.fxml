@@ -3,41 +3,80 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.CareerAssessmentController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
+      spacing="0" styleClass="page-content">
+    <padding><Insets top="24" right="28" bottom="24" left="28"/></padding>
+
+    <!-- Page Header -->
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="assessment-page-header">
+        <VBox styleClass="assessment-header-icon-wrap">
+            <padding><Insets top="6" right="10" bottom="6" left="10"/></padding>
+            <FontIcon iconLiteral="mdi2c-clipboard-check-outline" iconSize="22" styleClass="assessment-header-icon"/>
+        </VBox>
+        <VBox spacing="3">
             <Label text="职业测评" styleClass="page-title"/>
             <Label text="完成霍兰德或 MBTI 问卷，生成你的职业倾向报告" styleClass="secondary-text"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
+        <Button text="我的测评记录" onAction="#openHistory" styleClass="ghost-button"/>
     </HBox>
-    <HBox spacing="18" VBox.vgrow="ALWAYS">
-        <VBox spacing="10" prefWidth="240" minWidth="220" styleClass="content-card">
-            <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-            <Label text="选择测评" styleClass="module-title"/>
-            <ListView fx:id="templateListView" VBox.vgrow="ALWAYS" styleClass="data-table"/>
-            <Button text="我的测评记录" onAction="#openHistory" styleClass="secondary-button"/>
+
+    <!-- Main Content -->
+    <HBox spacing="20" VBox.vgrow="ALWAYS" styleClass="assessment-body">
+        <padding><Insets top="20" right="0" bottom="0" left="0"/></padding>
+
+        <!-- Left Sidebar: Template Selection -->
+        <VBox prefWidth="280" minWidth="250" maxWidth="320" styleClass="content-card, assessment-sidebar">
+            <padding><Insets top="18" right="16" bottom="16" left="16"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="8">
+                <FontIcon iconLiteral="mdi2f-format-list-bulleted-square" iconSize="16" styleClass="assessment-section-icon"/>
+                <Label text="选择测评" styleClass="module-title"/>
+            </HBox>
+            <Separator styleClass="assessment-separator"/>
+            <ListView fx:id="templateListView" VBox.vgrow="ALWAYS" styleClass="assessment-list"/>
         </VBox>
-        <VBox spacing="10" HBox.hgrow="ALWAYS">
-            <HBox alignment="CENTER_LEFT" spacing="10" styleClass="section-summary">
+
+        <!-- Right Panel: Questions -->
+        <VBox spacing="0" HBox.hgrow="ALWAYS" styleClass="assessment-main-panel">
+            <!-- Question Area Header -->
+            <HBox alignment="CENTER_LEFT" spacing="12" styleClass="assessment-question-header">
+                <padding><Insets top="14" right="16" bottom="14" left="16"/></padding>
+                <FontIcon iconLiteral="mdi2h-help-circle-outline" iconSize="18" styleClass="assessment-section-icon"/>
                 <Label text="答题" styleClass="module-title"/>
                 <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="progressLabel" text="" styleClass="assessment-progress-label"/>
+                <Region minWidth="12"/>
                 <Button fx:id="submitButton" text="提交测评" onAction="#submit" styleClass="primary-button"/>
             </HBox>
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="content-scroll">
+
+            <!-- Scrollable Question Area -->
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="content-scroll, assessment-scroll">
                 <content>
-                    <VBox fx:id="questionHost" spacing="12" styleClass="editor-page">
-                        <padding><Insets top="18" right="8" bottom="18" left="0"/></padding>
-                        <Label text="从左侧选择一份问卷开始作答" styleClass="empty-hint"/>
+                    <VBox fx:id="questionHost" spacing="10" styleClass="assessment-question-host">
+                        <padding><Insets top="14" right="16" bottom="20" left="16"/></padding>
+                        <!-- Empty State -->
+                        <VBox fx:id="emptyState" alignment="CENTER" spacing="14" maxWidth="Infinity" VBox.vgrow="ALWAYS">
+                            <padding><Insets top="70" right="0" bottom="70" left="0"/></padding>
+                            <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="40" styleClass="assessment-empty-icon"/>
+                            <Label text="从左侧选择一份问卷开始作答" styleClass="assessment-empty-text"/>
+                            <Label text="选择后题目将在此处显示" styleClass="assessment-empty-hint"/>
+                        </VBox>
                     </VBox>
                 </content>
             </ScrollPane>
-            <Label fx:id="hintLabel" text="" styleClass="local-data-note" wrapText="true"/>
+
+            <!-- Hint / Description Bar -->
+            <VBox fx:id="hintBar" visible="false" managed="false" styleClass="assessment-hint-bar">
+                <padding><Insets top="10" right="16" bottom="10" left="16"/></padding>
+                <HBox alignment="CENTER_LEFT" spacing="8">
+                    <FontIcon iconLiteral="mdi2i-information-outline" iconSize="14" styleClass="assessment-hint-icon"/>
+                    <Label fx:id="hintLabel" text="" styleClass="local-data-note" wrapText="true" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                </HBox>
+            </VBox>
         </VBox>
     </HBox>
 </VBox>

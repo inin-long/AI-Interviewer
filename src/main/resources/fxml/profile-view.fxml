@@ -1,38 +1,107 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.inin.aiinterviewer.ui.component.AppSelect?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.ProfileController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <VBox spacing="5">
-            <Label text="候选人画像" styleClass="page-title"/>
-            <Label text="集中查看 AI 生成或人工维护的候选人画像" styleClass="secondary-text"/>
+      spacing="0" styleClass="profile-page">
+    <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
+
+    <!-- Page Header -->
+    <HBox alignment="CENTER_LEFT" spacing="12" styleClass="profile-header">
+        <VBox spacing="4">
+            <Label text="候选人画像" styleClass="profile-page-title"/>
+            <Label text="集中查看 AI 生成或人工维护的候选人画像" styleClass="profile-page-subtitle"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="刷新" onAction="#refresh" styleClass="secondary-button"/>
+        <Button fx:id="refreshButton" text="刷新" onAction="#refresh" styleClass="profile-outline-action">
+            <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="18"/></graphic>
+        </Button>
     </HBox>
-    <HBox alignment="CENTER_LEFT" spacing="16" styleClass="section-summary">
-        <Label fx:id="summaryLabel" text="共 0 份画像" styleClass="summary-value"/>
-        <Label text="画像修改和确认在独立子页面中完成" styleClass="secondary-text"/>
+
+    <!-- Stats Row -->
+    <HBox spacing="12" styleClass="profile-stats-row">
+        <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="profile-stat-card">
+            <StackPane styleClass="profile-stat-icon-box,primary">
+                <FontIcon iconLiteral="mdi2a-account-box-outline" iconSize="26" styleClass="profile-stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="画像总数" styleClass="profile-stat-label"/>
+                <HBox alignment="BASELINE_LEFT" spacing="6">
+                    <Label fx:id="totalCountLabel" text="0" styleClass="profile-stat-value"/>
+                    <Label text="份" styleClass="profile-stat-unit"/>
+                </HBox>
+            </VBox>
+        </HBox>
+        <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="profile-stat-card">
+            <StackPane styleClass="profile-stat-icon-box,success">
+                <FontIcon iconLiteral="mdi2a-account-check-outline" iconSize="26" styleClass="profile-stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="已确认" styleClass="profile-stat-label"/>
+                <HBox alignment="BASELINE_LEFT" spacing="6">
+                    <Label fx:id="confirmedCountLabel" text="0" styleClass="profile-stat-value"/>
+                    <Label text="份" styleClass="profile-stat-unit"/>
+                </HBox>
+            </VBox>
+        </HBox>
+        <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="profile-stat-card">
+            <StackPane styleClass="profile-stat-icon-box,warning">
+                <FontIcon iconLiteral="mdi2c-clock-outline" iconSize="26" styleClass="profile-stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="待确认" styleClass="profile-stat-label"/>
+                <HBox alignment="BASELINE_LEFT" spacing="6">
+                    <Label fx:id="pendingCountLabel" text="0" styleClass="profile-stat-value"/>
+                    <Label text="份" styleClass="profile-stat-unit"/>
+                </HBox>
+            </VBox>
+        </HBox>
+        <HBox spacing="12" alignment="CENTER_LEFT" HBox.hgrow="ALWAYS" styleClass="profile-stat-card">
+            <StackPane styleClass="profile-stat-icon-box,info">
+                <FontIcon iconLiteral="mdi2b-brain" iconSize="26" styleClass="profile-stat-icon"/>
+            </StackPane>
+            <VBox spacing="2">
+                <Label text="AI 生成" styleClass="profile-stat-label"/>
+                <HBox alignment="BASELINE_LEFT" spacing="6">
+                    <Label fx:id="aiCountLabel" text="0" styleClass="profile-stat-value"/>
+                    <Label text="份" styleClass="profile-stat-unit"/>
+                </HBox>
+            </VBox>
+        </HBox>
+    </HBox>
+
+    <!-- Toolbar -->
+    <HBox alignment="CENTER_LEFT" spacing="8" styleClass="profile-toolbar">
+        <fx:define>
+            <ToggleGroup fx:id="statusFilterGroup"/>
+        </fx:define>
+        <ToggleButton fx:id="allFilterBtn" text="全部" selected="true" toggleGroup="$statusFilterGroup"
+                      onAction="#applyFilters" styleClass="profile-filter-button"/>
+        <ToggleButton fx:id="confirmedFilterBtn" text="已确认" toggleGroup="$statusFilterGroup"
+                      onAction="#applyFilters" styleClass="profile-filter-button"/>
+        <ToggleButton fx:id="pendingFilterBtn" text="待确认" toggleGroup="$statusFilterGroup"
+                      onAction="#applyFilters" styleClass="profile-filter-button"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="primary-button"/>
+        <TextField fx:id="searchField" promptText="搜索候选人或岗位" onKeyReleased="#applyFilters"
+                  prefWidth="240" styleClass="profile-search-field"/>
+        <AppSelect fx:id="sortSelect" prefWidth="140" styleClass="profile-sort-select"/>
+        <Button fx:id="editButton" text="查看 / 编辑" onAction="#editSelected" styleClass="primary-button,profile-edit-btn" disable="true"/>
     </HBox>
-    <TableView fx:id="profileTable" VBox.vgrow="ALWAYS" styleClass="data-table">
-        <placeholder><Label text="暂无候选人画像，请先在简历中心生成画像" styleClass="secondary-text"/></placeholder>
-        <columns>
-            <TableColumn fx:id="resumeColumn" text="关联简历" prefWidth="190"/>
-            <TableColumn fx:id="nameColumn" text="候选人" prefWidth="120"/>
-            <TableColumn fx:id="roleColumn" text="目标岗位" prefWidth="150"/>
-            <TableColumn fx:id="skillsColumn" text="核心技能" prefWidth="280"/>
-            <TableColumn fx:id="sourceColumn" text="来源" prefWidth="100"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="90"/>
-            <TableColumn fx:id="updateTimeColumn" text="更新时间" prefWidth="160"/>
-        </columns>
-    </TableView>
+
+    <!-- Profile List -->
+    <ListView fx:id="profileList" VBox.vgrow="ALWAYS" styleClass="profile-list">
+        <placeholder>
+            <VBox spacing="10" alignment="CENTER">
+                <FontIcon iconLiteral="mdi2a-account-search-outline" iconSize="36" styleClass="profile-empty-icon"/>
+                <Label text="暂无候选人画像" styleClass="profile-empty-title"/>
+                <Label text="请先在简历中心上传简历并生成候选人画像" styleClass="profile-empty-hint"/>
+            </VBox>
+        </placeholder>
+    </ListView>
 </VBox>

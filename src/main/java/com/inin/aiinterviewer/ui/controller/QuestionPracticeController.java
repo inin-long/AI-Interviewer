@@ -16,7 +16,6 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.FlowPane;
@@ -53,9 +52,7 @@ public class QuestionPracticeController implements ContextAwareController<Long> 
     @FXML private Button submitButton;
     @FXML private VBox scoreCard;
     @FXML private Label scoreValueLabel;
-    @FXML private ProgressBar correctnessBar;
     @FXML private Label correctnessLabel;
-    @FXML private ProgressBar depthBar;
     @FXML private Label depthLabel;
     @FXML private VBox feedbackContainer;
     @FXML private TitledPane referencePane;
@@ -105,6 +102,7 @@ public class QuestionPracticeController implements ContextAwareController<Long> 
         titleLabel.setText(question.title());
         contentLabel.setText(question.content() == null ? "" : question.content());
 
+        // Job + Difficulty badges (shown in question header)
         String job = question.jobTitle() == null || question.jobTitle().isBlank()
                 ? "未归类" : question.jobTitle();
         jobBadge.setText(job);
@@ -124,6 +122,7 @@ public class QuestionPracticeController implements ContextAwareController<Long> 
         referenceContainer.getChildren().clear();
         if (hasReference) {
             MarkdownView refMd = new MarkdownView();
+            refMd.setCompact(true);
             refMd.setMarkdown(formatReference(question.referenceAnswer()));
             referenceContainer.getChildren().add(refMd);
         } else {
@@ -201,9 +200,7 @@ public class QuestionPracticeController implements ContextAwareController<Long> 
     private void renderScoreNumbers(int score, int correctness, int depth) {
         scoreValueLabel.setText(String.valueOf(score));
 
-        correctnessBar.setProgress(correctness / 100.0);
         correctnessLabel.setText(correctness + " 分");
-        depthBar.setProgress(depth / 100.0);
         depthLabel.setText(depth + " 分");
 
         scoreCard.setVisible(true);
@@ -213,6 +210,7 @@ public class QuestionPracticeController implements ContextAwareController<Long> 
     private void renderFeedback(AnswerScore result) {
         feedbackContainer.getChildren().clear();
         MarkdownView md = new MarkdownView();
+        md.setCompact(true);
         md.setMarkdown(buildFeedbackMarkdown(result));
         // feedbackContainer 直接平铺展开，内容多时由整页外层 ScrollPane 统一滚动
         feedbackContainer.getChildren().add(md);

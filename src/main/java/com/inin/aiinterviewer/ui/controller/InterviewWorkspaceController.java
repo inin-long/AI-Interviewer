@@ -45,10 +45,14 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.time.LocalDateTime;
 import reactor.core.publisher.Flux;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 @Scope("prototype")
 public class InterviewWorkspaceController implements ContextAwareController<Long> {
+
+    private static final Logger log = LoggerFactory.getLogger(InterviewWorkspaceController.class);
 
     private final InterviewSessionService sessionService;
     private final InterviewAgentService agentService;
@@ -389,20 +393,60 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
         if (expectsQuestion) {
             transcriptView.beginAssistantStream(transcriptView.getQuestionCount() + 1);
         }
-        output.subscribe(
-                chunk -> Platform.runLater(() -> {
-                    if (expectsQuestion) transcriptView.appendAssistantChunk(chunk);
-                }),
-                throwable -> Platform.runLater(() -> {
-                    generationInProgress = false;
-                    refresh();
-                    viewManager.showError(exceptionHandler.toUserMessage(throwable));
-                }),
-                () -> Platform.runLater(() -> {
-                    generationInProgress = false;
-                    if (clearInputOnSuccess) answerArea.clear();
-                    refresh();
-                }));
+        output.timeout(java.time.Duration.ofMinutes(3))
+                .subscribe(
+                        chunk -> Platform.runLater(() -> {
+                            if (expectsQuestion) transcriptView.appendAssistantChunk(chunk);
+                        }),
+                        throwable -> Platform.runLater(() -> handleStreamFailure(throwable)),
+                        () -> Platform.runLater(() -> handleStreamSuccess(clearInputOnSuccess)));
+    }
+
+    private void handleStreamFailure(Throwable throwable) {
+        log.error("Interview stream failed for session {}", sessionId, throwable);
+        generationInProgress = false;
+        String message = buildStreamErrorMessage(throwable);
+        try {
+            refresh();
+        } catch (RuntimeException refreshFailure) {
+            log.error("Refresh failed after stream error for session {}", sessionId, refreshFailure);
+        }
+        viewManager.showError(message);
+    }
+
+    private void handleStreamSuccess(boolean clearInputOnSuccess) {
+        try {
+            generationInProgress = false;
+            if (clearInputOnSuccess) answerArea.clear();
+            refresh();
+        } catch (RuntimeException exception) {
+            log.error("Refresh failed after stream completion for session {}", sessionId, exception);
+            generationInProgress = false;
+            try {
+                refresh();
+            } catch (RuntimeException ignored) {
+                // best effort: keep UI usable even if refresh keeps failing
+            }
+            viewManager.showError(exceptionHandler.toUserMessage(exception));
+        }
+    }
+
+    private String buildStreamErrorMessage(Throwable throwable) {
+        Throwable root = throwable;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String detail = root.getMessage();
+        boolean lock = root.getClass().getName().toLowerCase().contains("lock")
+                || (detail != null && detail.toLowerCase().contains("locked"));
+        StringBuilder message = new StringBuilder(exceptionHandler.toUserMessage(throwable));
+        if (detail != null && !detail.isBlank()) {
+            message.append("\n\n原始信息：").append(detail);
+        }
+        if (lock) {
+            message.append("\n\n检测到数据库被占用，请完全关闭应用（任务管理器中结束所有 java.exe）后重新启动再试。");
+        }
+        return message.toString();
     }
 
     private void setBusyState(String progressText) {
@@ -782,6 +826,7 @@ public class InterviewWorkspaceController implements ContextAwareController<Long
             case FORMAL_SIMULATION -> "正式模拟";
             case COACHING -> "教练训练";
             case SCENARIO_SIMULATION -> "情境沙盘";
+            case RE_TEST -> "复试";
         };
     }
 

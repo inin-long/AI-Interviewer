@@ -50,6 +50,8 @@ import org.springframework.stereotype.Component;
 
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -65,6 +67,10 @@ public class ResumeController {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter ROW_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
+    private static LocalDateTime toLocal(LocalDateTime utc) {
+        return utc == null ? null : utc.atZone(ZoneOffset.UTC).withZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+    }
     private static final String SORT_UPDATE = "按更新时间";
     private static final String SORT_NAME = "按名称";
     private static final String SORT_SIZE = "按大小";
@@ -254,8 +260,9 @@ public class ResumeController {
         confirmedCountLabel.setText(String.valueOf(confirmed));
         pendingCountLabel.setText(String.valueOf(pending));
         LocalDateTime latest = allResumes.stream().map(ResumeDto::updateTime).max(LocalDateTime::compareTo).orElse(null);
-        latestDateLabel.setText(latest == null ? "--" : DATE_FORMAT.format(latest));
-        latestTimeLabel.setText(latest == null ? "暂无数据" : TIME_FORMAT.format(latest));
+        LocalDateTime latestLocal = toLocal(latest);
+        latestDateLabel.setText(latestLocal == null ? "--" : DATE_FORMAT.format(latestLocal));
+        latestTimeLabel.setText(latestLocal == null ? "暂无数据" : TIME_FORMAT.format(latestLocal));
     }
 
     private void updateProcess(ResumeDto resume) {
@@ -333,7 +340,7 @@ public class ResumeController {
         Label fileName = new Label(resume.originalName());
         fileName.getStyleClass().add("resume-original-name");
         Label meta = new Label(resume.fileType().toUpperCase(Locale.ROOT) + "  ·  "
-                + formatSize(resume.fileSize()) + "  ·  " + ROW_TIME_FORMAT.format(resume.updateTime()));
+                + formatSize(resume.fileSize()) + "  ·  " + ROW_TIME_FORMAT.format(toLocal(resume.updateTime())));
         meta.getStyleClass().add("resume-original-meta");
         VBox summary = new VBox(4, fileName, meta);
         summary.getStyleClass().add("resume-original-summary");
@@ -518,7 +525,7 @@ public class ResumeController {
             identity.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(identity, Priority.ALWAYS);
 
-            Label time = new Label(ROW_TIME_FORMAT.format(resume.updateTime()));
+            Label time = new Label(ROW_TIME_FORMAT.format(toLocal(resume.updateTime())));
             time.getStyleClass().add("resume-row-time");
             Label timeHint = new Label("上传时间");
             timeHint.getStyleClass().add("resume-row-time-hint");
@@ -533,7 +540,7 @@ public class ResumeController {
             original.setOnAction(event -> openOriginal(resume));
             Button portrait = rowAction("查看画像", "mdi2a-account-outline", "resume-profile-action");
             portrait.setOnAction(event -> openProfile(resume));
-            Button more = rowAction("更多", "mdi2d-dots-horizontal", "resume-more-action");
+            Button more = rowAction("删除", "mdi2d-dots-horizontal", "resume-more-action");
             more.setOnAction(event -> deleteResume(resume));
             HBox actions = new HBox(4, original, portrait, more);
             actions.setAlignment(Pos.CENTER_RIGHT);

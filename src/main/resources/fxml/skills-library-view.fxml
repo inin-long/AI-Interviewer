@@ -3,33 +3,77 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
-      fx:controller="com.inin.aiinterviewer.ui.controller.SkillsLibraryController"
-      spacing="12" styleClass="container">
+<StackPane xmlns="http://javafx.com/javafx/21"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.inin.aiinterviewer.ui.controller.SkillsLibraryController"
+           styleClass="skills-page">
+    <fx:define>
+        <ToggleGroup fx:id="categoryFilterGroup"/>
+    </fx:define>
 
-    <padding>
-        <Insets topRightBottomLeft="20"/>
-    </padding>
+    <VBox spacing="14">
+        <padding><Insets top="20" right="24" bottom="20" left="24"/></padding>
 
-    <HBox spacing="12" alignment="CENTER_LEFT">
-        <Label text="面试技巧库" styleClass="heading-2"/>
-        <Region HBox.hgrow="ALWAYS"/>
-        <AppSelect fx:id="categoryFilter" promptText="分类筛选" prefWidth="140"/>
-        <Button text="新增文章" onAction="#handleAdd" styleClass="btn-primary"/>
-    </HBox>
-
-    <ListView fx:id="articleList" VBox.vgrow="ALWAYS" styleClass="card">
-        <placeholder>
-            <VBox alignment="CENTER" spacing="8">
-                <padding><Insets topRightBottomLeft="30"/></padding>
-                <Label text="📚" style="-fx-font-size: 32px;"/>
-                <Label text="暂无面试技巧文章" style="-fx-font-size: 14px; -fx-text-fill: #666;"/>
-                <Label text="点击「新增文章」添加面试技巧资料" style="-fx-font-size: 12px; -fx-text-fill: #999;"/>
+        <!-- Header -->
+        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="skills-header">
+            <VBox spacing="4">
+                <Label text="面试技巧库" styleClass="skills-page-title"/>
+                <Label text="系统化的面试准备资料，覆盖行为面试、STAR 法则、礼仪与沟通技巧"
+                       styleClass="skills-page-subtitle"/>
             </VBox>
-        </placeholder>
-    </ListView>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button fx:id="addButton" text="新增文章" onAction="#handleAdd" styleClass="primary-button,skills-primary-action">
+                <graphic><FontIcon iconLiteral="mdi2p-plus" iconSize="18"/></graphic>
+            </Button>
+            <Button text="批量导入" onAction="#handleImport" styleClass="skills-outline-action">
+                <graphic><FontIcon iconLiteral="mdi2i-import" iconSize="18"/></graphic>
+            </Button>
+        </HBox>
 
-</VBox>
+        <!-- Toolbar -->
+        <HBox alignment="CENTER_LEFT" spacing="8" styleClass="skills-toolbar">
+            <ToggleButton fx:id="allFilterButton" text="全部" selected="true" toggleGroup="$categoryFilterGroup"
+                          onAction="#applyFilters" styleClass="skills-filter-button"/>
+            <ToggleButton fx:id="starFilterButton" text="STAR 法则" toggleGroup="$categoryFilterGroup"
+                          onAction="#applyFilters" styleClass="skills-filter-button"/>
+            <ToggleButton fx:id="behaviorFilterButton" text="行为面试" toggleGroup="$categoryFilterGroup"
+                          onAction="#applyFilters" styleClass="skills-filter-button"/>
+            <ToggleButton fx:id="etiquetteFilterButton" text="礼仪指南" toggleGroup="$categoryFilterGroup"
+                          onAction="#applyFilters" styleClass="skills-filter-button"/>
+            <ToggleButton fx:id="generalFilterButton" text="通用技巧" toggleGroup="$categoryFilterGroup"
+                          onAction="#applyFilters" styleClass="skills-filter-button"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <TextField fx:id="searchField" promptText="搜索标题 / 摘要 / 标签..." onKeyReleased="#applyFilters"
+                       prefWidth="260" styleClass="skills-search-field"/>
+            <Button onAction="#refresh" accessibleText="刷新技巧库" styleClass="skills-refresh-button">
+                <graphic><FontIcon iconLiteral="mdi2r-refresh" iconSize="18"/></graphic>
+                <tooltip><Tooltip text="刷新技巧库"/></tooltip>
+            </Button>
+        </HBox>
+
+        <!-- Article List -->
+        <ListView fx:id="articleList" VBox.vgrow="ALWAYS" styleClass="skills-list">
+            <placeholder>
+                <VBox spacing="10" alignment="CENTER">
+                    <FontIcon iconLiteral="mdi2b-book-open-variant" iconSize="40" styleClass="skills-empty-list-icon"/>
+                    <Label text="暂无符合条件的面试技巧" styleClass="skills-empty-list-title"/>
+                    <Label text="点击「新增文章」添加面试技巧资料" styleClass="skills-empty-list-hint"/>
+                </VBox>
+            </placeholder>
+        </ListView>
+
+        <!-- Bottom Tip Card -->
+        <HBox alignment="CENTER_LEFT" spacing="18" styleClass="skills-tip-card">
+            <StackPane styleClass="skills-tip-icon">
+                <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="22"/>
+            </StackPane>
+            <VBox spacing="3" HBox.hgrow="ALWAYS">
+                <Label text="面试准备建议" styleClass="skills-tip-title"/>
+                <Label text="建议先通读 STAR 法则与行为面试框架，再针对目标岗位准备 5–8 个真实项目故事。"
+                       styleClass="skills-tip-desc" wrapText="true"/>
+            </VBox>
+        </HBox>
+    </VBox>
+</StackPane>

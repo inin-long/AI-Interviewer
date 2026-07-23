@@ -107,15 +107,11 @@
                                     <AppSelect fx:id="profileBox" maxWidth="Infinity" promptText="不关联候选人画像"/>
                                 </VBox>
                                 <VBox spacing="5" GridPane.rowIndex="1">
-                                    <Label text="岗位领域知识包" styleClass="plan-field-label"/>
-                                    <AppSelect fx:id="domainPackBox" maxWidth="Infinity" promptText="请选择岗位知识包"/>
-                                </VBox>
-                                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                     <Label text="知识库分类（可多选）" styleClass="plan-field-label"/>
                                     <AppMultiSelect fx:id="knowledgeSelect" promptText="请选择知识库分类"
                                                     popupTitle="选择知识库分类" maxWidth="Infinity"/>
                                 </VBox>
-                                <VBox spacing="5" GridPane.rowIndex="2" GridPane.columnSpan="2">
+                                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
                                     <Label text="JD / 岗位描述 *" styleClass="plan-field-label"/>
                                     <TextArea fx:id="jobDescriptionArea" promptText="粘贴岗位职责、技术要求和业务场景" prefHeight="54" minHeight="54" maxHeight="54" wrapText="true"/>
                                 </VBox>
@@ -191,8 +187,6 @@
                                 <Label fx:id="summaryProfileLabel" text="未关联" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
                                 <Label text="知识库：" styleClass="plan-preview-key" GridPane.rowIndex="5"/>
                                 <Label fx:id="summaryKnowledgeLabel" text="未选择" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
-                                <Label text="知识包：" styleClass="plan-preview-key" GridPane.rowIndex="6"/>
-                                <Label fx:id="summaryDomainPackLabel" text="待选择" wrapText="true" styleClass="plan-preview-value" GridPane.columnIndex="1" GridPane.rowIndex="6"/>
                             </GridPane>
                         </VBox>
 

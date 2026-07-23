@@ -8,7 +8,6 @@ public record EvaluationPayload(
         int technicalScore,
         int problemSolvingScore,
         int projectScore,
-        int systemDesignScore,
         int communicationScore,
         int comprehensiveScore,
         String summary,
@@ -21,13 +20,12 @@ public record EvaluationPayload(
             int technicalScore,
             int problemSolvingScore,
             int projectScore,
-            int systemDesignScore,
             int communicationScore,
             int comprehensiveScore,
             String summary
     ) {
         this(overallScore, technicalScore, problemSolvingScore, projectScore,
-                systemDesignScore, communicationScore, comprehensiveScore, summary,
+                communicationScore, comprehensiveScore, summary,
                 Map.of(), 0, true);
     }
 

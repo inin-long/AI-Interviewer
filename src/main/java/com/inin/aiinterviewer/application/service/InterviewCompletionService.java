@@ -137,7 +137,7 @@ public class InterviewCompletionService {
                 必须只返回 JSON，不要 Markdown。返回字段如下：
                 {"overallScore":0到100整数,"technicalScore":0到100整数,
                 "problemSolvingScore":0到100整数,"projectScore":0到100整数,
-                "systemDesignScore":0到100整数,"communicationScore":0到100整数,
+                "communicationScore":0到100整数,
                 "comprehensiveScore":0到100整数,"summary":"综合评价：具体说明候选人表现、优势和改进点"}
 
                 目标岗位：%s
@@ -152,7 +152,7 @@ public class InterviewCompletionService {
 
     private void validate(EvaluationPayload payload) {
         int[] scores = {payload.overallScore(), payload.technicalScore(), payload.problemSolvingScore(),
-                payload.projectScore(), payload.systemDesignScore(), payload.communicationScore(),
+                payload.projectScore(), payload.communicationScore(),
                 payload.comprehensiveScore()};
         for (int score : scores) {
             if (score < 0 || score > 100) {
@@ -187,16 +187,15 @@ public class InterviewCompletionService {
         return """
                 # %s · 面试报告
 
-                **综合得分：%d / 100**
+                **综合得分：%s / 100**
 
                 | 维度 | 得分 |
                 | --- | ---: |
-                | 技术基础 | %d |
-                | 问题解决 | %d |
-                | 项目经验 | %d |
-                | 系统设计 | %d |
-                | 沟通表达 | %d |
-                | 综合能力 | %d |
+                | 技术基础 | %s |
+                | 问题解决 | %s |
+                | 项目经验 | %s |
+                | 沟通表达 | %s |
+                | 综合能力 | %s |
 
                 ## 综合评价
 
@@ -209,10 +208,23 @@ public class InterviewCompletionService {
                 ## 参考依据
 
                 %s
-                """.formatted(title, value.overallScore(), value.technicalScore(),
-                value.problemSolvingScore(), value.projectScore(), value.systemDesignScore(),
-                value.communicationScore(), value.comprehensiveScore(), value.summary(), contextSummary,
-                citationMarkdown(messages));
+                """.formatted(title, scoreMarkdown(value.overallScore()),
+                scoreMarkdown(value.technicalScore()), scoreMarkdown(value.problemSolvingScore()),
+                scoreMarkdown(value.projectScore()),
+                scoreMarkdown(value.communicationScore()), scoreMarkdown(value.comprehensiveScore()),
+                value.summary(), contextSummary, citationMarkdown(messages));
+    }
+
+    private String scoreMarkdown(int score) {
+        return "<span style=\"color:%s;font-weight:700;\">%.1f</span>".formatted(
+                scoreColor(score), (double) score);
+    }
+
+    private String scoreColor(int score) {
+        if (score >= 80) return "#27845B";
+        if (score >= 60) return "#2F80C4";
+        if (score >= 40) return "#B5780E";
+        return "#C53B46";
     }
 
     String citationMarkdown(List<InterviewMessageDto> messages) {

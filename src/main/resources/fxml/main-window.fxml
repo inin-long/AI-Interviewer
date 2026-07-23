@@ -13,7 +13,7 @@
             fx:id="mainRoot"
             styleClass="app-root">
     <left>
-        <VBox fx:id="sidebar" minWidth="200" prefWidth="200" maxWidth="200" spacing="5" styleClass="sidebar">
+        <VBox fx:id="sidebar" minWidth="220" prefWidth="220" maxWidth="220" spacing="5" styleClass="sidebar">
             <padding><Insets top="22" right="10" bottom="14" left="10"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="10" styleClass="sidebar-brand">
                 <ImageView fitWidth="36" fitHeight="36" preserveRatio="true" smooth="true">
