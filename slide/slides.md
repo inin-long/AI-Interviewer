@@ -177,53 +177,12 @@ lineNumbers: false
   </div>
 
   <div class="choice-list">
-    <div class="choice"><i>1</i><div><h3>单进程桌面架构</h3><p>部署简单，不引入 Web 服务；Spring 管业务，JavaFX 管交互。</p></div></div>
+    <div class="choice"><i>1</i><div><h3>单进程桌面架构</h3><p>JavaFX 承载交互，Spring 管理业务。</p></div></div>
     <div class="choice"><i>2</i><div><h3>状态图而非一次性调用</h3><p>面试是长流程，必须能暂停、校验、重试并从 Checkpoint 恢复。</p></div></div>
     <div class="choice"><i>3</i><div><h3>本地数据与检索</h3><p>简历、问答和索引留在本机，仅在 AI 调用时按需联网。</p></div></div>
   </div>
 </div>
 
 <!--
-约 45 秒：不要逐项念技术名。先讲三个选择标准，再用左侧栈说明每层如何支撑目标。突出单进程、本地数据和状态图。
--->
-
----
-
-<div class="eyebrow">Team & delivery</div>
-<h2 class="slide-title">A 负责产品与前端，B、C 负责后端与智能体</h2>
-
-<div class="team-layout">
-  <section class="owner">
-    <div class="owner-head">
-      <span class="owner-id">A</span>
-      <div><h3>A</h3><p>产品方向与前端</p></div>
-    </div>
-    <ul>
-      <li>需求梳理、业务流程与验收口径</li>
-      <li>信息架构、交互设计与视觉规范</li>
-      <li>JavaFX / FXML 页面、组件与前后端联调</li>
-    </ul>
-  </section>
-
-  <section class="owner backend">
-    <div class="owner-head">
-      <span class="owner-id">B+C</span>
-      <div><h3>B、C</h3><p>后端与智能体</p></div>
-    </div>
-    <ul>
-      <li>服务层、SQLite 数据模型、任务与文件系统</li>
-      <li>简历解析、RAG 索引、AI Provider 接入</li>
-      <li>Agent 状态图、证据评估、Checkpoint 与测试</li>
-    </ul>
-  </section>
-</div>
-
-<div class="acceptance-line">
-  <strong>验收结论</strong>
-  <p>简历 → 画像 → 方案 → 面试 → 评估 → 训练主链路已贯通，并具备本地数据隔离、失败恢复和自动化验证。</p>
-  <span>READY</span>
-</div>
-
-<!--
-约 35 秒：说明 A 与 B/C 的边界，以及接口联调点。最后回扣开场：主流程已贯通，项目具备验收条件。总时长约 4 分 35 秒。
+约 45 秒：先讲三个选择标准，再用左侧技术栈说明每层如何支撑目标。最后回扣本地、可恢复、可追溯三个关键词，总时长约 4 分钟。
 -->
