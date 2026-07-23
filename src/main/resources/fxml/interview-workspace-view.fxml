@@ -2,131 +2,265 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 <?import com.inin.aiinterviewer.ui.component.InterviewTranscriptView?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.inin.aiinterviewer.ui.controller.InterviewWorkspaceController"
             fx:id="workspaceRoot"
-            styleClass="page-content">
-    <top>
-        <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
-            <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="←" onAction="#back" styleClass="back-icon-button"
-                    accessibleText="返回面试方案列表">
-                <tooltip><Tooltip text="暂停并返回方案列表"/></tooltip>
-            </Button>
-            <VBox spacing="4">
-                <Label fx:id="titleLabel" text="模拟面试" styleClass="page-title"/>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label fx:id="jobLabel" text="目标岗位" styleClass="secondary-text"/>
-                    <Label fx:id="stageLabel" text="开场介绍" styleClass="status-tag"/>
-                    <Label fx:id="statusLabel" text="进行中" styleClass="status-tag"/>
-                    <Label fx:id="modeLabel" text="正式模拟" styleClass="status-tag"/>
-                    <Label fx:id="personaLabel" text="专业面试官" styleClass="status-tag"/>
-                    <Label fx:id="pressureLabel" text="标准压力" styleClass="status-tag"/>
-                    <Label fx:id="scenarioLabel" text="场景 0 / 0" styleClass="status-tag"
-                           visible="false" managed="false"/>
-                    <Label fx:id="progressLabel" text="第 0 / 0 题" styleClass="secondary-text"/>
-                    <Label fx:id="remainingTimeLabel" text="剩余 0 分钟" styleClass="secondary-text"/>
-                </HBox>
-            </VBox>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Button fx:id="retryQuestionButton" text="生成问题" onAction="#generateInitialQuestion"
-                    styleClass="secondary-button" visible="false" managed="false"/>
-            <Button fx:id="retryReportButton" text="重新生成报告" onAction="#retryReport"
-                    styleClass="secondary-button" visible="false" managed="false"/>
-            <Button fx:id="reportButton" text="查看报告" onAction="#openReport"
-                    styleClass="primary-button" visible="false" managed="false"/>
-            <Button fx:id="pauseButton" text="暂停面试" onAction="#togglePause" styleClass="secondary-button"/>
-            <Button fx:id="endButton" text="结束面试" onAction="#endInterview" styleClass="danger-button"
-                    visible="false" managed="false"/>
-        </HBox>
-    </top>
+            styleClass="interview-page">
+    <fx:define>
+        <ToggleGroup fx:id="answerModeGroup"/>
+    </fx:define>
     <center>
-        <VBox spacing="16" styleClass="interview-workspace">
-            <padding><Insets top="20" right="28" bottom="28" left="28"/></padding>
-            <Label fx:id="aiNoticeLabel" text="AI 状态" styleClass="local-data-note" wrapText="true"/>
-            <HBox spacing="16" VBox.vgrow="ALWAYS">
-                <VBox spacing="12" HBox.hgrow="ALWAYS" styleClass="content-card">
-                    <padding><Insets top="20" right="20" bottom="20" left="20"/></padding>
-                    <HBox alignment="CENTER_LEFT">
-                        <Label text="面试对话" styleClass="module-title"/>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label text="回答、阶段切换和暂停均会保存" styleClass="secondary-text"/>
-                    </HBox>
+        <HBox spacing="6" styleClass="interview-workspace">
+            <padding><Insets top="0" right="16" bottom="34" left="24"/></padding>
+
+            <VBox spacing="8" HBox.hgrow="ALWAYS">
+                <HBox minHeight="78" prefHeight="78" maxHeight="78" alignment="CENTER_LEFT"
+                      styleClass="interview-status-card">
+                    <padding><Insets top="11" right="12" bottom="11" left="20"/></padding>
+                    <VBox spacing="5" minWidth="132" prefWidth="132">
+                        <Label text="当前阶段" styleClass="interview-status-kicker"/>
+                        <HBox alignment="CENTER_LEFT" spacing="7">
+                            <FontIcon iconLiteral="mdi2t-target" iconSize="15" styleClass="status-stage-icon"/>
+                            <Label fx:id="stageLabel" text="技术深挖" styleClass="interview-stage-pill"/>
+                        </HBox>
+                    </VBox>
+                    <Separator orientation="VERTICAL" minHeight="42" prefHeight="42" styleClass="interview-status-divider"/>
+                    <VBox spacing="6" minWidth="126" prefWidth="126">
+                        <Label text="题目进度" styleClass="interview-status-kicker"/>
+                        <Label fx:id="progressLabel" text="第 0 / 0 题" styleClass="interview-status-value"/>
+                    </VBox>
+                    <Separator orientation="VERTICAL" minHeight="42" prefHeight="42" styleClass="interview-status-divider"/>
+                    <VBox spacing="6" minWidth="130" prefWidth="130">
+                        <Label text="面试时长" styleClass="interview-status-kicker"/>
+                        <HBox alignment="CENTER_LEFT" spacing="7">
+                            <FontIcon iconLiteral="mdi2c-clock-outline" iconSize="16" styleClass="status-neutral-icon"/>
+                            <Label fx:id="remainingTimeLabel" text="00:00" styleClass="interview-status-value"/>
+                        </HBox>
+                    </VBox>
+                    <Separator orientation="VERTICAL" minHeight="42" prefHeight="42" styleClass="interview-status-divider"/>
+                    <VBox spacing="6" minWidth="128" prefWidth="128">
+                        <Label text="AI 连接状态" styleClass="interview-status-kicker"/>
+                        <HBox alignment="CENTER_LEFT" spacing="7">
+                            <FontIcon iconLiteral="mdi2c-circle" iconSize="9" styleClass="status-connected-dot"/>
+                            <Label fx:id="agentConnectionLabel" text="已连接" styleClass="interview-status-value"/>
+                            <FontIcon iconLiteral="mdi2s-signal" iconSize="16" styleClass="status-signal-icon"/>
+                        </HBox>
+                    </VBox>
+                    <Separator orientation="VERTICAL" minHeight="42" prefHeight="42" styleClass="interview-status-divider"/>
+                    <VBox spacing="7" HBox.hgrow="ALWAYS" minWidth="210">
+                        <Label text="整体进度" styleClass="interview-status-kicker"/>
+                        <HBox alignment="CENTER_LEFT" spacing="8">
+                            <ProgressBar fx:id="overallProgressBar" progress="0" maxWidth="Infinity"
+                                         HBox.hgrow="ALWAYS" styleClass="interview-overall-progress"/>
+                            <Label fx:id="overallProgressLabel" text="0%" styleClass="interview-progress-percent"/>
+                        </HBox>
+                    </VBox>
+                    <Region minWidth="12" prefWidth="12"/>
+                    <Button fx:id="retryQuestionButton" text="生成问题" onAction="#generateInitialQuestion"
+                            visible="false" managed="false" styleClass="interview-outline-button"/>
+                    <Button fx:id="retryReportButton" text="重新生成报告" onAction="#retryReport"
+                            visible="false" managed="false" styleClass="interview-outline-button"/>
+                    <Button fx:id="reportButton" text="查看报告" onAction="#openReport"
+                            visible="false" managed="false" styleClass="interview-primary-button"/>
+                    <Button fx:id="pauseButton" text="暂停面试" onAction="#togglePause"
+                            contentDisplay="LEFT" graphicTextGap="6" styleClass="interview-pause-button">
+                        <graphic><FontIcon iconLiteral="mdi2p-pause" iconSize="15"/></graphic>
+                    </Button>
+                    <Button fx:id="endButton" text="结束面试" onAction="#endInterview"
+                            contentDisplay="LEFT" graphicTextGap="6" styleClass="interview-end-button">
+                        <graphic><FontIcon iconLiteral="mdi2s-stop" iconSize="14"/></graphic>
+                    </Button>
+                </HBox>
+
+                <VBox VBox.vgrow="ALWAYS" styleClass="interview-dialogue-card">
                     <InterviewTranscriptView fx:id="transcriptView" VBox.vgrow="ALWAYS"/>
-                    <Separator/>
-                    <Label text="你的回答" styleClass="field-label"/>
-                    <Label fx:id="answerTimeLimitLabel" text="" styleClass="secondary-text" wrapText="true"
-                           visible="false" managed="false"/>
-                    <TextArea fx:id="answerArea" promptText="输入你的回答，AI 将结合当前阶段和已关联资料继续提问"
-                              wrapText="true" prefRowCount="5" prefColumnCount="80"
-                              minHeight="132" prefHeight="156" maxWidth="Infinity"
-                              styleClass="answer-input"/>
-                    <HBox alignment="CENTER_RIGHT">
-                        <Button fx:id="submitButton" text="提交回答" onAction="#submitAnswer"
-                                defaultButton="true" styleClass="primary-button"/>
+                </VBox>
+
+                <VBox minHeight="164" prefHeight="164" maxHeight="164" styleClass="interview-composer">
+                    <HBox minHeight="40" prefHeight="40" maxHeight="40" alignment="CENTER_LEFT"
+                          styleClass="composer-tabs">
+                        <ToggleButton fx:id="textModeToggle" text="文本模式" selected="true"
+                                      toggleGroup="$answerModeGroup" onAction="#selectTextMode"
+                                      styleClass="composer-tab"/>
+                        <ToggleButton fx:id="codeModeToggle" text="&lt;/&gt; 代码模式"
+                                      toggleGroup="$answerModeGroup" onAction="#selectCodeMode"
+                                      styleClass="composer-tab"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="answerTimeLimitLabel" text="" visible="false" managed="false"
+                               styleClass="answer-time-limit"/>
+                        <FontIcon iconLiteral="mdi2a-arrow-expand" iconSize="16" styleClass="composer-expand-icon"/>
+                    </HBox>
+                    <TextArea fx:id="answerArea"
+                              promptText="输入你的回答，支持普通文本与代码回答…"
+                              wrapText="true" prefRowCount="3" maxWidth="Infinity"
+                              VBox.vgrow="ALWAYS" styleClass="interview-answer-input"/>
+                    <HBox minHeight="48" prefHeight="48" maxHeight="48" alignment="CENTER_LEFT"
+                          spacing="10" styleClass="composer-footer">
+                        <Button text="&lt;/&gt; 代码模式" onAction="#selectCodeMode" styleClass="composer-tool-button"/>
+                        <Button text="▣  草稿⌄" onAction="#saveDraft" styleClass="composer-tool-button"/>
+                        <Button text="▱  清空" onAction="#clearDraft" styleClass="composer-tool-button"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label text="Ctrl + Enter 发送" styleClass="composer-shortcut"/>
+                        <Button fx:id="submitButton" text="发送回答" onAction="#submitAnswer"
+                                defaultButton="true" contentDisplay="LEFT" graphicTextGap="8"
+                                styleClass="interview-send-button">
+                            <graphic><FontIcon iconLiteral="mdi2s-send-outline" iconSize="17"/></graphic>
+                        </Button>
                     </HBox>
                 </VBox>
-                <VBox fx:id="rightRail" spacing="12" minWidth="290" prefWidth="320" maxWidth="350">
-                    <VBox fx:id="coachingPanel" spacing="10" styleClass="content-card,mode-detail-card"
-                          visible="false" managed="false">
-                        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-                        <Label text="教练反馈" styleClass="module-title"/>
-                        <Label text="仅用于训练，不进入正式能力证据" wrapText="true"
-                               styleClass="mode-isolation-note"/>
-                        <Label text="已经覆盖" styleClass="field-label"/>
-                        <Label fx:id="coachCoveredLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="缺失内容" styleClass="field-label"/>
-                        <Label fx:id="coachMissingLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="逻辑缺口" styleClass="field-label"/>
-                        <Label fx:id="coachLogicLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="参考结构" styleClass="field-label"/>
-                        <Label fx:id="coachStructureLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label fx:id="coachHintLabel" wrapText="true" styleClass="coach-hint"
-                               visible="false" managed="false"/>
-                        <HBox spacing="8">
-                            <Button fx:id="coachHintButton" text="请求提示" onAction="#requestCoachHint"
-                                    styleClass="secondary-button" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                            <Button fx:id="coachReanswerButton" text="重新组织回答" onAction="#reanswerLatest"
-                                    styleClass="secondary-button" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
-                        </HBox>
-                    </VBox>
-                    <VBox fx:id="scenarioPanel" spacing="10" styleClass="content-card,mode-detail-card"
-                          visible="false" managed="false">
-                        <padding><Insets top="18" right="18" bottom="18" left="18"/></padding>
-                        <Label text="情境沙盘" styleClass="module-title"/>
-                        <Label fx:id="scenarioObjectiveLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="公开事实与约束" styleClass="field-label"/>
-                        <Label fx:id="scenarioFactsLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="当前事件" styleClass="field-label"/>
-                        <Label fx:id="scenarioEventLabel" wrapText="true" styleClass="mode-detail-value"/>
-                        <Label text="最近决策" styleClass="field-label"/>
-                        <Label fx:id="scenarioDecisionLabel" wrapText="true" styleClass="mode-detail-value"/>
-                    </VBox>
-                    <VBox fx:id="citationRail" spacing="12" VBox.vgrow="ALWAYS"
-                          styleClass="content-card,citation-rail">
-                        <padding><Insets top="20" right="18" bottom="18" left="18"/></padding>
-                        <HBox alignment="CENTER_LEFT">
-                            <VBox spacing="3">
-                                <Label text="参考依据" styleClass="module-title"/>
-                                <Label text="本次提问实际采用的片段" styleClass="secondary-text"/>
-                            </VBox>
-                            <Region HBox.hgrow="ALWAYS"/>
-                        </HBox>
-                        <Label fx:id="citationCountLabel" text="暂无引用" styleClass="citation-count"/>
-                        <Separator/>
-                        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS"
-                                    styleClass="citation-scroll">
-                            <content>
-                                <VBox fx:id="citationContainer" spacing="10" fillWidth="true"/>
-                            </content>
-                        </ScrollPane>
-                    </VBox>
+            </VBox>
+
+            <VBox fx:id="rightRail" spacing="8" minWidth="330" prefWidth="330" maxWidth="330"
+                  styleClass="interview-right-rail">
+                <VBox minHeight="140" prefHeight="140" maxHeight="140" spacing="8" styleClass="interview-rail-card">
+                    <padding><Insets top="13" right="14" bottom="12" left="14"/></padding>
+                    <Label text="当前面试信息" styleClass="interview-rail-title"/>
+                    <GridPane hgap="10" vgap="6">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="66" prefWidth="66"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                        </columnConstraints>
+                        <Label text="岗位" styleClass="rail-field-name" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <Label fx:id="infoJobLabel" text="--" maxWidth="Infinity" styleClass="rail-field-value"
+                               GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="方案名称" styleClass="rail-field-name" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <Label fx:id="planNameLabel" text="--" maxWidth="Infinity" styleClass="rail-field-value"
+                               GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="简历" styleClass="rail-field-name" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <Label fx:id="resumeNameLabel" text="--" maxWidth="Infinity" styleClass="rail-field-value"
+                               GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <Label text="默认时长" styleClass="rail-field-name" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <Label fx:id="durationLabel" text="--" styleClass="rail-field-value"
+                               GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    </GridPane>
                 </VBox>
-            </HBox>
-        </VBox>
+
+                <VBox minHeight="102" prefHeight="102" maxHeight="102" spacing="7" styleClass="interview-rail-card">
+                    <padding><Insets top="12" right="14" bottom="10" left="14"/></padding>
+                    <Label text="当前阶段" styleClass="interview-rail-title"/>
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <FontIcon iconLiteral="mdi2t-target" iconSize="16" styleClass="status-stage-icon"/>
+                        <Label fx:id="stageRailLabel" text="技术深挖" styleClass="rail-stage-value"/>
+                    </HBox>
+                    <Label fx:id="stageDescriptionLabel" text="深入考察候选人的技术广度与深度，结合项目经验进行追问和延展性思考。"
+                           wrapText="true" maxWidth="Infinity" styleClass="rail-stage-description"/>
+                </VBox>
+
+                <VBox fx:id="scorePanel" minHeight="153" prefHeight="153" maxHeight="153" spacing="6" styleClass="interview-rail-card">
+                    <padding><Insets top="12" right="14" bottom="10" left="14"/></padding>
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="评分维度预览" styleClass="interview-rail-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="scoreStateLabel" text="总分 100" styleClass="rail-score-caption"/>
+                    </HBox>
+                    <GridPane hgap="8" vgap="5">
+                        <columnConstraints>
+                            <ColumnConstraints minWidth="66" prefWidth="66"/>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                            <ColumnConstraints minWidth="44" prefWidth="44" halignment="RIGHT"/>
+                        </columnConstraints>
+                        <Label text="技术能力" styleClass="rail-score-name" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <ProgressBar progress="0" maxWidth="Infinity" styleClass="rail-score-progress" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="--/100" styleClass="rail-score-value" GridPane.rowIndex="0" GridPane.columnIndex="2"/>
+                        <Label text="问题分析" styleClass="rail-score-name" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <ProgressBar progress="0" maxWidth="Infinity" styleClass="rail-score-progress" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="--/100" styleClass="rail-score-value" GridPane.rowIndex="1" GridPane.columnIndex="2"/>
+                        <Label text="项目经验" styleClass="rail-score-name" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <ProgressBar progress="0" maxWidth="Infinity" styleClass="rail-score-progress" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <Label text="--/100" styleClass="rail-score-value" GridPane.rowIndex="2" GridPane.columnIndex="2"/>
+                        <Label text="系统设计" styleClass="rail-score-name" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <ProgressBar progress="0" maxWidth="Infinity" styleClass="rail-score-progress" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                        <Label text="--/100" styleClass="rail-score-value" GridPane.rowIndex="3" GridPane.columnIndex="2"/>
+                        <Label text="沟通表达" styleClass="rail-score-name" GridPane.rowIndex="4" GridPane.columnIndex="0"/>
+                        <ProgressBar progress="0" maxWidth="Infinity" styleClass="rail-score-progress" GridPane.rowIndex="4" GridPane.columnIndex="1"/>
+                        <Label text="--/100" styleClass="rail-score-value" GridPane.rowIndex="4" GridPane.columnIndex="2"/>
+                    </GridPane>
+                </VBox>
+
+                <VBox fx:id="citationRail" minHeight="134" prefHeight="134" maxHeight="134" spacing="5"
+                      styleClass="interview-rail-card,citation-rail">
+                    <padding><Insets top="11" right="12" bottom="9" left="14"/></padding>
+                    <HBox alignment="CENTER_LEFT">
+                        <Label text="已关联知识库" styleClass="interview-rail-title"/>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="citationCountLabel" text="0 个文档" styleClass="citation-count"/>
+                    </HBox>
+                    <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"
+                                VBox.vgrow="ALWAYS" styleClass="citation-scroll">
+                        <content><VBox fx:id="citationContainer" spacing="3" fillWidth="true"/></content>
+                    </ScrollPane>
+                </VBox>
+
+                <VBox fx:id="agentPanel" minHeight="133" prefHeight="133" maxHeight="133" spacing="6" styleClass="interview-rail-card">
+                    <padding><Insets top="11" right="14" bottom="10" left="14"/></padding>
+                    <Label text="Agent 运行状态" styleClass="interview-rail-title"/>
+                    <GridPane hgap="8" vgap="5">
+                        <columnConstraints>
+                            <ColumnConstraints hgrow="ALWAYS"/>
+                            <ColumnConstraints minWidth="54" prefWidth="54" halignment="RIGHT"/>
+                        </columnConstraints>
+                        <Label text="LangGraph Agent" styleClass="rail-agent-name" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+                        <Label fx:id="agentGraphStatusLabel" text="就绪" styleClass="rail-agent-ready" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
+                        <Label text="Checkpoint（断点）" styleClass="rail-agent-name" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+                        <Label fx:id="agentCheckpointLabel" text="就绪" styleClass="rail-agent-ready" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                        <Label text="Streaming（流式）" styleClass="rail-agent-name" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+                        <Label fx:id="agentStreamingLabel" text="就绪" styleClass="rail-agent-ready" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
+                        <Label text="Retry（重试机制）" styleClass="rail-agent-name" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+                        <Label fx:id="agentRetryLabel" text="就绪" styleClass="rail-agent-ready" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+                    </GridPane>
+                </VBox>
+
+                <VBox fx:id="tipPanel" minHeight="106" prefHeight="106" maxHeight="106" spacing="7" styleClass="interview-rail-card,interview-tip-card">
+                    <padding><Insets top="12" right="14" bottom="10" left="14"/></padding>
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <FontIcon iconLiteral="mdi2l-lightbulb-outline" iconSize="18" styleClass="rail-tip-icon"/>
+                        <Label text="提示" styleClass="interview-rail-title"/>
+                    </HBox>
+                    <Label text="当前问题引用了知识库：" styleClass="rail-tip-copy"/>
+                    <Label fx:id="currentCitationLabel" text="当前问题尚未引用知识库" wrapText="true"
+                           maxWidth="Infinity" styleClass="rail-tip-link"/>
+                </VBox>
+
+                <VBox fx:id="coachingPanel" spacing="6" visible="false" managed="false"
+                      VBox.vgrow="ALWAYS" styleClass="interview-rail-card,mode-detail-card">
+                    <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+                    <Label text="教练反馈" styleClass="interview-rail-title"/>
+                    <Label fx:id="coachCoveredLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="coachMissingLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="coachLogicLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="coachStructureLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="coachHintLabel" wrapText="true" visible="false" managed="false" styleClass="coach-hint"/>
+                    <HBox spacing="6">
+                        <Button fx:id="coachHintButton" text="请求提示" onAction="#requestCoachHint" styleClass="composer-tool-button"/>
+                        <Button fx:id="coachReanswerButton" text="重新组织回答" onAction="#reanswerLatest" styleClass="composer-tool-button"/>
+                    </HBox>
+                </VBox>
+                <VBox fx:id="scenarioPanel" spacing="5" visible="false" managed="false"
+                      VBox.vgrow="ALWAYS" styleClass="interview-rail-card,mode-detail-card">
+                    <padding><Insets top="14" right="14" bottom="14" left="14"/></padding>
+                    <Label text="情境沙盘" styleClass="interview-rail-title"/>
+                    <Label fx:id="scenarioObjectiveLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="scenarioFactsLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="scenarioEventLabel" wrapText="true" styleClass="mode-detail-value"/>
+                    <Label fx:id="scenarioDecisionLabel" wrapText="true" styleClass="mode-detail-value"/>
+                </VBox>
+            </VBox>
+
+            <Label fx:id="titleLabel" visible="false" managed="false"/>
+            <Label fx:id="jobLabel" visible="false" managed="false"/>
+            <Label fx:id="statusLabel" visible="false" managed="false"/>
+            <Label fx:id="modeLabel" visible="false" managed="false"/>
+            <Label fx:id="personaLabel" visible="false" managed="false"/>
+            <Label fx:id="pressureLabel" visible="false" managed="false"/>
+            <Label fx:id="scenarioLabel" visible="false" managed="false"/>
+            <Label fx:id="aiNoticeLabel" visible="false" managed="false"/>
+        </HBox>
     </center>
 </BorderPane>
