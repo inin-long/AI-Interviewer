@@ -4,6 +4,7 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
@@ -12,7 +13,8 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header">
             <padding><Insets top="20" right="28" bottom="18" left="28"/></padding>
-            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回题库">
+            <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回题库">
+                <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
                 <tooltip><Tooltip text="返回题库"/></tooltip>
             </Button>
             <VBox spacing="4">

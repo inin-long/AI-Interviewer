@@ -4,49 +4,54 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import com.inin.aiinterviewer.ui.component.AppSelect?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.inin.aiinterviewer.ui.controller.SkillArticleEditorController"
-      spacing="12" styleClass="container">
+      spacing="16" styleClass="page-content,skill-article-editor-page">
 
     <padding>
-        <Insets topRightBottomLeft="20"/>
+        <Insets top="20" right="24" bottom="20" left="24"/>
     </padding>
 
-    <HBox spacing="12" alignment="CENTER_LEFT">
-        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
-        <Label text="编辑文章" styleClass="heading-2"/>
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="standard-page-header">
+        <Button onAction="#handleBack" styleClass="back-icon-button" accessibleText="返回面试技巧库">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+        </Button>
+        <Label text="编辑文章" styleClass="page-title"/>
     </HBox>
 
-    <GridPane hgap="12" vgap="12" styleClass="card">
+    <GridPane hgap="14" vgap="14" styleClass="content-card,skill-editor-card" VBox.vgrow="ALWAYS">
         <padding>
-            <Insets topRightBottomLeft="16"/>
+            <Insets topRightBottomLeft="20"/>
         </padding>
         <columnConstraints>
             <ColumnConstraints prefWidth="80" minWidth="80"/>
             <ColumnConstraints hgrow="ALWAYS" minWidth="300"/>
         </columnConstraints>
 
-        <Label text="标题" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <Label text="标题" styleClass="field-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
         <TextField fx:id="titleField" promptText="文章标题" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 
-        <Label text="分类" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <Label text="分类" styleClass="field-label" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
         <AppSelect fx:id="categoryCombo" promptText="选择分类" editable="true" prefWidth="250"
                   GridPane.rowIndex="1" GridPane.columnIndex="1"/>
 
-        <Label text="摘要" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
+        <Label text="摘要" styleClass="field-label" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
         <TextArea fx:id="summaryField" promptText="简短摘要（可选）" prefRowCount="2" wrapText="true"
                   GridPane.rowIndex="2" GridPane.columnIndex="1"/>
 
-        <Label text="内容" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
+        <Label text="内容" styleClass="field-label" GridPane.rowIndex="3" GridPane.columnIndex="1"/>
         <TextArea fx:id="contentArea" promptText="Markdown 格式内容..." prefRowCount="15" wrapText="true"
                   GridPane.rowIndex="4" GridPane.columnIndex="1" GridPane.columnSpan="2"/>
     </GridPane>
 
     <HBox spacing="12" alignment="CENTER_RIGHT">
-        <Button text="保存" onAction="#handleSave" styleClass="btn-primary"/>
-        <Button text="取消" onAction="#handleBack" styleClass="btn-secondary"/>
+        <Button text="取消" onAction="#handleBack" styleClass="secondary-button"/>
+        <Button text="保存" onAction="#handleSave" styleClass="primary-button">
+            <graphic><FontIcon iconLiteral="mdi2c-content-save-outline" iconSize="17"/></graphic>
+        </Button>
     </HBox>
 
 </VBox>

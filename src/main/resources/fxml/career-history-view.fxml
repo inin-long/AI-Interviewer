@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
@@ -10,7 +11,8 @@
       spacing="18" styleClass="page-content">
     <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
     <HBox alignment="CENTER_LEFT" spacing="12">
-        <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回测评">
+        <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回测评">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
             <tooltip><Tooltip text="返回测评"/></tooltip>
         </Button>
         <VBox spacing="5">

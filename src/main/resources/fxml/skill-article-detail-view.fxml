@@ -3,29 +3,34 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.inin.aiinterviewer.ui.controller.SkillArticleDetailController"
-      spacing="12" styleClass="container">
+      spacing="16" styleClass="page-content,skill-article-detail-page">
 
     <padding>
-        <Insets topRightBottomLeft="20"/>
+        <Insets top="20" right="24" bottom="20" left="24"/>
     </padding>
 
-    <HBox spacing="12" alignment="CENTER_LEFT">
-        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
-        <Label fx:id="titleLabel" text="" styleClass="heading-2"/>
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="standard-page-header">
+        <Button onAction="#handleBack" styleClass="back-icon-button" accessibleText="返回面试技巧库">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+        </Button>
+        <Label fx:id="titleLabel" text="" styleClass="page-title"/>
         <Region HBox.hgrow="ALWAYS"/>
         <Label fx:id="categoryLabel" styleClass="status-badge,skill-article-category"/>
-        <Button text="编辑" onAction="#handleEdit" styleClass="btn-primary"/>
+        <Button text="编辑" onAction="#handleEdit" styleClass="primary-button">
+            <graphic><FontIcon iconLiteral="mdi2p-pencil-outline" iconSize="17"/></graphic>
+        </Button>
     </HBox>
 
     <Label fx:id="summaryLabel" styleClass="secondary-text,skill-article-summary" wrapText="true"/>
 
     <Separator/>
 
-    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="card">
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" styleClass="content-card,skill-article-content">
         <content>
             <VBox fx:id="contentArea" spacing="8">
                 <padding>

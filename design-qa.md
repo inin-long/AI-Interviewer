@@ -132,6 +132,56 @@ final result: passed（本轮垂直间距与启动窗口调整）
 
 final result: passed
 
+## 全局 UI 设计标准与通用组件收敛（2026-07-24）
+
+- source visual truth:
+  - `D:\Code\Java\AI-Interviewer\docs\ui-reference\ui-standard-resume.png`
+  - `D:\Code\Java\AI-Interviewer\docs\ui-reference\ui-standard-skills.png`
+- implementation screenshots:
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\resume-center.png`
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\skills-library.png`
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\question-bank.png`
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\settings.png`
+- same-frame comparisons:
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\compare-resume-global-standard.png`
+  - `C:\Users\35975\.codex\visualizations\2026\07\17\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\global-ui\compare-skills-global-standard.png`
+- viewport: `1672 × 901` JavaFX scene；参考截图移除 28px 系统标题栏后按相同视觉缩放对齐，并使用共同 `1551 × 901` 内容画幅比较。
+- Browser classification: JavaFX 桌面应用，不使用 Browser/IAB；所有实现截图来自 JavaFX 原生 `Parent.snapshot`。
+
+### Locked standard
+
+- `docs/product/ui-design.md` 已重写为项目唯一视觉规范，锁定颜色、间距、字号、圆角、边框、阴影、按钮、输入、卡片、筛选、表格、弹层、图标和 3D 插画规则。
+- 两张用户截图已版本化到 `docs/ui-reference`，避免临时文件失效后失去视觉真值。
+- `app.css` 根令牌和通用组件统一为冷白工作区、白色表面、`#5364F2` 主色、`#E1E5EC` 边框、8px 控件圆角、10px 卡片圆角与低阴影。
+- 面试工作台专属布局继续位于锁定标准之后，保留该页面已经验收的专注模式尺寸，不被通用覆盖破坏。
+
+### Mismatch ledger and fixes
+
+- P1：历史页面存在 10 处 FXML 内联样式，绕过全局组件。已全部替换为语义样式类，并新增自动化守卫，当前内联样式数量为 0。
+- P1：多个详情页以 `←` 或 `&lt; 返回` 字符模拟返回图标。已全部替换为 Ikonli Material Design 2 `mdi2a-arrow-left`，保留原事件绑定、Tooltip 和可访问名称。
+- P1：技巧文章详情、编辑及两个历史页仍使用未定义的 `container / heading-2 / btn-*` 旧组件。已改为标准页面头部、内容卡、主次按钮和字段标签，控制器与业务流程未改。
+- P1：岗位题库表格使用整片淡紫底、渐变图标块和旧颜色值，偏离两张基准页。已收敛为白色表面、统一边框、弱悬停/选中态和标准语义色。
+- P2：旧样式引用 `-text-primary` / `-text-tertiary` 未定义，运行时产生 JavaFX CSS 警告。已补齐兼容别名，复查截图无 CSS lookup 警告。
+- P2：通用表单原始高度为 52px，与业务工作台 40px 控件规范冲突。已将工作台通用输入和选择器收敛为 40px；登录/注册页由更高特异性的认证样式继续保持已验收尺寸。
+- Pass 3：简历中心和技巧库同画幅比较确认壳层、标题、按钮、筛选、统计卡、列表行、状态色和底部提示卡均无剩余 P0/P1/P2 问题。
+
+### Assets
+
+- 正式页面继续使用已生成且通过透明背景 QA 的 `src/main/resources/images/resume/resume-sidebar-illustration.png`，其构图、色板和 178×178px 显示密度与参考一致。
+- 本轮 built-in ImageGen 生成候选文件：`C:\Users\35975\.codex\generated_images\019f704b-9f99-7db3-87b7-aa0f8ddce3e9\call_aAJK1hnruujDu6bb57T9HGP3.png`。
+- 候选文件虽构图合格，但实际为 24bpp RGB 且把棋盘格烘焙进背景，不满足真实透明 Alpha 要求；两次透明化编辑因 ImageGen 网络错误失败，因此未把不合格素材写入生产资源。
+
+### Verification
+
+- `mvnw.cmd -q -DskipTests compile`：通过。
+- `UiDesignStandardTest`：3 项通过，锁定视觉真值文件、关键 CSS 令牌、无内联样式和无字符返回图标。
+- `GlobalUiSnapshotTest`：通过，原生生成技巧库、岗位题库和设置三条代表路由截图。
+- `ResumeCenterSnapshotTest`：通过，使用隔离 SQLite 数据生成 6 状态简历中心截图。
+- `JavaFxFxmlLoadTest`：22 项中 17 项通过；5 个失败是仓库已有的旧尺寸/旧布局断言（启动窗口、认证卡、侧栏、画像 Drawer、报告证据栏），本轮未新增 FXML 加载或 CSS 解析错误。
+- 非 UI 全量回归仍存在仓库当前基线中的 AI 代理随机结果、迁移版本、Markdown 安全断言与 E2E 登录夹具等 10 个失败；本轮没有修改任何相关业务代码，未在视觉任务中越权修复。
+
+final result: passed
+
 ## 面试工作台重构（2026-07-23）
 
 - source visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\interview.png`

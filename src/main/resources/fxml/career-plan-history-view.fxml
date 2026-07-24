@@ -3,21 +3,24 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx"
       xmlns:fx="http://javafx.com/fxml"
       fx:controller="com.inin.aiinterviewer.ui.controller.CareerPlanHistoryController"
-      spacing="12" styleClass="container">
+      spacing="16" styleClass="page-content,archive-page">
 
     <padding>
-        <Insets topRightBottomLeft="20"/>
+        <Insets top="20" right="24" bottom="20" left="24"/>
     </padding>
 
-    <HBox spacing="12" alignment="CENTER_LEFT">
-        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
-        <Label text="职业规划历史" styleClass="heading-2"/>
+    <HBox spacing="12" alignment="CENTER_LEFT" styleClass="standard-page-header">
+        <Button onAction="#handleBack" styleClass="back-icon-button" accessibleText="返回职业规划">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+        </Button>
+        <Label text="职业规划历史" styleClass="page-title"/>
     </HBox>
 
-    <ListView fx:id="historyList" VBox.vgrow="ALWAYS" styleClass="card"/>
+    <ListView fx:id="historyList" VBox.vgrow="ALWAYS" styleClass="content-card"/>
 
 </VBox>

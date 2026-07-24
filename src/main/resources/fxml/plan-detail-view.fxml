@@ -13,7 +13,9 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="11" styleClass="plan-detail-header">
             <padding><Insets top="16" right="24" bottom="14" left="24"/></padding>
-            <Button text="←" onAction="#back" styleClass="back-icon-button"/>
+            <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回面试方案列表">
+                <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+            </Button>
             <VBox spacing="3">
                 <Label text="面试方案详情" styleClass="plan-detail-title"/>
                 <Label fx:id="breadcrumbLabel" text="面试方案 / 方案详情" styleClass="plan-detail-breadcrumb"/>

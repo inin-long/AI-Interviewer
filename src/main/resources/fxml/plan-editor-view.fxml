@@ -15,7 +15,9 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="plan-editor-header">
             <padding><Insets top="16" right="24" bottom="14" left="24"/></padding>
-            <Button text="←" onAction="#cancel" accessibleText="返回面试方案列表" styleClass="back-icon-button"/>
+            <Button onAction="#cancel" accessibleText="返回面试方案列表" styleClass="back-icon-button">
+                <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+            </Button>
             <VBox spacing="3">
                 <Label fx:id="pageHeadingLabel" text="新建面试方案" styleClass="plan-editor-title"/>
                 <Label text="配置岗位、候选人资料、面试范围、流程与规则，生成可直接执行的 AI 面试方案。"
