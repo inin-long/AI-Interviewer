@@ -13,10 +13,11 @@
 
     <!-- Page Header -->
     <HBox alignment="CENTER_LEFT" spacing="14" styleClass="assessment-page-header">
-        <VBox styleClass="assessment-header-icon-wrap">
-            <padding><Insets top="6" right="10" bottom="6" left="10"/></padding>
+        <StackPane minWidth="54" prefWidth="54" maxWidth="54"
+                   minHeight="54" prefHeight="54" maxHeight="54"
+                   styleClass="assessment-header-icon-wrap">
             <FontIcon iconLiteral="mdi2c-clipboard-check-outline" iconSize="22" styleClass="assessment-header-icon"/>
-        </VBox>
+        </StackPane>
         <VBox spacing="3">
             <Label text="职业测评" styleClass="page-title"/>
             <Label text="完成霍兰德或 MBTI 问卷，生成你的职业倾向报告" styleClass="secondary-text"/>
@@ -54,7 +55,8 @@
             </HBox>
 
             <!-- Scrollable Question Area -->
-            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="content-scroll, assessment-scroll">
+            <ScrollPane fx:id="questionScrollPane" fitToWidth="true" hbarPolicy="NEVER"
+                        VBox.vgrow="ALWAYS" styleClass="content-scroll, assessment-scroll">
                 <content>
                     <VBox fx:id="questionHost" spacing="10" styleClass="assessment-question-host">
                         <padding><Insets top="14" right="16" bottom="20" left="16"/></padding>

@@ -16,8 +16,12 @@
         <VBox fx:id="sidebar" minWidth="220" prefWidth="220" maxWidth="220" spacing="5" styleClass="sidebar">
             <padding><Insets top="22" right="10" bottom="14" left="10"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="10" styleClass="sidebar-brand">
-                <ImageView fitWidth="36" fitHeight="36" preserveRatio="true" smooth="true">
+                <ImageView fx:id="defaultBrandImage" fitWidth="36" fitHeight="36" preserveRatio="true" smooth="true">
                     <image><Image url="@../images/home/app-icon.png"/></image>
+                </ImageView>
+                <ImageView fx:id="interviewBrandImage" fitWidth="28" fitHeight="28" preserveRatio="true" smooth="true"
+                           visible="false" managed="false">
+                    <image><Image url="@../images/interview/interview-ai-avatar-v2.png"/></image>
                 </ImageView>
                 <Label text="AI Interviewer" styleClass="window-brand"/>
             </HBox>
@@ -30,6 +34,11 @@
                     contentDisplay="LEFT" graphicTextGap="12" maxWidth="Infinity" styleClass="nav-button">
                 <graphic><FontIcon iconLiteral="mdi2f-file-document-edit-outline" iconSize="19"/></graphic>
             </Button>
+            <ToggleButton fx:id="interviewNavButton" text="面试" onAction="#showInterviewEntry"
+                          contentDisplay="LEFT" graphicTextGap="12" maxWidth="Infinity" styleClass="nav-button"
+                          visible="false" managed="false">
+                <graphic><FontIcon iconLiteral="mdi2m-microphone-outline" iconSize="19"/></graphic>
+            </ToggleButton>
             <Button fx:id="historyNavButton" text="面试记录" onAction="#showHistory"
                     contentDisplay="LEFT" graphicTextGap="12" maxWidth="Infinity" styleClass="nav-button">
                 <graphic><FontIcon iconLiteral="mdi2c-calendar-clock-outline" iconSize="19"/></graphic>
@@ -73,17 +82,13 @@
                 <graphic><FontIcon iconLiteral="mdi2c-cog-outline" iconSize="19"/></graphic>
             </Button>
             <Region VBox.vgrow="ALWAYS"/>
-            <StackPane fx:id="resumeSidebarArtwork" visible="false" managed="false"
-                       minHeight="188" prefHeight="188" styleClass="resume-sidebar-artwork">
-                <ImageView fitWidth="178" fitHeight="178" preserveRatio="true" smooth="true">
-                    <image><Image url="@../images/resume/resume-sidebar-illustration.png"/></image>
-                </ImageView>
-            </StackPane>
             <Separator styleClass="sidebar-divider"/>
             <HBox alignment="CENTER_LEFT" spacing="8" styleClass="sidebar-service-row">
                 <FontIcon fx:id="aiStatusIcon" iconLiteral="mdi2c-circle" iconSize="10" styleClass="service-status-icon"/>
                 <Label fx:id="aiStatusLabel" text="AI 服务状态：正常" styleClass="sidebar-status-text"/>
             </HBox>
+            <Label fx:id="interviewStorageNote" text="所有数据仅保存在本地设备&#10;仅 AI 调用需要网络连接"
+                   wrapText="true" visible="false" managed="false" styleClass="interview-storage-note"/>
             <Label text="版本 0.1.0" styleClass="fine-print sidebar-version"/>
         </VBox>
     </left>
@@ -91,15 +96,26 @@
         <BorderPane>
             <top>
                 <VBox>
-                    <HBox minHeight="62" prefHeight="62" alignment="CENTER_LEFT" spacing="14" styleClass="topbar">
+                    <HBox fx:id="shellTopbar" minHeight="62" prefHeight="62" alignment="CENTER_LEFT" spacing="14" styleClass="topbar">
                         <padding><Insets top="0" right="28" bottom="0" left="30"/></padding>
-                        <FontIcon iconLiteral="mdi2m-menu" iconSize="22" styleClass="topbar-menu-icon"/>
-                        <Label fx:id="contentTitleLabel" text="首页" styleClass="topbar-title"/>
+                        <FontIcon fx:id="topbarMenuIcon" iconLiteral="mdi2m-menu" iconSize="22" styleClass="topbar-menu-icon"/>
+                        <VBox spacing="2" alignment="CENTER_LEFT">
+                            <Label fx:id="contentTitleLabel" text="首页" styleClass="topbar-title"/>
+                            <Label fx:id="contentSubtitleLabel" text="" visible="false" managed="false"
+                                   styleClass="topbar-subtitle"/>
+                        </VBox>
                         <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="sessionClockLabel" text="00:00:00" visible="false" managed="false"
+                               styleClass="session-clock-label"/>
                         <Button fx:id="userMenuButton" onAction="#showUserMenu" styleClass="user-menu-button">
                             <graphic>
                                 <HBox alignment="CENTER" spacing="9">
                                     <Label fx:id="avatarLabel" text="M" styleClass="user-avatar"/>
+                                    <ImageView fx:id="interviewUserAvatar" fitWidth="30" fitHeight="30"
+                                               preserveRatio="true" smooth="true" visible="false" managed="false"
+                                               styleClass="interview-user-avatar">
+                                        <image><Image url="@../images/interview/interview-user-avatar-v2.png"/></image>
+                                    </ImageView>
                                     <Label fx:id="usernameLabel" text="用户" styleClass="username-text"/>
                                     <FontIcon iconLiteral="mdi2c-chevron-down" iconSize="17" styleClass="user-chevron"/>
                                 </HBox>

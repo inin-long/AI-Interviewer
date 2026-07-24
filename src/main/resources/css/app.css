@@ -1,34 +1,41 @@
 .root {
     -fx-font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
     -fx-font-size: 14px;
-    -app-background: #F6F7F9;
+    /* AI Interviewer Design Standard v1.0 — locked reference tokens. */
+    -app-background: #F8FAFD;
     -surface: #FFFFFF;
-    -surface-muted: #F9FAFB;
-    -hover: #F1F4F8;
-    -border: #E4E7EC;
-    -border-strong: #CDD3DC;
-    -text: #171A21;
-    -text-secondary: #5F6673;
-    -text-muted: #9299A6;
-    -primary: #4F63D9;
-    -primary-hover: #4356C6;
-    -primary-pressed: #394AB1;
-    -primary-soft: #EEF0FF;
-    -success: #27845B;
-    -success-soft: #EAF7F0;
-    -danger: #C53B46;
-    -danger-soft: #FDECEE;
+    -surface-muted: #F7F9FC;
+    -surface-soft: #F3F5FF;
+    -hover: #F5F6FA;
+    -border: #E1E5EC;
+    -border-strong: #CDD4E0;
+    -border-focus: #5969F6;
+    -text: #151B2D;
+    -text-secondary: #667085;
+    -text-muted: #98A2B3;
+    -primary: #5364F2;
+    -primary-hover: #4656DC;
+    -primary-pressed: #3D4CC8;
+    -primary-soft: #F0F1FF;
+    -success: #2DBE82;
+    -success-soft: #EAF8F2;
+    -warning: #F5A623;
+    -warning-soft: #FFF6E8;
+    -danger: #E85D68;
+    -danger-soft: #FFF0F1;
+    -info: #3478F6;
+    -info-soft: #EDF4FF;
     -scroll-thumb: #C7CEDA;
     -scroll-thumb-hover: #AEB8C8;
-    -scroll-thumb-pressed: #7484E8;
-    -border-card: #E5E8EF;
+    -scroll-thumb-pressed: #6977EE;
+    -border-card: #E1E5EC;
     -border-hover: #BAC2D0;
     -radius-card: 10;
     -radius-control: 8;
     -radius-pill: 999;
-    -shadow-card: dropshadow(gaussian, rgba(23, 26, 33, 0.06), 12, 0.05, 0, 2);
-    -shadow-pop: dropshadow(gaussian, rgba(23, 26, 33, 0.14), 22, 0.10, 0, 8);
-    -shadow-dialog: dropshadow(gaussian, rgba(23, 26, 33, 0.22), 34, 0.12, 0, 12);
+    -shadow-card: dropshadow(gaussian, rgba(22, 31, 55, 0.055), 12, 0.06, 0, 2);
+    -shadow-pop: dropshadow(gaussian, rgba(22, 31, 55, 0.14), 22, 0.10, 0, 8);
+    -shadow-dialog: dropshadow(gaussian, rgba(22, 31, 55, 0.22), 34, 0.12, 0, 12);
 
 }
 
@@ -372,11 +379,6 @@
 .resume-process-state {
     -fx-font-size: 10px;
     -fx-text-fill: #8A93A5;
-}
-
-.resume-sidebar-artwork {
-    -fx-alignment: center;
-    -fx-opacity: 0.92;
 }
 
 /* Candidate portrait Drawer */
@@ -736,30 +738,30 @@
 }
 
 .text-field, .password-field, .combo-box {
-    -fx-min-height: 52;
-    -fx-pref-height: 52;
-    -fx-max-height: 52;
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-max-height: 40;
 }
 
 .text-field, .password-field {
     -fx-background-color: -surface;
     -fx-border-color: -border-strong;
-    -fx-border-radius: 7;
-    -fx-background-radius: 7;
-    -fx-padding: 11 13;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 9 13;
     -fx-prompt-text-fill: -text-muted;
 }
 
 .text-field:focused, .password-field:focused {
-    -fx-border-color: #7484E8;
-    -fx-effect: dropshadow(gaussian, rgba(79, 99, 217, 0.14), 8, 0.1, 0, 0);
+    -fx-border-color: -border-focus;
+    -fx-effect: dropshadow(gaussian, rgba(83, 100, 242, 0.14), 8, 0.1, 0, 0);
 }
 
 .button {
     -fx-cursor: hand;
-    -fx-background-radius: 7;
-    -fx-border-radius: 7;
-    -fx-padding: 10 16;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-padding: 9 16;
     -fx-font-weight: 600;
 }
 
@@ -1514,8 +1516,8 @@
 .text-area {
     -fx-background-color: -surface;
     -fx-border-color: -border-strong;
-    -fx-border-radius: 7;
-    -fx-background-radius: 7;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
 }
 
 .text-area .content { -fx-background-color: -surface; }
@@ -1523,8 +1525,8 @@
 .combo-box {
     -fx-background-color: -surface;
     -fx-border-color: -border-strong;
-    -fx-border-radius: 7;
-    -fx-background-radius: 7;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
 }
 
 .combo-box > .list-cell {
@@ -4395,8 +4397,15 @@
     -fx-padding: 4 0 18 0;
 }
 .assessment-header-icon-wrap {
-    -fx-background-color: linear-gradient(135deg, #EEEDFF, #E8E6FF);
+    -fx-background-color: linear-gradient(to bottom right, #EEEDFF, #E8E6FF);
     -fx-background-radius: 10;
+    -fx-alignment: center;
+    -fx-min-width: 54;
+    -fx-pref-width: 54;
+    -fx-max-width: 54;
+    -fx-min-height: 54;
+    -fx-pref-height: 54;
+    -fx-max-height: 54;
 }
 .assessment-header-icon {
     -fx-icon-color: -primary;
@@ -4520,7 +4529,7 @@
 
 /* Question number badge — smaller */
 .question-number-badge {
-    -fx-background-color: linear-gradient(135deg, #DDD9FF, #D4CFFF);
+    -fx-background-color: linear-gradient(to bottom right, #DDD9FF, #D4CFFF);
     -fx-background-radius: 6;
     -fx-pref-width: 24;
     -fx-pref-height: 24;
@@ -4551,6 +4560,7 @@
 /* Individual option row — card-like clickable surface */
 .question-option-row {
     -fx-padding: 8 12;
+    -fx-max-width: Infinity;
     -fx-background-radius: 8;
     -fx-background-color: -surface-muted;
     -fx-cursor: hand;
@@ -4849,7 +4859,6 @@
 .profile-card-skills {
     -fx-font-size: 12px;
     -fx-text-fill: -text-muted;
-    HBox.hgrow: ALWAYS;
 }
 .profile-card-time {
     -fx-font-size: 11px;
@@ -4884,7 +4893,7 @@
 }
 
 .qb-header-icon-wrap {
-    -fx-background-color: linear-gradient(135deg, #E8F0FE, #DCE6FA);
+    -fx-background-color: linear-gradient(to bottom right, #E8F0FE, #DCE6FA);
     -fx-background-radius: 10;
     -fx-padding: 10;
     -fx-alignment: center;
@@ -4917,9 +4926,9 @@
     -fx-min-size: 38 38;
     -fx-pref-size: 38 38;
 }
-.qb-stat-icon-blue { -fx-background-color: linear-gradient(135deg, #E8F0FE, #DBE7FB); }
-.qb-stat-icon-purple { -fx-background-color: linear-gradient(135deg, #F0EBFF, #E8E0FC); }
-.qb-stat-icon-green { -fx-background-color: linear-gradient(135deg, #E8F8EE, #DDF5E6); }
+.qb-stat-icon-blue { -fx-background-color: linear-gradient(to bottom right, #E8F0FE, #DBE7FB); }
+.qb-stat-icon-purple { -fx-background-color: linear-gradient(to bottom right, #F0EBFF, #E8E0FC); }
+.qb-stat-icon-green { -fx-background-color: linear-gradient(to bottom right, #E8F8EE, #DDF5E6); }
 .qb-stat-icon {
     -fx-icon-color: white;
 }
@@ -5332,7 +5341,7 @@
 
 /* Score Rounded Card */
 .practice-score-card {
-    -fx-background-color: linear-gradient(135deg, #EEF2FF, #E8EDFF);
+    -fx-background-color: linear-gradient(to bottom right, #EEF2FF, #E8EDFF);
     -fx-background-radius: 12;
     -fx-min-size: 120 90;
     -fx-pref-size: 120 90;
@@ -5745,4 +5754,1077 @@
 .skills-empty-list-icon { -fx-icon-color: #B3B9C8; }
 .skills-empty-list-title { -fx-font-weight: 700; -fx-text-fill: #59657A; }
 .skills-empty-list-hint { -fx-font-size: 11px; -fx-text-fill: #98A0AF; }
+
+/* =========================================================================
+   AI Interviewer UI Design Standard v1.0 — LOCKED
+   Visual truth: Resume Center + Skills Library reference screens.
+   Keep this section after route styles so shared component decisions win.
+   Interview focus mode is intentionally defined after this block.
+   ========================================================================= */
+
+/* Workspace surfaces ----------------------------------------------------- */
+.app-root,
+.content-host,
+.content-scroll,
+.content-scroll > .viewport,
+.page-content,
+.container,
+.dashboard-page,
+.history-page,
+.knowledge-page,
+.plan-page,
+.plan-detail-page,
+.plan-editor-page,
+.profile-page,
+.qb-page,
+.resume-page,
+.skills-page {
+    -fx-background-color: -app-background;
+}
+
+.page-content,
+.container {
+    -fx-spacing: 16;
+}
+
+.standard-page-header {
+    -fx-min-height: 68;
+    -fx-pref-height: 68;
+    -fx-alignment: center-left;
+}
+
+/* Type hierarchy --------------------------------------------------------- */
+.page-title,
+.heading-2,
+.history-page-title,
+.plan-page-title,
+.profile-page-title,
+.resume-page-title,
+.skills-page-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -text;
+}
+
+.topbar-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.module-title,
+.section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.card-title,
+.list-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.secondary-text,
+.content-description,
+.history-page-subtitle,
+.plan-page-subtitle,
+.profile-page-subtitle,
+.resume-page-subtitle,
+.skills-page-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text-secondary;
+}
+
+.fine-print,
+.caption-text,
+.meta-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-muted;
+}
+
+.field-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+/* Surface and elevation -------------------------------------------------- */
+.content-card,
+.form-card,
+.summary-card,
+.card,
+.data-table,
+.settings-form,
+.drawer-panel,
+.resume-stat-card,
+.resume-row-card,
+.resume-process-card,
+.skills-card,
+.skills-tip-card {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: -shadow-card;
+}
+
+.separator .line {
+    -fx-border-color: -border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* Buttons --------------------------------------------------------------- */
+.primary-button,
+.btn-primary {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-padding: 9 16;
+    -fx-background-color: -primary;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-graphic-text-gap: 8;
+}
+
+.primary-button .font-icon,
+.primary-button .ikonli-font-icon,
+.btn-primary .font-icon,
+.btn-primary .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+.primary-button:hover,
+.btn-primary:hover {
+    -fx-background-color: -primary-hover;
+}
+
+.primary-button:pressed,
+.btn-primary:pressed {
+    -fx-background-color: -primary-pressed;
+}
+
+.secondary-button,
+.btn-secondary {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-padding: 9 16;
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: #253047;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-graphic-text-gap: 8;
+}
+
+.secondary-button:hover,
+.btn-secondary:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #BAC2FA;
+    -fx-text-fill: -primary;
+}
+
+.danger-button {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-background-color: -surface;
+    -fx-border-color: #F2B8BE;
+    -fx-text-fill: -danger;
+}
+
+.button:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: #F1F3F7;
+    -fx-border-color: -border;
+    -fx-text-fill: #A7AFBD;
+}
+
+.back-icon-button {
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+    -fx-padding: 0;
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: -text-secondary;
+}
+
+.back-icon-button:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #BAC2FA;
+    -fx-text-fill: -primary;
+}
+
+.back-icon-button .font-icon,
+.back-icon-button .ikonli-font-icon {
+    -fx-icon-color: -text-secondary;
+}
+
+.back-icon-button:hover .font-icon,
+.back-icon-button:hover .ikonli-font-icon {
+    -fx-icon-color: -primary;
+}
+
+/* Inputs and selectors --------------------------------------------------- */
+.text-field,
+.password-field,
+.text-area,
+.combo-box,
+.app-select {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text;
+}
+
+.text-field,
+.password-field,
+.text-area,
+.combo-box,
+.app-select,
+.app-multi-select {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-prompt-text-fill: -text-muted;
+}
+
+.text-field:hover,
+.password-field:hover,
+.text-area:hover,
+.combo-box:hover,
+.app-select:hover,
+.app-multi-select:hover {
+    -fx-border-color: -border-hover;
+}
+
+.text-field:focused,
+.password-field:focused,
+.text-area:focused,
+.combo-box:focused,
+.app-select:focused,
+.app-select:showing,
+.app-multi-select:focused,
+.app-multi-select:showing {
+    -fx-border-color: -border-focus;
+    -fx-effect: dropshadow(gaussian, rgba(83, 100, 242, 0.15), 8, 0.1, 0, 0);
+}
+
+.text-area .content {
+    -fx-background-color: -surface;
+    -fx-background-radius: 8;
+}
+
+.check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text-secondary;
+}
+
+.check-box > .box {
+    -fx-background-color: -surface;
+    -fx-border-color: -border-strong;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.check-box:selected > .box {
+    -fx-background-color: -primary;
+    -fx-border-color: -primary;
+}
+
+.check-box:selected > .box > .mark {
+    -fx-background-color: white;
+}
+
+/* Filter chips and status tags ------------------------------------------ */
+.filter-chip,
+.resume-filter-button,
+.skills-filter-button {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.filter-chip:hover,
+.resume-filter-button:hover,
+.skills-filter-button:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #D7DBFF;
+    -fx-text-fill: -primary;
+}
+
+.filter-chip:selected,
+.resume-filter-button:selected,
+.skills-filter-button:selected {
+    -fx-background-color: -primary;
+    -fx-border-color: -primary;
+    -fx-text-fill: white;
+}
+
+.status-badge {
+    -fx-padding: 4 10;
+    -fx-background-color: -primary-soft;
+    -fx-background-radius: 999;
+    -fx-text-fill: -primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.status-badge.success {
+    -fx-background-color: -success-soft;
+    -fx-text-fill: -success;
+}
+
+.status-badge.warning {
+    -fx-background-color: -warning-soft;
+    -fx-text-fill: #D9820A;
+}
+
+.status-badge.danger {
+    -fx-background-color: -danger-soft;
+    -fx-text-fill: -danger;
+}
+
+/* Lists and tables ------------------------------------------------------- */
+.list-view,
+.table-view,
+.tree-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.list-view .list-cell {
+    -fx-text-fill: -text;
+}
+
+.list-view .list-cell:filled:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -text;
+}
+
+.table-view {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: -surface-muted;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.table-view .column-header .label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text-secondary;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: -surface;
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #FBFCFF;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-background-color: -text;
+}
+
+/* Popup surfaces --------------------------------------------------------- */
+.context-menu,
+.combo-box-popup > .list-view,
+.app-dialog-shell,
+.dialog-pane {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: -shadow-pop;
+}
+
+.context-menu {
+    -fx-padding: 6;
+}
+
+.menu-item {
+    -fx-padding: 8 12;
+    -fx-background-radius: 7;
+}
+
+.menu-item:focused {
+    -fx-background-color: -primary-soft;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: -primary;
+}
+
+.tooltip {
+    -fx-background-color: #20263A;
+    -fx-background-radius: 6;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 7 10;
+}
+
+/* Scrollbars ------------------------------------------------------------- */
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: -scroll-thumb;
+    -fx-background-radius: 999;
+}
+
+.scroll-bar:vertical .thumb:hover,
+.scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: -scroll-thumb-hover;
+}
+
+.scroll-bar:vertical .increment-button,
+.scroll-bar:vertical .decrement-button,
+.scroll-bar:horizontal .increment-button,
+.scroll-bar:horizontal .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* Semantic replacements for former FXML inline styles ------------------- */
+.section-heading-offset-8 {
+    -fx-padding: 0 0 0 8;
+}
+
+.section-heading-offset-10 {
+    -fx-padding: 0 0 0 10;
+}
+
+.compact-label {
+    -fx-font-size: 12px;
+}
+
+.empty-copy-narrow {
+    -fx-max-width: 360;
+    -fx-text-alignment: center;
+}
+
+.practice-score-header {
+    -fx-padding: 0 0 10 0;
+}
+
+.skill-article-category {
+    -fx-text-fill: -text-secondary;
+}
+
+.skill-article-summary {
+    -fx-font-size: 14px;
+    -fx-wrap-text: true;
+    -fx-line-spacing: 2px;
+}
+
+.skill-article-content {
+    -fx-padding: 14;
+}
+
+.skill-editor-card {
+    -fx-padding: 20;
+}
+
+/* Live interview workspace — rebuilt from docs/ui-reference/interview.png. */
+.app-root:interview-mode,
+.app-root:interview-mode .content-host {
+    -fx-background-color: #F8F9FC;
+}
+
+.app-root:interview-mode .sidebar {
+    -fx-min-width: 224;
+    -fx-pref-width: 224;
+    -fx-max-width: 224;
+    -fx-padding: 20 15 14 15;
+}
+
+.app-root:interview-mode .sidebar-brand {
+    -fx-padding: 0 8;
+    -fx-spacing: 9;
+}
+
+.app-root:interview-mode .window-brand {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+}
+
+.app-root:interview-mode .nav-button {
+    -fx-min-height: 48;
+    -fx-pref-height: 48;
+    -fx-padding: 0 18;
+    -fx-font-size: 14px;
+}
+
+.app-root:interview-mode .topbar {
+    -fx-min-height: 59;
+    -fx-pref-height: 59;
+    -fx-max-height: 59;
+    -fx-padding: 0 28 0 32;
+    -fx-spacing: 12;
+}
+
+.app-root:interview-mode .topbar-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #171B2C;
+}
+
+.topbar-subtitle {
+    -fx-font-size: 11px;
+    -fx-text-fill: #60697C;
+}
+
+.session-clock-label {
+    -fx-font-family: "Consolas";
+    -fx-font-size: 12px;
+    -fx-text-fill: #646D80;
+    -fx-padding: 0 9 0 0;
+}
+
+.interview-user-avatar {
+    -fx-background-radius: 999;
+}
+
+.interview-storage-note {
+    -fx-padding: 0 10 8 10;
+    -fx-font-size: 11px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: #717A8E;
+}
+
+.interview-page,
+.interview-workspace,
+.interview-right-rail {
+    -fx-background-color: #F8F9FC;
+}
+
+.interview-status-card,
+.interview-dialogue-card,
+.interview-composer,
+.interview-rail-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E4ED;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-effect: dropshadow(gaussian, rgba(31, 39, 65, 0.045), 7, 0.08, 0, 1);
+}
+
+.interview-status-kicker {
+    -fx-font-size: 11px;
+    -fx-text-fill: #747D90;
+}
+
+.interview-status-value {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #202638;
+}
+
+.interview-stage-pill {
+    -fx-background-color: #F0EEFF;
+    -fx-background-radius: 5;
+    -fx-padding: 4 8;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #5B52E9;
+}
+
+.status-stage-icon,
+.status-stage-icon .ikonli-font-icon,
+.status-signal-icon,
+.status-signal-icon .ikonli-font-icon {
+    -fx-icon-color: #5B55ED;
+}
+
+.status-neutral-icon,
+.status-neutral-icon .ikonli-font-icon {
+    -fx-icon-color: #596274;
+}
+
+.status-connected-dot,
+.status-connected-dot .ikonli-font-icon {
+    -fx-icon-color: #39B56B;
+}
+
+.interview-status-divider .line {
+    -fx-border-color: transparent transparent transparent #E6E8EF;
+    -fx-border-width: 0 0 0 1;
+}
+
+.interview-overall-progress,
+.rail-score-progress {
+    -fx-accent: #5953E9;
+}
+
+.interview-overall-progress > .track,
+.rail-score-progress > .track {
+    -fx-background-color: #E4E6EC;
+    -fx-background-radius: 999;
+}
+
+.interview-overall-progress > .bar,
+.rail-score-progress > .bar {
+    -fx-background-color: linear-gradient(to right, #6358F2, #514BE2);
+    -fx-background-radius: 999;
+    -fx-background-insets: 0;
+    -fx-padding: 3;
+}
+
+.interview-progress-percent {
+    -fx-min-width: 34;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #31384B;
+}
+
+.interview-pause-button,
+.interview-end-button,
+.interview-outline-button,
+.interview-primary-button {
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-padding: 0 11;
+    -fx-background-color: white;
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.interview-pause-button,
+.interview-outline-button {
+    -fx-border-color: #C9C7FA;
+    -fx-text-fill: #3E3A77;
+}
+
+.interview-pause-button .ikonli-font-icon { -fx-icon-color: #34305E; }
+
+.interview-end-button {
+    -fx-border-color: #FFBFC4;
+    -fx-text-fill: #E5505A;
+}
+
+.interview-end-button .ikonli-font-icon { -fx-icon-color: #E5505A; }
+
+.interview-primary-button {
+    -fx-background-color: #5851E8;
+    -fx-border-color: #5851E8;
+    -fx-text-fill: white;
+}
+
+.interview-dialogue-card {
+    -fx-padding: 0;
+    -fx-background-radius: 7;
+    -fx-border-radius: 7;
+}
+
+.interview-transcript,
+.interview-transcript > .viewport,
+.interview-transcript-content {
+    -fx-background-color: #FFFFFF;
+}
+
+.interview-transcript {
+    -fx-border-color: transparent;
+    -fx-border-radius: 7;
+    -fx-background-radius: 7;
+    -fx-padding: 0;
+}
+
+.interview-transcript-content {
+    -fx-padding: 0;
+}
+
+.transcript-message-row {
+    -fx-padding: 13 13 12 10;
+    -fx-spacing: 13;
+    -fx-border-color: transparent transparent #E5E8EF transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.assistant-message-row { -fx-background-color: #FFFFFF; }
+.user-message-row { -fx-background-color: #F5F7FE; }
+
+.streaming-message-row {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #8F93FF;
+    -fx-border-width: 1;
+    -fx-border-style: segments(4, 3);
+    -fx-border-radius: 6;
+    -fx-background-radius: 6;
+    -fx-padding: 12 12 9 10;
+}
+
+.transcript-ai-avatar,
+.transcript-user-avatar {
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+
+.transcript-user-avatar {
+    -fx-alignment: center;
+    -fx-background-color: linear-gradient(to bottom right, #3F6FE8, #5A43E8);
+    -fx-background-radius: 999;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+}
+
+.transcript-message-body { -fx-padding: 0; }
+
+.transcript-message-header {
+    -fx-min-height: 20;
+    -fx-pref-height: 20;
+}
+
+.transcript-author {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #1C2233;
+}
+
+.transcript-time {
+    -fx-font-size: 11px;
+    -fx-text-fill: #7E879A;
+}
+
+.transcript-message-text {
+    -fx-font-size: 13px;
+    -fx-line-spacing: 3px;
+    -fx-text-fill: #272D3D;
+}
+
+.transcript-icon-button,
+.transcript-collapse-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 2 4;
+    -fx-text-fill: #665FF1;
+}
+
+.transcript-icon-button .ikonli-font-icon { -fx-icon-color: #687185; }
+.transcript-icon-button:hover { -fx-background-color: #EEF0FA; }
+
+.transcript-streaming-title {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #5653E8;
+}
+
+.transcript-streaming-dots {
+    -fx-font-size: 18px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #7774ED;
+}
+
+.streaming-message-row .progress-indicator { -fx-progress-color: #5953E9; }
+
+.transcript-code-block {
+    -fx-max-width: 490;
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #DDE1EA;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+    -fx-padding: 4 12 4 8;
+}
+
+.transcript-code-line-number {
+    -fx-min-width: 18;
+    -fx-alignment: center-right;
+    -fx-font-family: "Consolas";
+    -fx-font-size: 12px;
+    -fx-text-fill: #7C8495;
+}
+
+.transcript-code-line {
+    -fx-font-family: "Consolas";
+    -fx-font-size: 12px;
+    -fx-text-fill: #242B3C;
+}
+
+.transcript-citations {
+    -fx-min-height: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+    -fx-opacity: 0;
+    -fx-padding: 0;
+}
+
+.transcript-citation-chip {
+    -fx-background-color: #F0EEFF;
+    -fx-background-radius: 999;
+    -fx-border-color: transparent;
+    -fx-padding: 3 8;
+    -fx-font-size: 10px;
+    -fx-text-fill: #5C55E8;
+}
+
+.transcript-empty {
+    -fx-padding: 90 30;
+}
+
+.transcript-empty .ikonli-font-icon { -fx-icon-color: #8D8AF0; }
+.transcript-empty-title { -fx-font-size: 14px; -fx-font-weight: 800; -fx-text-fill: #2D3446; }
+.transcript-empty-copy { -fx-font-size: 12px; -fx-text-fill: #8A92A3; }
+
+.interview-composer {
+    -fx-padding: 0;
+}
+
+.composer-tabs {
+    -fx-padding: 0 12;
+    -fx-border-color: transparent transparent #E4E7EE transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.composer-tab {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 2 0;
+    -fx-padding: 0 12;
+    -fx-font-size: 12px;
+    -fx-text-fill: #3B4354;
+}
+
+.composer-tab:selected {
+    -fx-border-color: transparent transparent #5A54EB transparent;
+    -fx-text-fill: #5751E7;
+    -fx-font-weight: 800;
+}
+
+.composer-expand-icon,
+.composer-expand-icon .ikonli-font-icon { -fx-icon-color: #3E4658; }
+
+.answer-time-limit {
+    -fx-font-size: 11px;
+    -fx-padding: 0 12 0 0;
+}
+
+.interview-answer-input {
+    -fx-background-color: white;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 5 12 0 12;
+    -fx-font-size: 12px;
+    -fx-text-fill: #293043;
+    -fx-prompt-text-fill: #A0A7B6;
+}
+
+.interview-answer-input .content {
+    -fx-background-color: white;
+    -fx-background-radius: 0;
+}
+
+.code-answer-input,
+.code-answer-input .content {
+    -fx-font-family: "Consolas";
+}
+
+.composer-footer {
+    -fx-padding: 6 12 8 12;
+}
+
+.composer-tool-button {
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-background-color: white;
+    -fx-border-color: #E0E3EA;
+    -fx-border-radius: 5;
+    -fx-background-radius: 5;
+    -fx-padding: 0 11;
+    -fx-font-size: 12px;
+    -fx-text-fill: #2D3445;
+}
+
+.composer-tool-button:hover {
+    -fx-background-color: #F7F7FC;
+    -fx-border-color: #C8C9F4;
+}
+
+.composer-shortcut {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9299A9;
+}
+
+.interview-send-button {
+    -fx-min-width: 132;
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-background-color: linear-gradient(to right, #6255F1, #4B45DD);
+    -fx-background-radius: 6;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+}
+
+.interview-send-button .ikonli-font-icon { -fx-icon-color: white; }
+
+.interview-rail-card {
+    -fx-effect: none;
+}
+
+.interview-rail-title {
+    -fx-font-size: 12px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #222839;
+}
+
+.rail-field-name,
+.rail-score-name,
+.rail-agent-name {
+    -fx-font-size: 11px;
+    -fx-text-fill: #616A7D;
+}
+
+.rail-field-value {
+    -fx-font-size: 11px;
+    -fx-text-fill: #2D3446;
+    -fx-text-overrun: ellipsis;
+}
+
+.rail-stage-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #5B54EA;
+}
+
+.rail-stage-description,
+.rail-tip-copy {
+    -fx-font-size: 10.5px;
+    -fx-line-spacing: 2px;
+    -fx-text-fill: #6D7689;
+}
+
+.rail-score-caption {
+    -fx-font-size: 10px;
+    -fx-text-fill: #8991A2;
+}
+
+.rail-score-progress {
+    -fx-min-height: 4;
+    -fx-pref-height: 4;
+    -fx-max-height: 4;
+}
+
+.rail-score-value {
+    -fx-font-size: 10px;
+    -fx-text-fill: #313849;
+}
+
+.citation-scroll,
+.citation-scroll > .viewport {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.rail-document-row {
+    -fx-min-height: 24;
+    -fx-pref-height: 24;
+}
+
+.rail-document-icon,
+.rail-document-icon .ikonli-font-icon { -fx-icon-color: #6570EF; }
+
+.rail-document-link {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 2 0;
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #333A4B;
+    -fx-text-overrun: ellipsis;
+}
+
+.rail-document-link:hover { -fx-text-fill: #5650E6; -fx-underline: true; }
+
+.rail-document-tag,
+.rail-document-tag-recommended {
+    -fx-background-radius: 999;
+    -fx-padding: 2 7;
+    -fx-font-size: 9px;
+}
+
+.rail-document-tag { -fx-background-color: #EFF0FF; -fx-text-fill: #5F58E9; }
+.rail-document-tag-recommended { -fx-background-color: #EAF8EF; -fx-text-fill: #34A764; }
+
+.citation-count {
+    -fx-font-size: 10px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #5953E9;
+}
+
+.citation-empty {
+    -fx-padding: 8 0;
+    -fx-font-size: 10.5px;
+    -fx-text-fill: #9299A9;
+}
+
+.rail-agent-ready {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #35AD66;
+}
+
+.rail-agent-running {
+    -fx-font-size: 10.5px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #5B54E9;
+}
+
+.interview-tip-card { -fx-background-color: #FDFDFF; }
+
+.rail-tip-icon,
+.rail-tip-icon .ikonli-font-icon { -fx-icon-color: #625BEC; }
+
+.rail-tip-link {
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+    -fx-text-fill: #5C55EA;
+}
 

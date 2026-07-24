@@ -132,6 +132,54 @@ final result: passed（本轮垂直间距与启动窗口调整）
 
 final result: passed
 
+## 面试工作台重构（2026-07-23）
+
+- source visual truth: `D:\Code\Java\AI-Interviewer\docs\ui-reference\interview.png`
+- implementation screenshot: `D:\Code\Java\AI-Interviewer\target\visual-qa\interview-v2.png`
+- same-frame comparison: `D:\Code\Java\AI-Interviewer\target\visual-qa\interview-v2-comparison.png`
+- viewport: `1672 × 901` JavaFX scene；参考稿带有设计态窗口框，应用内容区按同宽画幅比较
+- rendered screenshot method: JavaFX 原生 `Parent.snapshot`，在 CSS 与布局完成后抓取
+- Browser classification: Browser/IAB 不适用于 JavaFX 桌面应用，因此使用原生 FXML/CSS 渲染、同画幅截图和业务集成测试
+
+### Fidelity and interaction evidence
+
+- 全局壳层在面试路由进入专用状态：`224px` 侧栏、面试选中态、双行会话标题、会话计时、生成用户头像、本地数据说明；离开后恢复普通壳层。
+- 主区域按参考图重排为 `78px` 状态条、连续对话流、`164px` 固定输入区和 `330px` 右侧信息栏；同画幅对照中主要边界、间距、卡片密度和底部基线一致。
+- 对话流支持 AI/用户头像、精确时间、复制、代码块行号、流式追问状态、收起/展开和知识引用；真实引用在右栏集中展示并可跳转来源文档。
+- 右栏六个区块展示当前岗位/方案/简历/时长、当前阶段、评分维度占位、关联知识库、Agent 状态和当前题引用提示；尚未产生正式评分时使用 `--/100`，不伪造业务结果。
+- 输入区支持文本/代码模式、草稿保存与恢复、清空、`Ctrl + Enter` 发送和发送按钮；暂停、继续、结束、报告重试/查看沿用真实业务链路。
+- 导航增加页面离开守卫：AI 流式输出时阻止误离开；进行中离开会确认、暂停并保存草稿，避免侧栏跳转绕过原有会话保存逻辑。
+- 教练模式与情境沙盘继续使用真实反馈/状态，只在相应模式替换右栏的预览区块，避免固定正式模拟布局挤压内容。
+
+### Generated asset evidence
+
+- AI avatar: `D:\Code\Java\AI-Interviewer\src\main\resources\images\interview\interview-ai-avatar-v2.png`
+- user avatar: `D:\Code\Java\AI-Interviewer\src\main\resources\images\interview\interview-user-avatar-v2.png`
+- generation method: built-in ImageGen；生成后仅按目标头像位缩放为 `256 × 256` PNG，没有使用 CLI 图像生成器。
+
+### Comparison history
+
+- Pass 1 / P1：上一版使用大卡片、过小字号和碎片化右栏，信息密度与参考图明显不符；本轮完全替换页面结构和消息组件。
+- Pass 2 / P1：初次同画幅截图中页面底部余量与参考稿不一致，状态条下移；将工作区上边距收敛到 `0px`、底部留白调整为 `34px`，输入区与右栏底线重新对齐。
+- Pass 2 / P2：消息内引用标签导致第三条 AI 消息高度膨胀；引用改由右栏作为主要可见入口，消息内仍保留可访问节点但不占布局高度。
+- Pass 3 / P2：草稿按钮仅保留当前控件文本，跨页面不闭环；增加按会话保存与重新进入自动恢复，并在离开时静默保存。
+- Pass 3：重新生成原生截图并与参考图置于同一比较图；字体、间距、颜色、图片、文案与主要交互未发现剩余 P0/P1/P2 问题。
+
+### Verification
+
+- `mvnw.cmd -q -DskipTests compile`：通过。
+- `InterviewWorkspaceSnapshotTest`：通过并生成 `1672 × 901` 截图。
+- `JavaFxFxmlLoadTest#transcriptRendersQuestionCardsCitationsAndStreamingOutput`：通过。
+- `InterviewSessionServiceIntegrationTest`：通过。
+- 全量 `JavaFxFxmlLoadTest` 仍有仓库既存的登录尺寸、简历 Drawer、主侧栏和报告页断言失败；本轮相关的对话渲染专项断言已通过。
+
+### Intentional deviations
+
+- 参考稿中的实时评分值属于设计演示数据；当前业务在报告生成前没有可信实时分数，因此正式运行时显示 `--/100`，截图测试只为视觉对照注入参考态数值。
+- 参考稿包含设计态窗口控制条；JavaFX 实际窗口由操作系统提供标题栏，应用根节点截图不重复绘制窗口控件。
+
+final result: passed
+
 ## 候选人画像 Drawer 信息卡响应修复（2026-07-20）
 
 - source issue screenshot: `C:\Users\35975\AppData\Local\Temp\codex-clipboard-62288905-ae32-42ec-a2c5-99c32b1fac51.png`

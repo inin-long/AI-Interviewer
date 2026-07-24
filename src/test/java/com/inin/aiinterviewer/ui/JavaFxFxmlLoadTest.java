@@ -28,6 +28,7 @@ import com.inin.aiinterviewer.ui.state.UserSessionState;
 import com.inin.aiinterviewer.ui.state.TaskNotificationCenter;
 import javafx.application.Platform;
 import javafx.animation.Animation;
+import javafx.geometry.Bounds;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
@@ -42,10 +43,13 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.FlowPane;
@@ -324,6 +328,43 @@ class JavaFxFxmlLoadTest {
     }
 
     @Test
+    void profileSortOptionsRenderAndOnlyMarkedPlaceholdersAreRemoved() throws Exception {
+        if (sessionState.currentUser().isEmpty()) {
+            sessionState.logIn(new UserDto(1L, "targeted-ui-user", "定向界面用户", LocalDateTime.now()));
+        }
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent profile = load("/fxml/profile-view.fxml");
+            Parent editor = load("/fxml/plan-editor-view.fxml");
+            Parent career = load("/fxml/career-planning-view.fxml");
+            VBox root = new VBox(profile, editor, career);
+            Scene scene = new Scene(root, 1600, 1800);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+
+            @SuppressWarnings("unchecked")
+            AppSelect<String> sort = (AppSelect<String>) profile.lookup("#sortSelect");
+            TextField name = (TextField) editor.lookup("#nameField");
+            TextField jobTitle = (TextField) editor.lookup("#jobTitleField");
+            TextField focus = (TextField) editor.lookup("#focusField");
+            TextField targetPosition = (TextField) career.lookup("#targetPositionField");
+
+            return new boolean[]{
+                    sort.getItems().equals(List.of("最近更新", "最早更新", "按姓名")),
+                    "最近更新".equals(sort.getValue()),
+                    "最近更新".equals(sort.getButtonCell().getText()),
+                    sort.getItems().stream().noneMatch(String::isBlank),
+                    isBlankPrompt(name),
+                    isBlankPrompt(jobTitle),
+                    isBlankPrompt(focus),
+                    isBlankPrompt(targetPosition)
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
     void knowledgeLibraryUsesCategoryNavigationDocumentRowsAndReusableDrawer() throws Exception {
         if (sessionState.currentUser().isEmpty()) {
             sessionState.logIn(new UserDto(1L, "knowledge-layout-user", "知识库用户", LocalDateTime.now()));
@@ -405,7 +446,6 @@ class JavaFxFxmlLoadTest {
             ((Button) shell.lookup("#resumesNavButton")).fire();
             shell.applyCss();
             shell.layout();
-            Region artwork = (Region) shell.lookup("#resumeSidebarArtwork");
 
             return new boolean[]{
                     root.lookup("#resumeList") instanceof ListView,
@@ -416,7 +456,68 @@ class JavaFxFxmlLoadTest {
                     Math.abs(drawer.getDrawerWidth() - 470) < 0.5,
                     getClass().getResource("/images/resume/candidate-avatar.png") != null,
                     getClass().getResource("/images/resume/resume-sidebar-illustration.png") != null,
-                    artwork.isVisible() && artwork.isManaged()
+                    shell.lookup("#resumeSidebarArtwork") == null
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void careerAssessmentOptionRowsAreFullyClickableAndHeaderIconIsCentered() throws Exception {
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent root = load("/fxml/career-assessment-view.fxml");
+            Scene scene = new Scene(root, 1440, 839);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+
+            @SuppressWarnings("unchecked")
+            ListView<Object> templates = (ListView<Object>) root.lookup("#templateListView");
+            templates.getSelectionModel().selectFirst();
+            root.applyCss();
+            root.layout();
+
+            VBox options = (VBox) root.lookup(".question-options-box");
+            HBox firstRow = (HBox) options.getChildren().get(0);
+            HBox secondRow = (HBox) options.getChildren().get(1);
+            RadioButton firstOption = (RadioButton) firstRow.getChildren().get(0);
+            RadioButton secondOption = (RadioButton) secondRow.getChildren().get(0);
+
+            firstRow.fireEvent(mouseClick());
+            boolean firstSelected = firstOption.isSelected()
+                    && firstRow.getStyleClass().contains("selected");
+            secondRow.fireEvent(mouseClick());
+            boolean secondSelected = secondOption.isSelected()
+                    && secondRow.getStyleClass().contains("selected")
+                    && !firstOption.isSelected()
+                    && !firstRow.getStyleClass().contains("selected");
+
+            StackPane iconWrap = (StackPane) root.lookup(".assessment-header-icon-wrap");
+            Node icon = root.lookup(".assessment-header-icon");
+            Bounds wrapBounds = iconWrap.localToScene(iconWrap.getBoundsInLocal());
+            Bounds iconBounds = icon.localToScene(icon.getBoundsInLocal());
+            boolean iconCentered = Math.abs(centerX(wrapBounds) - centerX(iconBounds)) < 0.75
+                    && Math.abs(centerY(wrapBounds) - centerY(iconBounds)) < 0.75;
+
+            ScrollPane questionScroll = (ScrollPane) root.lookup("#questionScrollPane");
+            questionScroll.setVvalue(0.72);
+            templates.getSelectionModel().select(1);
+            boolean secondTemplateStartsAtTop = Math.abs(questionScroll.getVvalue()) < 0.001;
+            questionScroll.setVvalue(0.31);
+            templates.getSelectionModel().select(0);
+            boolean firstTemplateRestoresOwnScroll = Math.abs(questionScroll.getVvalue() - 0.72) < 0.001;
+
+            return new boolean[]{
+                    templates.getItems().size() >= 2,
+                    firstRow.getWidth() > firstOption.getLayoutBounds().getWidth(),
+                    firstSelected,
+                    secondSelected,
+                    Math.abs(iconWrap.getWidth() - 54) < 0.75,
+                    Math.abs(iconWrap.getHeight() - 54) < 0.75,
+                    iconCentered,
+                    secondTemplateStartsAtTop,
+                    firstTemplateRestoresOwnScroll
             };
         });
         Platform.runLater(task);
@@ -513,6 +614,11 @@ class JavaFxFxmlLoadTest {
                     false, false, false, false));
             boolean escapeActionClosed = !escapeDialog.isShowing();
 
+            AppDialog<String> waitDialog = new AppDialog<>(null, "关闭验证", "等待结果时取消");
+            Button waitCancel = waitDialog.addCancelAction("取消");
+            waitDialog.setOnShown(event -> Platform.runLater(waitCancel::fire));
+            boolean cancelResultIsEmpty = waitDialog.showAndWait().isEmpty();
+
             return new boolean[]{
                     select.getStyleClass().contains("app-select"),
                     select.getCellFactory() != null,
@@ -528,7 +634,8 @@ class JavaFxFxmlLoadTest {
                     chromeDialogOpened,
                     chromeActionClosed,
                     escapeDialogOpened,
-                    escapeActionClosed
+                    escapeActionClosed,
+                    cancelResultIsEmpty
             };
         });
         Platform.runLater(task);
@@ -836,5 +943,25 @@ class JavaFxFxmlLoadTest {
         FXMLLoader loader = new FXMLLoader(getClass().getResource(resource));
         loader.setControllerFactory(applicationContext::getBean);
         return loader.load();
+    }
+
+    private static MouseEvent mouseClick() {
+        return new MouseEvent(MouseEvent.MOUSE_CLICKED,
+                0, 0, 0, 0, MouseButton.PRIMARY, 1,
+                false, false, false, false,
+                false, false, false,
+                false, false, false, null);
+    }
+
+    private static double centerX(Bounds bounds) {
+        return (bounds.getMinX() + bounds.getMaxX()) / 2;
+    }
+
+    private static double centerY(Bounds bounds) {
+        return (bounds.getMinY() + bounds.getMaxY()) / 2;
+    }
+
+    private static boolean isBlankPrompt(TextField field) {
+        return field.getPromptText() == null || field.getPromptText().isEmpty();
     }
 }

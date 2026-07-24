@@ -33,7 +33,7 @@
                         <!-- Section Header: Title + Badges -->
                         <HBox alignment="CENTER_LEFT" spacing="0">
                             <Region prefWidth="3" styleClass="practice-section-bar"/>
-                            <Label text="题目" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
+                    <Label text="题目" styleClass="module-title,section-heading-offset-10"/>
                             <Region HBox.hgrow="ALWAYS"/>
                             <Label fx:id="jobBadge" styleClass="badge badge-job"/>
                             <Label fx:id="difficultyBadge" styleClass="badge"/>
@@ -52,7 +52,7 @@
                         <!-- Section Header -->
                         <HBox alignment="CENTER_LEFT" spacing="0">
                             <Region prefWidth="3" styleClass="practice-section-bar"/>
-                            <Label text="我的作答" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
+                    <Label text="我的作答" styleClass="module-title,section-heading-offset-10"/>
                         </HBox>
                         <!-- Answer Text Area -->
                         <TextArea fx:id="answerArea" prefRowCount="8" wrapText="true"
@@ -71,9 +71,9 @@
                     <VBox fx:id="scoreCard" spacing="0" styleClass="content-card practice-section" visible="false" managed="false">
                         <padding><Insets top="16" right="18" bottom="18" left="18"/></padding>
                         <!-- Section Header -->
-                        <HBox alignment="CENTER_LEFT" spacing="0" style="-fx-padding: 0 0 10 0;">
+                <HBox alignment="CENTER_LEFT" spacing="0" styleClass="practice-score-header">
                             <Region prefWidth="3" styleClass="practice-section-bar"/>
-                            <Label text="AI 评分与点评" styleClass="module-title" style="-fx-padding: 0 0 0 10;"/>
+                    <Label text="AI 评分与点评" styleClass="module-title,section-heading-offset-10"/>
                         </HBox>
                         <!-- Score Content: Left (Score Card) + Right (Feedback) -->
                         <HBox spacing="16" alignment="TOP_CENTER">

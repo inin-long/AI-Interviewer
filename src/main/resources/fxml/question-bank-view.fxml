@@ -33,12 +33,12 @@
             <!-- Section Title with accent bar -->
             <HBox alignment="CENTER_LEFT" spacing="0">
                 <Region prefWidth="3" styleClass="qb-section-bar"/>
-                <Label text="岗位列表" styleClass="module-title" style="-fx-padding: 0 0 0 8;"/>
+                <Label text="岗位列表" styleClass="module-title,section-heading-offset-8"/>
             </HBox>
 
             <!-- Quick-add typical positions -->
             <VBox spacing="8">
-                <Label text="典型岗位" styleClass="qb-link-title" style="-fx-font-size: 12px;"/>
+                <Label text="典型岗位" styleClass="qb-link-title,compact-label"/>
                 <FlowPane fx:id="quickJobPane" hgap="8" vgap="8" prefWrapLength="220" styleClass="qb-quick-job-pane">
                     <Button text="Java后端" onAction="#addQuickJavaJob" styleClass="qb-quick-job-chip"/>
                     <Button text="前端" onAction="#addQuickFrontendJob" styleClass="qb-quick-job-chip"/>
@@ -69,7 +69,7 @@
             <HBox alignment="CENTER_LEFT" spacing="10" styleClass="qb-table-toolbar">
                 <HBox alignment="CENTER_LEFT" spacing="0">
                     <Region prefWidth="3" styleClass="qb-section-bar"/>
-                    <Label text="面试题" styleClass="module-title" style="-fx-padding: 0 0 0 8;"/>
+                <Label text="面试题" styleClass="module-title,section-heading-offset-8"/>
                 </HBox>
                 <Region HBox.hgrow="ALWAYS"/>
                 <AppSelect fx:id="categoryFilterCombo" prefWidth="110"/>
@@ -113,7 +113,8 @@
                     <VBox fx:id="emptyStateContainer" alignment="CENTER" spacing="14" maxHeight="300" styleClass="empty-state qb-empty-state" maxWidth="Infinity">
                         <FontIcon iconLiteral="mdi2f-file-question-outline" iconSize="48" styleClass="empty-state-icon"/>
                         <Label text="还没有面试题" styleClass="empty-title"/>
-                        <Label text="选择左侧岗位后点击「新建题目」，按技术 / 行为 / 场景归类并打标签。" styleClass="empty-hint" wrapText="true" style="-fx-max-width:360;-fx-text-alignment:center;"/>
+                <Label text="选择左侧岗位后点击「新建题目」，按技术 / 行为 / 场景归类并打标签。"
+                       styleClass="empty-hint,empty-copy-narrow" wrapText="true"/>
                     </VBox>
                 </VBox>
             </ScrollPane>

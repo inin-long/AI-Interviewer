@@ -7,6 +7,7 @@ import com.inin.aiinterviewer.agent.support.StructuredAiResponseParser;
 import com.inin.aiinterviewer.application.dto.InterviewCompletionStateDto;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.InterviewReportDto;
+import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.exception.AIException;
 import com.inin.aiinterviewer.application.exception.ApplicationException;
 import com.inin.aiinterviewer.application.exception.BusinessException;
@@ -17,6 +18,7 @@ import com.inin.aiinterviewer.domain.model.Message;
 import com.inin.aiinterviewer.infrastructure.ai.ChatService;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -227,19 +229,27 @@ public class InterviewCompletionService {
         return "#C53B46";
     }
 
-    String citationMarkdown(List<InterviewMessageDto> messages) {
+    public String citationMarkdown(List<InterviewMessageDto> messages) {
         StringBuilder markdown = new StringBuilder();
         int questionNumber = 0;
+        int fragmentNumber = 0;
         for (InterviewMessageDto message : messages) {
             if (message.role() != Message.Role.ASSISTANT) continue;
             questionNumber++;
             if (message.citations().isEmpty()) continue;
             markdown.append("### 第 ").append(questionNumber).append(" 题\n\n")
                     .append("**问题：** ").append(inline(message.content(), 160)).append("\n\n");
-            message.citations().forEach(citation -> markdown
-                    .append("- **").append(inline(citation.documentName(), 100)).append("** · 片段 ")
-                    .append(citation.chunkIndex() + 1).append("\n\n")
-                    .append("  > ").append(quote(citation.excerpt())).append("\n\n"));
+            List<KnowledgeCitationDto> citations = message.citations().stream()
+                    .sorted(Comparator.comparing(KnowledgeCitationDto::documentName, String.CASE_INSENSITIVE_ORDER)
+                            .thenComparingInt(KnowledgeCitationDto::chunkIndex)
+                            .thenComparingLong(KnowledgeCitationDto::documentId))
+                    .toList();
+            for (KnowledgeCitationDto citation : citations) {
+                fragmentNumber++;
+                markdown.append("- **").append(inline(citation.documentName(), 100)).append("** · 片段 ")
+                        .append(fragmentNumber).append("\n\n")
+                        .append("  > ").append(quote(citation.excerpt())).append("\n\n");
+            }
         }
         return markdown.isEmpty()
                 ? "本次面试未使用知识库片段作为提问依据。"
@@ -258,7 +268,27 @@ public class InterviewCompletionService {
     }
 
     private String quote(String value) {
-        return inline(value, 320).replace(">", "\\>");
+        return inline(readableCitation(value), 320).replace(">", "\\>");
+    }
+
+    private String readableCitation(String value) {
+        if (value == null || value.isBlank()) return "";
+        return value
+                .replace("\\r\\n", " ")
+                .replace("\\n", " ")
+                .replace("\\t", " ")
+                .replaceAll("!\\[([^\\]]*)]\\([^)]*\\)", "$1")
+                .replaceAll("\\[([^\\]]+)]\\([^)]*\\)", "$1")
+                .replaceAll("(^|\\s)#{1,6}\\s*", "$1")
+                .replaceAll("(^|\\s)>\\s*", "$1")
+                .replaceAll("(^|\\s)[-_]{3,}(?=\\s|$)", "$1")
+                .replaceAll("`{1,3}", "")
+                .replace("**", "")
+                .replace("__", "")
+                .replace("~~", "")
+                .replace("|", " · ")
+                .replaceAll("\\s+", " ")
+                .strip();
     }
 
     private String json(Object value) {

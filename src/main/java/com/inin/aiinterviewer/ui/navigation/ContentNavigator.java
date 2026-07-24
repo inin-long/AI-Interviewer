@@ -28,7 +28,9 @@ public class ContentNavigator {
     private StackPane contentHost;
     private Label titleLabel;
     private Consumer<Route> routeListener = ignored -> { };
+    private Consumer<String> pageListener = ignored -> { };
     private PageDescriptor currentPage;
+    private Object currentController;
 
     public ContentNavigator(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -39,15 +41,27 @@ public class ContentNavigator {
     }
 
     public void attach(StackPane contentHost, Label titleLabel, Consumer<Route> routeListener) {
+        attach(contentHost, titleLabel, routeListener, ignored -> { });
+    }
+
+    public void attach(
+            StackPane contentHost,
+            Label titleLabel,
+            Consumer<Route> routeListener,
+            Consumer<String> pageListener
+    ) {
         this.contentHost = contentHost;
         this.titleLabel = titleLabel;
         this.routeListener = Objects.requireNonNull(routeListener, "routeListener");
+        this.pageListener = Objects.requireNonNull(pageListener, "pageListener");
         this.currentPage = null;
+        this.currentController = null;
         history.clear();
     }
 
     public void showRoute(Route route) {
         requireAttached();
+        if (!allowNavigationAway()) return;
         history.clear();
         PageDescriptor descriptor = new PageDescriptor(route.contentPath(), route.title(), null);
         show(descriptor, false);
@@ -56,6 +70,7 @@ public class ContentNavigator {
 
     public void showSubPage(String fxmlPath, String title, Object context) {
         requireAttached();
+        if (!allowNavigationAway()) return;
         if (currentPage != null) {
             history.push(currentPage);
         }
@@ -70,9 +85,14 @@ public class ContentNavigator {
         return !history.isEmpty();
     }
 
+    public boolean prepareForExternalNavigation() {
+        requireAttached();
+        return allowNavigationAway();
+    }
+
     public void back() {
         requireAttached();
-        if (!history.isEmpty()) {
+        if (!history.isEmpty() && allowNavigationAway()) {
             show(history.pop(), false);
         }
     }
@@ -86,6 +106,8 @@ public class ContentNavigator {
         if (descriptor.fxmlPath() == null) {
             contentHost.getChildren().setAll(placeholder(descriptor.title()));
             currentPage = descriptor;
+            currentController = null;
+            pageListener.accept(null);
             return;
         }
         try {
@@ -102,6 +124,8 @@ public class ContentNavigator {
             }
             contentHost.getChildren().setAll(content);
             currentPage = descriptor;
+            currentController = controller;
+            pageListener.accept(descriptor.fxmlPath());
         } catch (Exception exception) {
             log.error("Failed to load content page: {} (context={})", descriptor.fxmlPath(), descriptor.context(), exception);
             throw new IllegalStateException("Cannot load content page: " + descriptor.fxmlPath(), exception);
@@ -135,6 +159,10 @@ public class ContentNavigator {
         if (contentHost == null || titleLabel == null) {
             throw new IllegalStateException("Content navigator is not attached to the main window");
         }
+    }
+
+    private boolean allowNavigationAway() {
+        return !(currentController instanceof NavigationGuard guard) || guard.allowNavigationAway();
     }
 
     private record PageDescriptor(String fxmlPath, String title, Object context) {

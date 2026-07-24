@@ -17,11 +17,11 @@
         <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
         <Label fx:id="titleLabel" text="" styleClass="heading-2"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="categoryLabel" style="-fx-text-fill: #5F6673;"/>
+        <Label fx:id="categoryLabel" styleClass="status-badge,skill-article-category"/>
         <Button text="编辑" onAction="#handleEdit" styleClass="btn-primary"/>
     </HBox>
 
-    <Label fx:id="summaryLabel" style="-fx-font-size: 14px; -fx-wrap-text: true;" wrapText="true"/>
+    <Label fx:id="summaryLabel" styleClass="secondary-text,skill-article-summary" wrapText="true"/>
 
     <Separator/>
 

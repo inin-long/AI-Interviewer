@@ -16,6 +16,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
@@ -33,6 +35,7 @@ public class MainWindowController {
 
     private static final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
     private static final PseudoClass FAILED = PseudoClass.getPseudoClass("failed");
+    private static final PseudoClass INTERVIEW_MODE = PseudoClass.getPseudoClass("interview-mode");
 
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
@@ -46,9 +49,13 @@ public class MainWindowController {
     @FXML private Label aiStatusLabel;
     @FXML private FontIcon aiStatusIcon;
     @FXML private Label contentTitleLabel;
+    @FXML private Label contentSubtitleLabel;
+    @FXML private Label sessionClockLabel;
+    @FXML private Label interviewStorageNote;
     @FXML private StackPane contentHost;
     @FXML private Button dashboardNavButton;
     @FXML private Button plansNavButton;
+    @FXML private ToggleButton interviewNavButton;
     @FXML private Button historyNavButton;
     @FXML private Button resumesNavButton;
     @FXML private Button knowledgeNavButton;
@@ -60,8 +67,11 @@ public class MainWindowController {
     @FXML private Button tasksNavButton;
     @FXML private Button settingsNavButton;
     @FXML private Button userMenuButton;
+    @FXML private ImageView defaultBrandImage;
+    @FXML private ImageView interviewBrandImage;
+    @FXML private ImageView interviewUserAvatar;
+    @FXML private FontIcon topbarMenuIcon;
     @FXML private HBox activityReceipt;
-    @FXML private StackPane resumeSidebarArtwork;
     @FXML private Label activityTitleLabel;
     @FXML private Label activityDetailLabel;
 
@@ -92,7 +102,7 @@ public class MainWindowController {
         boolean aiConfigured = llmProperties.isConfigured();
         aiStatusLabel.setText(aiConfigured ? "AI 服务状态：正常" : "AI 服务状态：待配置");
         aiStatusIcon.pseudoClassStateChanged(FAILED, !aiConfigured);
-        contentNavigator.attach(contentHost, contentTitleLabel, this::selectNavigation);
+        contentNavigator.attach(contentHost, contentTitleLabel, this::selectNavigation, this::configurePageMode);
         mainRoot.sceneProperty().addListener((observable, previous, current) -> {
             if (current == null) unsubscribeFromNotifications();
             else subscribeToNotifications();
@@ -102,6 +112,7 @@ public class MainWindowController {
 
     @FXML private void showDashboard() { showSection(Route.DASHBOARD); }
     @FXML private void showPlans() { showSection(Route.PLAN); }
+    @FXML private void showInterviewEntry() { showSection(Route.PLAN); }
     @FXML private void showHistory() { showSection(Route.HISTORY); }
     @FXML private void showResumes() { showSection(Route.RESUME); }
     @FXML private void showProfiles() { showSection(Route.PROFILE); }
@@ -131,6 +142,7 @@ public class MainWindowController {
 
     @FXML
     private void logout() {
+        if (!contentNavigator.prepareForExternalNavigation()) return;
         unsubscribeFromNotifications();
         sessionState.logOut();
         viewManager.switchView(Route.LOGIN);
@@ -153,9 +165,47 @@ public class MainWindowController {
         careerPlanningNavButton.pseudoClassStateChanged(SELECTED, route == Route.CAREER_PLANNING);
         tasksNavButton.pseudoClassStateChanged(SELECTED, route == Route.TASK);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
-        boolean showResumeArtwork = route == Route.RESUME;
-        resumeSidebarArtwork.setManaged(showResumeArtwork);
-        resumeSidebarArtwork.setVisible(showResumeArtwork);
+    }
+
+    private void configurePageMode(String fxmlPath) {
+        boolean interviewMode = fxmlPath != null && fxmlPath.endsWith("/interview-workspace-view.fxml");
+        mainRoot.pseudoClassStateChanged(INTERVIEW_MODE, interviewMode);
+        showNode(interviewNavButton, interviewMode);
+        showNode(profilesNavButton, !interviewMode);
+        showNode(questionBankNavButton, !interviewMode);
+        showNode(careerAssessmentNavButton, !interviewMode);
+        showNode(skillsLibraryNavButton, !interviewMode);
+        showNode(careerPlanningNavButton, !interviewMode);
+        showNode(tasksNavButton, !interviewMode);
+        showNode(interviewStorageNote, interviewMode);
+        showNode(contentSubtitleLabel, interviewMode);
+        showNode(sessionClockLabel, interviewMode);
+        showNode(interviewBrandImage, interviewMode);
+        showNode(defaultBrandImage, !interviewMode);
+        showNode(interviewUserAvatar, interviewMode);
+        showNode(avatarLabel, !interviewMode);
+        showNode(topbarMenuIcon, !interviewMode);
+        aiStatusLabel.setText(interviewMode
+                ? "本地数据已同步"
+                : (llmProperties.isConfigured() ? "AI 服务状态：正常" : "AI 服务状态：待配置"));
+        if (!interviewMode) {
+            contentSubtitleLabel.setText("");
+            sessionClockLabel.setText("00:00:00");
+            return;
+        }
+        dashboardNavButton.pseudoClassStateChanged(SELECTED, false);
+        plansNavButton.pseudoClassStateChanged(SELECTED, false);
+        historyNavButton.pseudoClassStateChanged(SELECTED, false);
+        resumesNavButton.pseudoClassStateChanged(SELECTED, false);
+        profilesNavButton.pseudoClassStateChanged(SELECTED, false);
+        knowledgeNavButton.pseudoClassStateChanged(SELECTED, false);
+        settingsNavButton.pseudoClassStateChanged(SELECTED, false);
+        interviewNavButton.pseudoClassStateChanged(SELECTED, true);
+    }
+
+    private void showNode(javafx.scene.Node node, boolean visible) {
+        node.setVisible(visible);
+        node.setManaged(visible);
     }
 
     @FXML
