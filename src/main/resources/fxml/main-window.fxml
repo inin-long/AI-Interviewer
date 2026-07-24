@@ -89,7 +89,7 @@
             </HBox>
             <Label fx:id="interviewStorageNote" text="所有数据仅保存在本地设备&#10;仅 AI 调用需要网络连接"
                    wrapText="true" visible="false" managed="false" styleClass="interview-storage-note"/>
-            <Label text="版本 0.1.0" styleClass="fine-print sidebar-version"/>
+            <Label fx:id="sidebarVersionLabel" styleClass="fine-print sidebar-version"/>
         </VBox>
     </left>
     <center>

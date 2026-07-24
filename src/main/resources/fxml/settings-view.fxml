@@ -47,7 +47,7 @@
                                 <Label text="应用名称" styleClass="field-label" GridPane.rowIndex="0"/>
                                 <Label fx:id="appNameLabel" text="AI Interviewer" GridPane.rowIndex="0" GridPane.columnIndex="1"/>
                                 <Label text="应用版本" styleClass="field-label" GridPane.rowIndex="1"/>
-                                <Label fx:id="appVersionLabel" text="0.1.0" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
+                                <Label fx:id="appVersionLabel" GridPane.rowIndex="1" GridPane.columnIndex="1"/>
                                 <Label text="Java Runtime" styleClass="field-label" GridPane.rowIndex="2"/>
                                 <Label fx:id="javaVersionLabel" text="21" GridPane.rowIndex="2" GridPane.columnIndex="1"/>
                                 <Label text="JavaFX" styleClass="field-label" GridPane.rowIndex="3"/>

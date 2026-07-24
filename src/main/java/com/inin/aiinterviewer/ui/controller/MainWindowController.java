@@ -1,5 +1,6 @@
 package com.inin.aiinterviewer.ui.controller;
 
+import com.inin.aiinterviewer.config.properties.AppProperties;
 import com.inin.aiinterviewer.config.properties.LlmProperties;
 import com.inin.aiinterviewer.domain.enums.BackgroundTaskType;
 import com.inin.aiinterviewer.ui.navigation.ContentNavigator;
@@ -39,6 +40,7 @@ public class MainWindowController {
 
     private final UserSessionState sessionState;
     private final JavaFxViewManager viewManager;
+    private final AppProperties appProperties;
     private final LlmProperties llmProperties;
     private final ContentNavigator contentNavigator;
     private final TaskNotificationCenter notificationCenter;
@@ -74,6 +76,7 @@ public class MainWindowController {
     @FXML private HBox activityReceipt;
     @FXML private Label activityTitleLabel;
     @FXML private Label activityDetailLabel;
+    @FXML private Label sidebarVersionLabel;
 
     private TaskNotificationCenter.Registration notificationRegistration;
     private PauseTransition receiptTimeout;
@@ -83,12 +86,14 @@ public class MainWindowController {
     public MainWindowController(
             UserSessionState sessionState,
             JavaFxViewManager viewManager,
+            AppProperties appProperties,
             LlmProperties llmProperties,
             ContentNavigator contentNavigator,
             TaskNotificationCenter notificationCenter
     ) {
         this.sessionState = sessionState;
         this.viewManager = viewManager;
+        this.appProperties = appProperties;
         this.llmProperties = llmProperties;
         this.contentNavigator = contentNavigator;
         this.notificationCenter = notificationCenter;
@@ -99,6 +104,7 @@ public class MainWindowController {
         String nickname = sessionState.requireCurrentUser().nickname();
         usernameLabel.setText(nickname);
         avatarLabel.setText(avatarInitial(nickname));
+        sidebarVersionLabel.setText("版本 " + appProperties.version());
         boolean aiConfigured = llmProperties.isConfigured();
         aiStatusLabel.setText(aiConfigured ? "AI 服务状态：正常" : "AI 服务状态：待配置");
         aiStatusIcon.pseudoClassStateChanged(FAILED, !aiConfigured);
