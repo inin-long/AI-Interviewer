@@ -55,7 +55,7 @@
                 </columnConstraints>
 
                 <Label text="目标岗位" styleClass="field-label" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-                <TextField fx:id="targetPositionField" promptText="例如：高级Java开发工程师"
+                <TextField fx:id="targetPositionField"
                           styleClass="app-text-field"
                           GridPane.rowIndex="0" GridPane.columnIndex="1"/>
 

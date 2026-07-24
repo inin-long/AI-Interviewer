@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 public class ProfileController {
 
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final String SORT_LATEST = "最近更新";
+    private static final String SORT_EARLIEST = "最早更新";
+    private static final String SORT_NAME = "按姓名";
 
     private final CandidateProfileService profileService;
     private final UserSessionState sessionState;
@@ -46,7 +49,7 @@ public class ProfileController {
     @FXML private ToggleButton confirmedFilterBtn;
     @FXML private ToggleButton pendingFilterBtn;
     @FXML private TextField searchField;
-    @FXML private AppSelect sortSelect;
+    @FXML private AppSelect<String> sortSelect;
     @FXML private Button editButton;
 
     private List<CandidateProfileListItemDto> allProfiles = List.of();
@@ -63,6 +66,9 @@ public class ProfileController {
 
     @FXML
     private void initialize() {
+        sortSelect.getItems().setAll(SORT_LATEST, SORT_EARLIEST, SORT_NAME);
+        sortSelect.setValue(SORT_LATEST);
+        sortSelect.valueProperty().addListener((observable, oldValue, newValue) -> applyFilters());
         setupListView();
         setupSelection();
         refresh();
@@ -188,15 +194,14 @@ public class ProfileController {
         var filtered = allProfiles.stream().filter(pred).collect(Collectors.toList());
 
         // Sort
-        Object sortVal = sortSelect.getValue();
-        String sortKey = sortVal != null ? sortVal.toString() : null;
+        String sortKey = sortSelect.getValue();
         if (sortKey != null) {
             switch (sortKey) {
-                case "time_desc" -> filtered.sort((a, b) ->
+                case SORT_LATEST -> filtered.sort((a, b) ->
                         b.updateTime().compareTo(a.updateTime()));
-                case "time_asc" -> filtered.sort((a, b) ->
+                case SORT_EARLIEST -> filtered.sort((a, b) ->
                         a.updateTime().compareTo(b.updateTime()));
-                case "name_asc" -> filtered.sort((a, b) ->
+                case SORT_NAME -> filtered.sort((a, b) ->
                         fallback(a.candidateName()).compareTo(fallback(b.candidateName())));
             }
         }

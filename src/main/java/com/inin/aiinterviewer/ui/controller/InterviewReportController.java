@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.ui.controller;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.exception.BusinessException;
 import com.inin.aiinterviewer.application.exception.ErrorCode;
+import com.inin.aiinterviewer.application.service.InterviewCompletionService;
 import com.inin.aiinterviewer.application.service.InterviewResultService;
 import com.inin.aiinterviewer.application.service.InterviewSessionService;
 import com.inin.aiinterviewer.application.service.ReTestService;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
 public class InterviewReportController implements ContextAwareController<Long> {
 
     private final InterviewResultService resultService;
+    private final InterviewCompletionService completionService;
     private final InterviewSessionService sessionService;
     private final SessionBranchService branchService;
     private final TrainingRecommendationService trainingService;
@@ -73,6 +75,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
 
     public InterviewReportController(
             InterviewResultService resultService,
+            InterviewCompletionService completionService,
             InterviewSessionService sessionService,
             SessionBranchService branchService,
             TrainingRecommendationService trainingService,
@@ -84,6 +87,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
             GlobalExceptionHandler exceptionHandler
     ) {
         this.resultService = resultService;
+        this.completionService = completionService;
         this.sessionService = sessionService;
         this.branchService = branchService;
         this.trainingService = trainingService;
@@ -117,14 +121,26 @@ public class InterviewReportController implements ContextAwareController<Long> {
         configureScore(projectScoreLabel, report, "project");
         configureScore(communicationScoreLabel, report, "communication");
         configureScore(comprehensiveScoreLabel, report, "comprehensive");
-        markdown = report.contentMarkdown() == null ? "" : report.contentMarkdown();
+        List<InterviewMessageDto> messages = sessionService.messages(userId, interviewId);
+        markdown = refreshCitationSection(
+                report.contentMarkdown(),
+                completionService.citationMarkdown(messages));
         reportView.setMarkdown(markdown);
         renderEvidenceNavigation(report.evidence());
         renderBranchNavigation(branchService.list(userId, interviewId));
         renderTrainingRecommendation(trainingService.recommend(userId, interviewId));
         renderTrainingProgress(trainingProgressService.find(userId, interviewId));
-        renderCitationNavigation(sessionService.messages(userId, interviewId));
+        renderCitationNavigation(messages);
         configureReTestButton(userId);
+    }
+
+    static String refreshCitationSection(String reportMarkdown, String citationMarkdown) {
+        String report = reportMarkdown == null ? "" : reportMarkdown;
+        int sectionStart = report.lastIndexOf("## 参考依据");
+        if (sectionStart < 0) return report;
+        String prefix = report.substring(0, sectionStart).stripTrailing();
+        String citations = citationMarkdown == null ? "" : citationMarkdown.strip();
+        return prefix + "\n\n## 参考依据\n\n" + citations;
     }
 
     @FXML

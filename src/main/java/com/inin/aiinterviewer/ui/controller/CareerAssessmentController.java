@@ -40,6 +40,7 @@ public class CareerAssessmentController {
     private final GlobalExceptionHandler exceptionHandler;
 
     @FXML private ListView<AssessmentTemplateDto> templateListView;
+    @FXML private ScrollPane questionScrollPane;
     @FXML private VBox questionHost;
     @FXML private Button submitButton;
     @FXML private Label hintLabel;
@@ -48,6 +49,7 @@ public class CareerAssessmentController {
     @FXML private VBox hintBar;
 
     private final Map<Long, ToggleGroup> groups = new LinkedHashMap<>();
+    private final Map<String, Double> scrollPositions = new LinkedHashMap<>();
     private List<AssessmentQuestionDto> currentQuestions = new ArrayList<>();
     private String currentCode;
 
@@ -153,6 +155,9 @@ public class CareerAssessmentController {
     }
 
     private void loadQuestions(AssessmentTemplateDto template) {
+        if (currentCode != null) {
+            scrollPositions.put(currentCode, questionScrollPane.getVvalue());
+        }
         currentCode = template.code();
         currentQuestions = assessmentService.getQuestions(template.code());
         groups.clear();
@@ -214,11 +219,14 @@ public class CareerAssessmentController {
             for (int i = 0; i < question.options().size(); i++) {
                 HBox optionRow = new HBox(10);
                 optionRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+                optionRow.setMaxWidth(Double.MAX_VALUE);
+                optionRow.setPickOnBounds(true);
                 optionRow.getStyleClass().add("question-option-row");
 
                 RadioButton option = new RadioButton(question.options().get(i).label());
                 option.setToggleGroup(group);
                 option.setWrapText(true);
+                option.setMaxWidth(Double.MAX_VALUE);
                 option.getStyleClass().add("question-option-radio");
                 HBox.setHgrow(option, Priority.ALWAYS);
 
@@ -231,6 +239,12 @@ public class CareerAssessmentController {
                         optionRow.getStyleClass().remove("selected");
                     }
                 });
+                optionRow.setOnMouseClicked(event -> {
+                    if (!option.isDisabled()) {
+                        option.setSelected(true);
+                        event.consume();
+                    }
+                });
 
                 optionRow.getChildren().add(option);
                 optionsBox.getChildren().add(optionRow);
@@ -240,6 +254,13 @@ public class CareerAssessmentController {
             index++;
         }
         submitButton.setDisable(false);
+        double scrollPosition = scrollPositions.getOrDefault(currentCode, 0.0);
+        questionScrollPane.setVvalue(scrollPosition);
+        javafx.application.Platform.runLater(() -> {
+            if (template.code().equals(currentCode)) {
+                questionScrollPane.setVvalue(scrollPosition);
+            }
+        });
     }
 
     private void showHint(String message) {

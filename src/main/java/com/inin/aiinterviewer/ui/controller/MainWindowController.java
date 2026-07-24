@@ -72,7 +72,6 @@ public class MainWindowController {
     @FXML private ImageView interviewUserAvatar;
     @FXML private FontIcon topbarMenuIcon;
     @FXML private HBox activityReceipt;
-    @FXML private StackPane resumeSidebarArtwork;
     @FXML private Label activityTitleLabel;
     @FXML private Label activityDetailLabel;
 
@@ -166,9 +165,6 @@ public class MainWindowController {
         careerPlanningNavButton.pseudoClassStateChanged(SELECTED, route == Route.CAREER_PLANNING);
         tasksNavButton.pseudoClassStateChanged(SELECTED, route == Route.TASK);
         settingsNavButton.pseudoClassStateChanged(SELECTED, route == Route.SETTING);
-        boolean showResumeArtwork = route == Route.RESUME;
-        resumeSidebarArtwork.setManaged(showResumeArtwork);
-        resumeSidebarArtwork.setVisible(showResumeArtwork);
     }
 
     private void configurePageMode(String fxmlPath) {

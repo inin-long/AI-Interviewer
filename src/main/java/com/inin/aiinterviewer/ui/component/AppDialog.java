@@ -136,6 +136,7 @@ public class AppDialog<R> extends Dialog<R> {
         nativeCancel.setManaged(false);
         nativeCancel.getStyleClass().add("app-dialog-native-cancel");
         setDialogPane(dialogPane);
+        setResultConverter(buttonType -> null);
 
         setOnShown(event -> {
             Scene scene = dialogPane.getScene();

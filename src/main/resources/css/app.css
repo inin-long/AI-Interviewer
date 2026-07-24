@@ -381,11 +381,6 @@
     -fx-text-fill: #8A93A5;
 }
 
-.resume-sidebar-artwork {
-    -fx-alignment: center;
-    -fx-opacity: 0.92;
-}
-
 /* Candidate portrait Drawer */
 .resume-profile-drawer,
 .resume-drawer-scroll,
@@ -4404,6 +4399,13 @@
 .assessment-header-icon-wrap {
     -fx-background-color: linear-gradient(to bottom right, #EEEDFF, #E8E6FF);
     -fx-background-radius: 10;
+    -fx-alignment: center;
+    -fx-min-width: 54;
+    -fx-pref-width: 54;
+    -fx-max-width: 54;
+    -fx-min-height: 54;
+    -fx-pref-height: 54;
+    -fx-max-height: 54;
 }
 .assessment-header-icon {
     -fx-icon-color: -primary;
@@ -4558,6 +4560,7 @@
 /* Individual option row — card-like clickable surface */
 .question-option-row {
     -fx-padding: 8 12;
+    -fx-max-width: Infinity;
     -fx-background-radius: 8;
     -fx-background-color: -surface-muted;
     -fx-cursor: hand;

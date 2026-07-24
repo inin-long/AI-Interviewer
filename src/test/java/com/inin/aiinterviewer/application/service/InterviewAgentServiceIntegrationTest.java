@@ -786,7 +786,33 @@ class InterviewAgentServiceIntegrationTest {
                         "缓存穿透可以使用布隆过滤器，并为不存在的数据设置短期空值缓存。", 0.91)));
 
         assertThat(completionService.citationMarkdown(List.of(message)))
-                .contains("第 1 题", "Redis 设计说明.md", "片段 3", "布隆过滤器");
+                .contains("第 1 题", "Redis 设计说明.md", "片段 1", "布隆过滤器");
+    }
+
+    @Test
+    void numbersReportFragmentsContinuouslyAndRemovesSourceMarkdownNoise() {
+        var firstQuestion = new InterviewMessageDto(
+                4, Message.Role.ASSISTANT, "Explain the cache strategy.", LocalDateTime.now(), false,
+                List.of(
+                        new KnowledgeCitationDto(2L, "Beta.md", 5,
+                                "## Details --- `CacheManager` uses **two levels**.", 0.88),
+                        new KnowledgeCitationDto(1L, "Alpha.md", 2,
+                                "# Overview [Cache guide](https://example.test) keeps hot data.", 0.91)));
+        var secondQuestion = new InterviewMessageDto(
+                5, Message.Role.ASSISTANT, "Explain eviction.", LocalDateTime.now(), false,
+                List.of(new KnowledgeCitationDto(1L, "Alpha.md", 1,
+                        "### Eviction\\nUse LRU when access is uneven.", 0.84)));
+
+        String markdown = completionService.citationMarkdown(List.of(firstQuestion, secondQuestion));
+
+        assertThat(markdown).containsSubsequence(
+                "Alpha.md** · 片段 1",
+                "Beta.md** · 片段 2",
+                "Alpha.md** · 片段 3");
+        assertThat(markdown)
+                .contains("Overview Cache guide keeps hot data.", "Details CacheManager uses two levels.",
+                        "Eviction Use LRU when access is uneven.")
+                .doesNotContain("\\#", "`", "---", "](https://");
     }
 
     private boolean hasCause(Throwable throwable, Class<? extends Throwable> type) {

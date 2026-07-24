@@ -82,12 +82,6 @@
                 <graphic><FontIcon iconLiteral="mdi2c-cog-outline" iconSize="19"/></graphic>
             </Button>
             <Region VBox.vgrow="ALWAYS"/>
-            <StackPane fx:id="resumeSidebarArtwork" visible="false" managed="false"
-                       minHeight="188" prefHeight="188" styleClass="resume-sidebar-artwork">
-                <ImageView fitWidth="178" fitHeight="178" preserveRatio="true" smooth="true">
-                    <image><Image url="@../images/resume/resume-sidebar-illustration.png"/></image>
-                </ImageView>
-            </StackPane>
             <Separator styleClass="sidebar-divider"/>
             <HBox alignment="CENTER_LEFT" spacing="8" styleClass="sidebar-service-row">
                 <FontIcon fx:id="aiStatusIcon" iconLiteral="mdi2c-circle" iconSize="10" styleClass="service-status-icon"/>
