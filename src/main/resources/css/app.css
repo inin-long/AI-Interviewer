@@ -5752,6 +5752,516 @@
 .skills-empty-list-title { -fx-font-weight: 700; -fx-text-fill: #59657A; }
 .skills-empty-list-hint { -fx-font-size: 11px; -fx-text-fill: #98A0AF; }
 
+/* =========================================================================
+   AI Interviewer UI Design Standard v1.0 — LOCKED
+   Visual truth: Resume Center + Skills Library reference screens.
+   Keep this section after route styles so shared component decisions win.
+   Interview focus mode is intentionally defined after this block.
+   ========================================================================= */
+
+/* Workspace surfaces ----------------------------------------------------- */
+.app-root,
+.content-host,
+.content-scroll,
+.content-scroll > .viewport,
+.page-content,
+.container,
+.dashboard-page,
+.history-page,
+.knowledge-page,
+.plan-page,
+.plan-detail-page,
+.plan-editor-page,
+.profile-page,
+.qb-page,
+.resume-page,
+.skills-page {
+    -fx-background-color: -app-background;
+}
+
+.page-content,
+.container {
+    -fx-spacing: 16;
+}
+
+.standard-page-header {
+    -fx-min-height: 68;
+    -fx-pref-height: 68;
+    -fx-alignment: center-left;
+}
+
+/* Type hierarchy --------------------------------------------------------- */
+.page-title,
+.heading-2,
+.history-page-title,
+.plan-page-title,
+.profile-page-title,
+.resume-page-title,
+.skills-page-title {
+    -fx-font-size: 28px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -text;
+}
+
+.topbar-title {
+    -fx-font-size: 21px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.module-title,
+.section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.card-title,
+.list-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.secondary-text,
+.content-description,
+.history-page-subtitle,
+.plan-page-subtitle,
+.profile-page-subtitle,
+.resume-page-subtitle,
+.skills-page-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text-secondary;
+}
+
+.fine-print,
+.caption-text,
+.meta-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-muted;
+}
+
+.field-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+/* Surface and elevation -------------------------------------------------- */
+.content-card,
+.form-card,
+.summary-card,
+.card,
+.data-table,
+.settings-form,
+.drawer-panel,
+.resume-stat-card,
+.resume-row-card,
+.resume-process-card,
+.skills-card,
+.skills-tip-card {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: -shadow-card;
+}
+
+.separator .line {
+    -fx-border-color: -border transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
+}
+
+/* Buttons --------------------------------------------------------------- */
+.primary-button,
+.btn-primary {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-padding: 9 16;
+    -fx-background-color: -primary;
+    -fx-border-color: transparent;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-graphic-text-gap: 8;
+}
+
+.primary-button .font-icon,
+.primary-button .ikonli-font-icon,
+.btn-primary .font-icon,
+.btn-primary .ikonli-font-icon {
+    -fx-icon-color: white;
+}
+
+.primary-button:hover,
+.btn-primary:hover {
+    -fx-background-color: -primary-hover;
+}
+
+.primary-button:pressed,
+.btn-primary:pressed {
+    -fx-background-color: -primary-pressed;
+}
+
+.secondary-button,
+.btn-secondary {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-padding: 9 16;
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: #253047;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+    -fx-graphic-text-gap: 8;
+}
+
+.secondary-button:hover,
+.btn-secondary:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #BAC2FA;
+    -fx-text-fill: -primary;
+}
+
+.danger-button {
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-background-color: -surface;
+    -fx-border-color: #F2B8BE;
+    -fx-text-fill: -danger;
+}
+
+.button:disabled {
+    -fx-opacity: 1;
+    -fx-background-color: #F1F3F7;
+    -fx-border-color: -border;
+    -fx-text-fill: #A7AFBD;
+}
+
+.back-icon-button {
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+    -fx-padding: 0;
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 8;
+    -fx-border-radius: 8;
+    -fx-text-fill: -text-secondary;
+}
+
+.back-icon-button:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #BAC2FA;
+    -fx-text-fill: -primary;
+}
+
+.back-icon-button .font-icon,
+.back-icon-button .ikonli-font-icon {
+    -fx-icon-color: -text-secondary;
+}
+
+.back-icon-button:hover .font-icon,
+.back-icon-button:hover .ikonli-font-icon {
+    -fx-icon-color: -primary;
+}
+
+/* Inputs and selectors --------------------------------------------------- */
+.text-field,
+.password-field,
+.text-area,
+.combo-box,
+.app-select {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text;
+}
+
+.text-field,
+.password-field,
+.text-area,
+.combo-box,
+.app-select,
+.app-multi-select {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-prompt-text-fill: -text-muted;
+}
+
+.text-field:hover,
+.password-field:hover,
+.text-area:hover,
+.combo-box:hover,
+.app-select:hover,
+.app-multi-select:hover {
+    -fx-border-color: -border-hover;
+}
+
+.text-field:focused,
+.password-field:focused,
+.text-area:focused,
+.combo-box:focused,
+.app-select:focused,
+.app-select:showing,
+.app-multi-select:focused,
+.app-multi-select:showing {
+    -fx-border-color: -border-focus;
+    -fx-effect: dropshadow(gaussian, rgba(83, 100, 242, 0.15), 8, 0.1, 0, 0);
+}
+
+.text-area .content {
+    -fx-background-color: -surface;
+    -fx-background-radius: 8;
+}
+
+.check-box {
+    -fx-font-size: 13px;
+    -fx-text-fill: -text-secondary;
+}
+
+.check-box > .box {
+    -fx-background-color: -surface;
+    -fx-border-color: -border-strong;
+    -fx-border-radius: 4;
+    -fx-background-radius: 4;
+}
+
+.check-box:selected > .box {
+    -fx-background-color: -primary;
+    -fx-border-color: -primary;
+}
+
+.check-box:selected > .box > .mark {
+    -fx-background-color: white;
+}
+
+/* Filter chips and status tags ------------------------------------------ */
+.filter-chip,
+.resume-filter-button,
+.skills-filter-button {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-text-fill: -text-secondary;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.filter-chip:hover,
+.resume-filter-button:hover,
+.skills-filter-button:hover {
+    -fx-background-color: -primary-soft;
+    -fx-border-color: #D7DBFF;
+    -fx-text-fill: -primary;
+}
+
+.filter-chip:selected,
+.resume-filter-button:selected,
+.skills-filter-button:selected {
+    -fx-background-color: -primary;
+    -fx-border-color: -primary;
+    -fx-text-fill: white;
+}
+
+.status-badge {
+    -fx-padding: 4 10;
+    -fx-background-color: -primary-soft;
+    -fx-background-radius: 999;
+    -fx-text-fill: -primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.status-badge.success {
+    -fx-background-color: -success-soft;
+    -fx-text-fill: -success;
+}
+
+.status-badge.warning {
+    -fx-background-color: -warning-soft;
+    -fx-text-fill: #D9820A;
+}
+
+.status-badge.danger {
+    -fx-background-color: -danger-soft;
+    -fx-text-fill: -danger;
+}
+
+/* Lists and tables ------------------------------------------------------- */
+.list-view,
+.table-view,
+.tree-view {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.list-view .list-cell {
+    -fx-text-fill: -text;
+}
+
+.list-view .list-cell:filled:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-fill: -text;
+}
+
+.table-view {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+.table-view .column-header-background,
+.table-view .column-header,
+.table-view .filler {
+    -fx-background-color: -surface-muted;
+}
+
+.table-view .column-header,
+.table-view .filler {
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.table-view .column-header .label {
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text-secondary;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: -surface;
+    -fx-border-color: transparent transparent -border transparent;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #FBFCFF;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: -primary-soft;
+    -fx-text-background-color: -text;
+}
+
+/* Popup surfaces --------------------------------------------------------- */
+.context-menu,
+.combo-box-popup > .list-view,
+.app-dialog-shell,
+.dialog-pane {
+    -fx-background-color: -surface;
+    -fx-border-color: -border;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-effect: -shadow-pop;
+}
+
+.context-menu {
+    -fx-padding: 6;
+}
+
+.menu-item {
+    -fx-padding: 8 12;
+    -fx-background-radius: 7;
+}
+
+.menu-item:focused {
+    -fx-background-color: -primary-soft;
+}
+
+.menu-item:focused .label {
+    -fx-text-fill: -primary;
+}
+
+.tooltip {
+    -fx-background-color: #20263A;
+    -fx-background-radius: 6;
+    -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 7 10;
+}
+
+/* Scrollbars ------------------------------------------------------------- */
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical .track,
+.scroll-bar:horizontal .track {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:vertical .thumb,
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: -scroll-thumb;
+    -fx-background-radius: 999;
+}
+
+.scroll-bar:vertical .thumb:hover,
+.scroll-bar:horizontal .thumb:hover {
+    -fx-background-color: -scroll-thumb-hover;
+}
+
+.scroll-bar:vertical .increment-button,
+.scroll-bar:vertical .decrement-button,
+.scroll-bar:horizontal .increment-button,
+.scroll-bar:horizontal .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+/* Semantic replacements for former FXML inline styles ------------------- */
+.section-heading-offset-8 {
+    -fx-padding: 0 0 0 8;
+}
+
+.section-heading-offset-10 {
+    -fx-padding: 0 0 0 10;
+}
+
+.compact-label {
+    -fx-font-size: 12px;
+}
+
+.empty-copy-narrow {
+    -fx-max-width: 360;
+    -fx-text-alignment: center;
+}
+
+.practice-score-header {
+    -fx-padding: 0 0 10 0;
+}
+
+.skill-article-category {
+    -fx-text-fill: -text-secondary;
+}
+
+.skill-article-summary {
+    -fx-font-size: 14px;
+    -fx-wrap-text: true;
+    -fx-line-spacing: 2px;
+}
+
+.skill-article-content {
+    -fx-padding: 14;
+}
+
+.skill-editor-card {
+    -fx-padding: 20;
+}
+
 /* Live interview workspace — rebuilt from docs/ui-reference/interview.png. */
 .app-root:interview-mode,
 .app-root:interview-mode .content-host {
