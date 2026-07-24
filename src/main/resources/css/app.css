@@ -11,9 +11,7 @@
     -border-strong: #CDD4E0;
     -border-focus: #5969F6;
     -text: #151B2D;
-    -text-primary: #151B2D;
     -text-secondary: #667085;
-    -text-tertiary: #98A2B3;
     -text-muted: #98A2B3;
     -primary: #5364F2;
     -primary-hover: #4656DC;
@@ -4892,7 +4890,7 @@
 }
 
 .qb-header-icon-wrap {
-    -fx-background-color: -info-soft;
+    -fx-background-color: linear-gradient(to bottom right, #E8F0FE, #DCE6FA);
     -fx-background-radius: 10;
     -fx-padding: 10;
     -fx-alignment: center;
@@ -4925,9 +4923,9 @@
     -fx-min-size: 38 38;
     -fx-pref-size: 38 38;
 }
-.qb-stat-icon-blue { -fx-background-color: -info-soft; }
-.qb-stat-icon-purple { -fx-background-color: -primary-soft; }
-.qb-stat-icon-green { -fx-background-color: -success-soft; }
+.qb-stat-icon-blue { -fx-background-color: linear-gradient(to bottom right, #E8F0FE, #DBE7FB); }
+.qb-stat-icon-purple { -fx-background-color: linear-gradient(to bottom right, #F0EBFF, #E8E0FC); }
+.qb-stat-icon-green { -fx-background-color: linear-gradient(to bottom right, #E8F8EE, #DDF5E6); }
 .qb-stat-icon {
     -fx-icon-color: white;
 }
@@ -4955,7 +4953,7 @@
 .qb-search-box {
     -fx-background-color: -surface;
     -fx-background-radius: 8;
-    -fx-border-color: -border;
+    -fx-border-color: transparent;
     -fx-border-radius: 8;
     -fx-padding: 0;
     -fx-alignment: center-left;
@@ -4963,8 +4961,8 @@
 }
 .qb-search-box:focused,
 .qb-search-focused {
-    -fx-border-color: -border-focus;
-    -fx-effect: dropshadow(gaussian, rgba(83,100,242,0.15), 8, 0.1, 0, 0);
+    -fx-border-color: #6C8EFF;
+    -fx-effect: dropshadow(gaussian, rgba(108,142,255,0.20), 6, 0.2, 0, 1);
 }
 .qb-search-input {
     -fx-background-color: transparent;
@@ -4996,11 +4994,11 @@
     -fx-border-radius: 8;
 }
 .qb-position-list .list-cell:hover {
-    -fx-background-color: -hover;
+    -fx-background-color: rgba(79,99,217,0.05);
 }
 .qb-position-list .list-cell:selected,
 .qb-position-list .list-cell:focused {
-    -fx-background-color: -primary-soft;
+    -fx-background-color: rgba(79,99,217,0.09);
 }
 .qb-position-list .list-cell:selected .qb-position-title {
     -fx-text-fill: -primary;
@@ -5058,14 +5056,14 @@
     -fx-font-size: 12px;
     -fx-font-weight: 500;
     -fx-text-fill: -text-secondary;
-    -fx-background-color: -primary-soft;
+    -fx-background-color: rgba(79,99,217,0.07);
     -fx-background-radius: 999;
     -fx-padding: 5 12;
     -fx-cursor: hand;
     -fx-border-color: transparent;
 }
 .qb-quick-job-chip:hover {
-    -fx-background-color: #E4E7FF;
+    -fx-background-color: rgba(79,99,217,0.14);
     -fx-text-fill: -primary;
 }
 
@@ -5114,14 +5112,14 @@
     -fx-padding: 0 0 0 16;
     -fx-hgap: 14;
     -fx-vgap: 0;
-    -fx-background-color: -surface;
+    -fx-background-color: rgba(79,99,217,0.035);
     -fx-background-radius: 10 10 0 0;
 }
 
 /* Table Header */
 .qb-table-header-cell {
     -fx-padding: 12 0;
-    -fx-border-color: -border;
+    -fx-border-color: rgba(79,99,217,0.10);
     -fx-border-width: 0 0 1 0;
 }
 .qb-th {
@@ -5144,7 +5142,7 @@
     -fx-border-color: transparent;
     -fx-padding: 0;
     -fx-border-width: 0 0 1 0;
-    -fx-border-color: -border;
+    -fx-border-color: rgba(79,99,217,0.10);
 }
 .qb-table-list .list-cell {
     -fx-background-color: transparent;
@@ -5152,11 +5150,11 @@
     -fx-border-color: transparent;
 }
 .qb-table-list .list-cell:hover {
-    -fx-background-color: #FBFCFF;
+    -fx-background-color: rgba(79,99,217,0.03);
 }
 .qb-table-list .list-cell:selected,
 .qb-table-list .list-cell:focused {
-    -fx-background-color: -primary-soft;
+    -fx-background-color: rgba(79,99,217,0.06);
 }
 
 /* Table Rows Container */
@@ -5174,16 +5172,16 @@
 /* Table Row Cell */
 .qb-table-row-cell {
     -fx-background-color: transparent;
-    -fx-border-color: -border;
+    -fx-border-color: rgba(23,26,33,0.06);
     -fx-border-width: 0 0 1 0;
     -fx-padding: 12 0;
     -fx-cursor: hand;
 }
 .qb-table-row-cell:hover {
-    -fx-background-color: #FBFCFF;
+    -fx-background-color: rgba(79,99,217,0.03);
 }
 .qb-table-row-selected {
-    -fx-background-color: -primary-soft;
+    -fx-background-color: rgba(79,99,217,0.06);
 }
 .qb-table-row-cell-difficulty {
     -fx-alignment: center;

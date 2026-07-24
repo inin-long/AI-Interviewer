@@ -13,8 +13,7 @@
     <top>
         <HBox alignment="CENTER_LEFT" spacing="12" styleClass="subpage-header report-header">
             <padding><Insets top="18" right="28" bottom="16" left="28"/></padding>
-            <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回面试">
-                <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+            <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回面试">
                 <tooltip><Tooltip text="返回面试"/></tooltip>
             </Button>
             <VBox spacing="3">
