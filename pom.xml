@@ -13,7 +13,7 @@
 
     <groupId>com.inin</groupId>
     <artifactId>ai-interviewer</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1</version>
     <name>AI Interviewer</name>
     <description>Local AI technical interview desktop assistant</description>
 

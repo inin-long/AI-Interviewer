@@ -51,7 +51,7 @@ Use `-SkipMavenBuild` only after a successful `mvnw clean package` in the curren
 
 ## Release checklist
 
-- Add `packaging\windows\AI Interviewer.ico` before a branded release; without it `jpackage` uses its default icon.
+- Verify `packaging\windows\AI Interviewer.ico` renders correctly at common Windows launcher sizes.
 - Sign the EXE/MSI with the project certificate before public distribution; current development artifacts are unsigned.
 - Install on a clean Windows user account and verify first launch, shortcuts, uninstall, upgrade, and retained
   `%LOCALAPPDATA%\AI-Interviewer` data before declaring a production release.

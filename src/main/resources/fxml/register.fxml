@@ -102,7 +102,7 @@
 
                 <HBox alignment="CENTER" minHeight="28" prefHeight="28" styleClass="auth-card-footer">
                     <padding><Insets top="14"/></padding>
-                    <Label text="AI Interviewer   v1.0.0   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
+                    <Label text="AI Interviewer   v1.0.1   |   本地 AI 技术面试助手" styleClass="auth-footer"/>
                 </HBox>
             </VBox>
             <Region minWidth="36" prefWidth="36" maxWidth="160" HBox.hgrow="ALWAYS"/>

@@ -13,7 +13,7 @@ spring:
 
 app:
   name: AI Interviewer
-  version: 1.0.0
+  version: 1.0.1
   data-root: ${ai.interviewer.home}
 
 storage:
