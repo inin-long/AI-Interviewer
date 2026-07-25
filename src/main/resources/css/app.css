@@ -4371,7 +4371,7 @@
     -fx-text-fill: -text-secondary;
 }
 .career-tab-header.career-tab-active .career-tab-label {
-    -fx-text-fill: -text-primary;
+    -fx-text-fill: -text;
     -fx-font-weight: 600;
 }
 .career-tab-line-fill {
@@ -6826,5 +6826,237 @@
     -fx-font-size: 11px;
     -fx-font-weight: 700;
     -fx-text-fill: #5C55EA;
+}
+
+/* =========================================================================
+   Career planning & assessment history — aligned to the locked UI standard
+   ========================================================================= */
+.career-history-page,
+.career-planning-page,
+.career-plan-detail-page {
+    -fx-background-color: -app-background;
+}
+
+.career-history-count-box {
+    -fx-padding: 8 14;
+    -fx-background-color: #F0F2FF;
+    -fx-background-radius: 9;
+    -fx-border-color: #DDE1FF;
+    -fx-border-radius: 9;
+}
+
+.career-history-count {
+    -fx-font-size: 16px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -primary;
+}
+
+.career-history-panel {
+    -fx-padding: 0;
+    -fx-background-color: -surface;
+}
+
+.career-history-panel-header {
+    -fx-padding: 16 18;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.career-history-list {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 6 6 8 6;
+}
+
+.career-history-list > .viewport,
+.career-history-list .virtual-flow,
+.career-history-list .clipped-container,
+.career-history-list .sheet {
+    -fx-background-color: transparent;
+}
+
+.career-history-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 5 7;
+}
+
+.career-history-list .list-cell:empty {
+    -fx-padding: 0;
+}
+
+.career-history-list .scroll-bar:horizontal {
+    -fx-opacity: 0;
+    -fx-pref-height: 0;
+    -fx-max-height: 0;
+}
+
+.career-history-row-card {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 9;
+    -fx-border-color: -border;
+    -fx-border-radius: 9;
+    -fx-border-width: 1;
+}
+
+.career-history-list .list-cell:hover .career-history-row-card {
+    -fx-background-color: #FAFAFF;
+    -fx-border-color: #C9CEF8;
+}
+
+.career-history-list .list-cell:selected .career-history-row-card {
+    -fx-background-color: #F5F6FF;
+    -fx-border-color: -primary;
+}
+
+.career-history-icon-box,
+.career-section-icon-box,
+.career-planning-header-icon-box,
+.career-plan-empty-icon-box {
+    -fx-alignment: center;
+    -fx-background-color: #EEF0FF;
+    -fx-background-radius: 9;
+}
+
+.career-history-icon-box {
+    -fx-min-width: 54;
+    -fx-pref-width: 54;
+    -fx-max-width: 54;
+    -fx-min-height: 54;
+    -fx-pref-height: 54;
+    -fx-max-height: 54;
+}
+
+.career-history-icon-holland { -fx-background-color: #FFF5E7; }
+.career-history-icon-mbti { -fx-background-color: #F1EDFF; }
+
+.career-history-row-icon,
+.career-history-row-icon .ikonli-font-icon,
+.career-section-icon,
+.career-section-icon .ikonli-font-icon,
+.career-planning-header-icon,
+.career-planning-header-icon .ikonli-font-icon {
+    -fx-icon-color: -primary;
+}
+
+.career-history-icon-holland .ikonli-font-icon { -fx-icon-color: #E88916; }
+.career-history-icon-mbti .ikonli-font-icon { -fx-icon-color: #7559E8; }
+
+.career-history-row-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: 800;
+    -fx-text-fill: -text;
+}
+
+.career-history-row-description {
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-secondary;
+}
+
+.career-history-row-meta {
+    -fx-font-size: 11px;
+    -fx-text-fill: -text-muted;
+}
+
+.career-result-code {
+    -fx-padding: 3 9;
+    -fx-background-color: #EEF0FF;
+    -fx-background-radius: 999;
+    -fx-text-fill: -primary;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.career-planning-header-icon-box {
+    -fx-min-width: 52;
+    -fx-pref-width: 52;
+    -fx-max-width: 52;
+    -fx-min-height: 52;
+    -fx-pref-height: 52;
+    -fx-max-height: 52;
+}
+
+.career-history-button {
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-padding: 8 14;
+}
+
+.career-section-icon-box {
+    -fx-min-width: 38;
+    -fx-pref-width: 38;
+    -fx-max-width: 38;
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
+    -fx-max-height: 38;
+}
+
+.career-planning-form-card {
+    -fx-border-color: #DDE1EB;
+}
+
+.career-planning-result-card {
+    -fx-min-height: 210;
+}
+
+.career-plan-empty-state {
+    -fx-padding: 30 20;
+}
+
+.career-plan-empty-icon-box {
+    -fx-min-width: 58;
+    -fx-pref-width: 58;
+    -fx-max-width: 58;
+    -fx-min-height: 58;
+    -fx-pref-height: 58;
+    -fx-max-height: 58;
+}
+
+.career-plan-date-badge {
+    -fx-padding: 7 11;
+    -fx-background-color: #F1F3FA;
+    -fx-background-radius: 7;
+    -fx-font-size: 12px;
+    -fx-text-fill: -text-secondary;
+}
+
+.career-plan-meta-card {
+    -fx-padding: 12 14;
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 9;
+    -fx-border-color: -border;
+    -fx-border-radius: 9;
+}
+
+.career-plan-meta-value {
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-text-fill: -text;
+}
+
+.career-plan-document-card {
+    -fx-padding: 0;
+}
+
+.career-plan-document-header {
+    -fx-padding: 15 18;
+    -fx-border-color: transparent transparent -border transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.career-plan-detail-scroll,
+.career-plan-detail-scroll > .viewport {
+    -fx-background-color: #F7F8FC;
+}
+
+.career-plan-document-stage {
+    -fx-background-color: #F7F8FC;
+}
+
+.career-plan-document {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 8;
+    -fx-border-color: -border;
+    -fx-border-radius: 8;
+    -fx-max-width: 980;
 }
 

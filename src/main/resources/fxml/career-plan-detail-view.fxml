@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.inin.aiinterviewer.ui.component.MarkdownView?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.inin.aiinterviewer.ui.controller.CareerPlanDetailController"
+            styleClass="page-content, career-plan-detail-page">
+    <top>
+        <VBox spacing="16">
+            <padding><Insets top="22" right="24" bottom="0" left="24"/></padding>
+            <HBox alignment="CENTER_LEFT" spacing="14" styleClass="standard-page-header">
+                <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回规划历史">
+                    <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+                    <tooltip><Tooltip text="返回规划历史"/></tooltip>
+                </Button>
+                <VBox spacing="4">
+                    <Label fx:id="titleLabel" text="职业规划详情" styleClass="page-title"/>
+                    <Label fx:id="subtitleLabel" text="查看完整职业发展路线" styleClass="secondary-text"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="createdLabel" styleClass="career-plan-date-badge"/>
+            </HBox>
+            <GridPane hgap="12" styleClass="career-plan-meta-grid">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="33.333"/>
+                    <ColumnConstraints percentWidth="33.334"/>
+                    <ColumnConstraints percentWidth="33.333"/>
+                </columnConstraints>
+                <VBox spacing="4" maxWidth="Infinity" styleClass="career-plan-meta-card"
+                      GridPane.columnIndex="0">
+                    <Label text="当前定位" styleClass="caption-text"/>
+                    <Label fx:id="currentRoleLabel" text="—" wrapText="true"
+                           maxWidth="Infinity" styleClass="career-plan-meta-value"/>
+                </VBox>
+                <VBox spacing="4" maxWidth="Infinity" styleClass="career-plan-meta-card"
+                      GridPane.columnIndex="1">
+                    <Label text="目标岗位" styleClass="caption-text"/>
+                    <Label fx:id="targetRoleLabel" text="—" wrapText="true"
+                           maxWidth="Infinity" styleClass="career-plan-meta-value"/>
+                </VBox>
+                <VBox spacing="4" maxWidth="Infinity" styleClass="career-plan-meta-card"
+                      GridPane.columnIndex="2">
+                    <Label text="行业 / 经验" styleClass="caption-text"/>
+                    <Label fx:id="backgroundLabel" text="—" wrapText="true"
+                           maxWidth="Infinity" styleClass="career-plan-meta-value"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+    </top>
+    <center>
+        <VBox spacing="10" styleClass="content-card, career-plan-document-card">
+            <BorderPane.margin><Insets top="16" right="24" bottom="24" left="24"/></BorderPane.margin>
+            <HBox alignment="CENTER_LEFT" spacing="8" styleClass="career-plan-document-header">
+                <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="19" styleClass="career-section-icon"/>
+                <Label text="规划正文" styleClass="module-title"/>
+            </HBox>
+            <ScrollPane fitToWidth="true" hbarPolicy="NEVER" VBox.vgrow="ALWAYS" styleClass="content-scroll, career-plan-detail-scroll">
+                <content>
+                    <StackPane alignment="TOP_CENTER" styleClass="career-plan-document-stage">
+                        <padding><Insets top="16" right="24" bottom="24" left="24"/></padding>
+                        <VBox maxWidth="980" prefWidth="980" styleClass="career-plan-document">
+                            <padding><Insets top="24" right="34" bottom="32" left="34"/></padding>
+                            <MarkdownView fx:id="markdownView"/>
+                        </VBox>
+                    </StackPane>
+                </content>
+            </ScrollPane>
+        </VBox>
+    </center>
+</BorderPane>

@@ -3,26 +3,38 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.CareerHistoryController"
-      spacing="18" styleClass="page-content">
-    <padding><Insets top="26" right="28" bottom="28" left="28"/></padding>
-    <HBox alignment="CENTER_LEFT" spacing="12">
-        <Button text="←" onAction="#back" styleClass="back-icon-button" accessibleText="返回测评">
-            <tooltip><Tooltip text="返回测评"/></tooltip>
+      spacing="18" styleClass="page-content, career-history-page">
+    <padding><Insets top="22" right="24" bottom="24" left="24"/></padding>
+
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="standard-page-header">
+        <Button onAction="#back" styleClass="back-icon-button" accessibleText="返回职业测评">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+            <tooltip><Tooltip text="返回职业测评"/></tooltip>
         </Button>
-        <VBox spacing="5">
+        <VBox spacing="4">
             <Label text="我的测评记录" styleClass="page-title"/>
-            <Label text="查看历史测评报告，或删除不再需要的记录" styleClass="secondary-text"/>
+            <Label text="查看霍兰德与 MBTI 历史报告，管理不再需要的记录" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <VBox alignment="CENTER_RIGHT" spacing="2" styleClass="career-history-count-box">
+            <Label fx:id="countLabel" text="0 份" styleClass="career-history-count"/>
+            <Label text="测评报告" styleClass="caption-text"/>
         </VBox>
     </HBox>
-    <HBox spacing="18" VBox.vgrow="ALWAYS">
-        <ListView fx:id="resultListView" HBox.hgrow="ALWAYS" styleClass="data-table"/>
-        <VBox spacing="10" prefWidth="180">
-            <Button fx:id="viewButton" text="查看报告" onAction="#viewSelected" styleClass="primary-button"/>
-            <Button fx:id="deleteButton" text="删除记录" onAction="#deleteSelected" styleClass="danger-button"/>
-        </VBox>
-    </HBox>
+
+    <VBox spacing="0" VBox.vgrow="ALWAYS" styleClass="content-card, career-history-panel">
+        <HBox alignment="CENTER_LEFT" spacing="10" styleClass="career-history-panel-header">
+            <FontIcon iconLiteral="mdi2c-clipboard-outline" iconSize="20" styleClass="career-section-icon"/>
+            <VBox spacing="2">
+                <Label text="历史报告" styleClass="module-title"/>
+                <Label text="选择记录后可查看完整报告，也可以直接删除记录" styleClass="caption-text"/>
+            </VBox>
+        </HBox>
+        <ListView fx:id="resultListView" VBox.vgrow="ALWAYS" styleClass="career-history-list"/>
+    </VBox>
 </VBox>

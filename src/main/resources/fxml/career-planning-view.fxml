@@ -8,17 +8,20 @@
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.CareerPlanningController"
-      spacing="16" styleClass="page-content">
-    <padding><Insets top="22" right="24" bottom="22" left="24"/></padding>
+      spacing="18" styleClass="page-content, career-planning-page">
+    <padding><Insets top="22" right="24" bottom="24" left="24"/></padding>
 
     <!-- Page header -->
-    <HBox alignment="CENTER_LEFT" spacing="12">
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="standard-page-header, career-planning-header">
+        <StackPane styleClass="career-planning-header-icon-box">
+            <FontIcon iconLiteral="mdi2m-map-outline" iconSize="25" styleClass="career-planning-header-icon"/>
+        </StackPane>
         <VBox spacing="4">
             <Label text="职业规划" styleClass="page-title"/>
-            <Label text="AI 驱动的职业路径规划与简历智能优化" styleClass="secondary-text"/>
+            <Label text="结合你的目标与现状，生成清晰、可执行的职业成长路线" styleClass="secondary-text"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="历史记录" onAction="#showPlanHistory" styleClass="ghost-button">
+        <Button text="规划历史" onAction="#showPlanHistory" styleClass="secondary-button, career-history-button">
             <graphic><FontIcon iconLiteral="mdi2h-history" iconSize="16"/></graphic>
         </Button>
     </HBox>
@@ -43,10 +46,17 @@
     <VBox fx:id="planTabContent" spacing="16" VBox.vgrow="ALWAYS" styleClass="career-tab-content-visible">
 
         <!-- Input form card -->
-        <VBox spacing="14" styleClass="content-card">
+        <VBox spacing="14" styleClass="content-card, career-planning-form-card">
             <padding><Insets top="18" right="20" bottom="18" left="20"/></padding>
-            <Label text="填写你的职业信息" styleClass="module-title"/>
-            <Label text="提供目标岗位和当前状态，AI 将为你生成个性化的发展路线图" styleClass="secondary-text"/>
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <StackPane styleClass="career-section-icon-box">
+                    <FontIcon iconLiteral="mdi2a-account-outline" iconSize="19" styleClass="career-section-icon"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="填写你的职业信息" styleClass="module-title"/>
+                    <Label text="提供目标岗位和当前状态，AI 将为你生成个性化的发展路线图" styleClass="caption-text"/>
+                </VBox>
+            </HBox>
 
             <GridPane hgap="16" vgap="12">
                 <columnConstraints>
@@ -79,7 +89,7 @@
         </VBox>
 
         <!-- Result area -->
-        <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
+        <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card, career-planning-result-card">
             <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="8">
                 <FontIcon iconLiteral="mdi2f-file-document-outline" iconSize="18" styleClass="plan-side-icon"/>
@@ -89,9 +99,12 @@
                 <content>
                     <VBox fx:id="planContentArea" spacing="12" styleClass="editor-page">
                         <padding><Insets top="40" right="24" bottom="40" left="24"/></padding>
-                        <VBox alignment="CENTER" spacing="12" maxWidth="Infinity" VBox.vgrow="ALWAYS">
-                            <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="36" styleClass="history-empty-icon"/>
-                            <Label text="填写上方信息后点击「生成职业规划」获取 AI 建议" styleClass="empty-hint"/>
+                        <VBox alignment="CENTER" spacing="10" maxWidth="Infinity" VBox.vgrow="ALWAYS" styleClass="career-plan-empty-state">
+                            <StackPane styleClass="career-plan-empty-icon-box">
+                                <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="32" styleClass="history-empty-icon"/>
+                            </StackPane>
+                            <Label text="开始创建你的职业路线" styleClass="history-empty-title"/>
+                            <Label text="填写上方信息后点击「生成职业规划」获取 AI 建议" styleClass="history-empty-copy"/>
                         </VBox>
                     </VBox>
                 </content>
@@ -103,7 +116,7 @@
     <VBox fx:id="resumeTabContent" spacing="16" VBox.vgrow="ALWAYS" styleClass="career-tab-content-hidden" visible="false" managed="false">
 
         <!-- Input form card -->
-        <VBox spacing="14" styleClass="content-card">
+        <VBox spacing="14" styleClass="content-card, career-planning-form-card">
             <padding><Insets top="18" right="20" bottom="18" left="20"/></padding>
             <Label text="粘贴简历内容" styleClass="module-title"/>
             <Label text="AI 将根据目标岗位和优化方向，智能改进你的简历表述" styleClass="secondary-text"/>
@@ -139,7 +152,7 @@
         </VBox>
 
         <!-- Result area -->
-        <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card">
+        <VBox spacing="12" VBox.vgrow="ALWAYS" styleClass="content-card, career-planning-result-card">
             <padding><Insets top="16" right="20" bottom="16" left="20"/></padding>
             <HBox alignment="CENTER_LEFT" spacing="8">
                 <FontIcon iconLiteral="mdi2f-file-document-edit-outline" iconSize="18" styleClass="plan-side-icon"/>
@@ -149,9 +162,12 @@
                 <content>
                     <VBox fx:id="optimizationResultArea" spacing="12" styleClass="editor-page">
                         <padding><Insets top="40" right="24" bottom="40" left="24"/></padding>
-                        <VBox alignment="CENTER" spacing="12" maxWidth="Infinity" VBox.vgrow="ALWAYS">
-                            <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="36" styleClass="history-empty-icon"/>
-                            <Label text="粘贴原始简历内容后点击「优化简历」获取 AI 建议" styleClass="empty-hint"/>
+                        <VBox alignment="CENTER" spacing="10" maxWidth="Infinity" VBox.vgrow="ALWAYS" styleClass="career-plan-empty-state">
+                            <StackPane styleClass="career-plan-empty-icon-box">
+                                <FontIcon iconLiteral="mdi2l-lightbulb-on-outline" iconSize="32" styleClass="history-empty-icon"/>
+                            </StackPane>
+                            <Label text="让 AI 帮你优化简历" styleClass="history-empty-title"/>
+                            <Label text="粘贴原始简历内容后点击「优化简历」获取 AI 建议" styleClass="history-empty-copy"/>
                         </VBox>
                     </VBox>
                 </content>

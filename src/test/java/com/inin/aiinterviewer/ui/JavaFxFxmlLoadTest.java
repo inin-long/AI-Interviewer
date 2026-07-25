@@ -3,6 +3,7 @@ package com.inin.aiinterviewer.ui;
 import com.inin.aiinterviewer.application.dto.InterviewMessageDto;
 import com.inin.aiinterviewer.application.dto.KnowledgeCitationDto;
 import com.inin.aiinterviewer.application.dto.CandidateProfileDto;
+import com.inin.aiinterviewer.application.dto.CareerPlanDto;
 import com.inin.aiinterviewer.application.dto.ResumeDetailDto;
 import com.inin.aiinterviewer.application.dto.ResumeDto;
 import com.inin.aiinterviewer.application.dto.UserDto;
@@ -21,6 +22,7 @@ import com.inin.aiinterviewer.ui.component.AppMultiSelect;
 import com.inin.aiinterviewer.ui.component.InterviewTranscriptView;
 import com.inin.aiinterviewer.ui.component.DrawerPane;
 import com.inin.aiinterviewer.ui.component.ResumeProfileDrawerView;
+import com.inin.aiinterviewer.ui.controller.CareerPlanDetailController;
 import com.inin.aiinterviewer.ui.navigation.InterviewTranscriptContext;
 import com.inin.aiinterviewer.ui.navigation.JavaFxViewManager;
 import com.inin.aiinterviewer.ui.navigation.Route;
@@ -43,6 +45,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.ProgressIndicator;
+import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
 import javafx.scene.image.ImageView;
@@ -53,6 +56,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.Region;
@@ -228,6 +232,86 @@ class JavaFxFxmlLoadTest {
         assertThat(loadOnFxThread("/fxml/history-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/interview-history-detail-view.fxml")).isNotNull();
         assertThat(loadOnFxThread("/fxml/settings-view.fxml")).isNotNull();
+    }
+
+    @Test
+    void careerPlanningAndHistoryViewsLoadAsFullContentPages() throws Exception {
+        sessionState.logIn(new UserDto(1L, "career-layout-user", "职业规划用户", LocalDateTime.now()));
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            Parent planning = load("/fxml/career-planning-view.fxml");
+            Parent planHistory = load("/fxml/career-plan-history-view.fxml");
+            Parent assessmentHistory = load("/fxml/career-history-view.fxml");
+            Parent detail = load("/fxml/career-plan-detail-view.fxml");
+            VBox root = new VBox(planning, planHistory, assessmentHistory, detail);
+            Scene scene = new Scene(root, 1672, 2200);
+            scene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            root.applyCss();
+            root.layout();
+            return new boolean[]{
+                    planning.lookup(".career-planning-header-icon-box") != null,
+                    planning.lookup(".career-planning-form-card") != null,
+                    planHistory.lookup("#historyList") instanceof ListView,
+                    assessmentHistory.lookup("#resultListView") instanceof ListView,
+                    detail.lookup("#markdownView") != null,
+                    detail.lookup(".career-plan-document-card") != null,
+                    detail.getScene().getWindow() == null
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
+    }
+
+    @Test
+    void careerPlanMetadataAndHistoryActionNeverCollapseToEllipsis() throws Exception {
+        sessionState.logIn(new UserDto(1L, "career-overflow-user", "职业规划用户", LocalDateTime.now()));
+        FutureTask<boolean[]> task = new FutureTask<>(() -> {
+            CareerPlanDto plan = new CareerPlanDto(
+                    1L,
+                    "熟练掌握 Java 基础、SpringBoot、MyBatis 等主流开发框架，熟悉 MySQL 数据库与 SQL 优化，具备后端接口开发、业务功能迭代经验。",
+                    "高级 Java 后端工程师",
+                    "互联网",
+                    "5 年经验",
+                    "# 职业规划\n\n完整规划正文。",
+                    LocalDateTime.now());
+
+            FXMLLoader historyLoader = new FXMLLoader(getClass().getResource("/fxml/career-plan-history-view.fxml"));
+            historyLoader.setControllerFactory(applicationContext::getBean);
+            Parent history = historyLoader.load();
+            ListView<CareerPlanDto> historyList = (ListView<CareerPlanDto>) history.lookup("#historyList");
+            historyList.getItems().setAll(plan);
+            Scene historyScene = new Scene(history, 1280, 760);
+            historyScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            history.applyCss();
+            history.layout();
+            Button viewPlan = history.lookupAll(".history-row-primary").stream()
+                    .filter(Button.class::isInstance)
+                    .map(Button.class::cast)
+                    .findFirst().orElseThrow();
+
+            FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/fxml/career-plan-detail-view.fxml"));
+            detailLoader.setControllerFactory(applicationContext::getBean);
+            Parent detail = detailLoader.load();
+            ((CareerPlanDetailController) detailLoader.getController()).initializeContext(plan);
+            Scene detailScene = new Scene(detail, 1280, 760);
+            detailScene.getStylesheets().add(getClass().getResource("/css/app.css").toExternalForm());
+            detail.applyCss();
+            detail.layout();
+            GridPane metaGrid = (GridPane) detail.lookup(".career-plan-meta-grid");
+            Label currentRole = (Label) detail.lookup("#currentRoleLabel");
+            Label targetRole = (Label) detail.lookup("#targetRoleLabel");
+            Label background = (Label) detail.lookup("#backgroundLabel");
+
+            return new boolean[]{
+                    "查看规划".equals(viewPlan.getText()),
+                    viewPlan.getWidth() >= 103.5,
+                    viewPlan.getTextOverrun() == OverrunStyle.CLIP,
+                    metaGrid != null && metaGrid.getColumnConstraints().size() == 3,
+                    currentRole.isWrapText() && targetRole.isWrapText() && background.isWrapText(),
+                    targetRole.getWidth() > 250 && background.getWidth() > 250
+            };
+        });
+        Platform.runLater(task);
+        assertThat(task.get(15, TimeUnit.SECONDS)).containsOnly(true);
     }
 
     @Test

@@ -37,6 +37,9 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Component
@@ -125,6 +128,7 @@ public class InterviewReportController implements ContextAwareController<Long> {
         markdown = refreshCitationSection(
                 report.contentMarkdown(),
                 completionService.citationMarkdown(messages));
+        markdown = synchronizeScoreTable(markdown, report);
         reportView.setMarkdown(markdown);
         renderEvidenceNavigation(report.evidence());
         renderBranchNavigation(branchService.list(userId, interviewId));
@@ -141,6 +145,37 @@ public class InterviewReportController implements ContextAwareController<Long> {
         String prefix = report.substring(0, sectionStart).stripTrailing();
         String citations = citationMarkdown == null ? "" : citationMarkdown.strip();
         return prefix + "\n\n## 参考依据\n\n" + citations;
+    }
+
+    static String synchronizeScoreTable(
+            String reportMarkdown,
+            com.inin.aiinterviewer.application.dto.InterviewReportDto report
+    ) {
+        String aligned = reportMarkdown == null ? "" : reportMarkdown;
+        Map<String, String> labels = Map.of(
+                "technical", "技术基础",
+                "problemSolving", "问题解决",
+                "project", "项目经验",
+                "communication", "沟通表达",
+                "comprehensive", "综合能力");
+        for (Map.Entry<String, String> dimension : labels.entrySet()) {
+            String key = dimension.getKey();
+            var trace = report.scoreEvidence().get(key);
+            if (trace == null) continue;
+            String displayValue = trace.scored()
+                    ? String.format(java.util.Locale.ROOT, "%.1f",
+                            report.dimensions().getOrDefault(key, 0).doubleValue())
+                    : "证据不足";
+            aligned = replaceScoreTableRow(aligned, dimension.getValue(), displayValue);
+        }
+        return aligned;
+    }
+
+    private static String replaceScoreTableRow(String markdown, String label, String value) {
+        Pattern rowPattern = Pattern.compile(
+                "(?m)^\\|\\s*" + Pattern.quote(label) + "\\s*\\|\\s*[^|\\r\\n]*\\|");
+        return rowPattern.matcher(markdown).replaceAll(
+                Matcher.quoteReplacement("| " + label + " | " + value + " |"));
     }
 
     @FXML

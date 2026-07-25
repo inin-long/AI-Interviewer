@@ -24,6 +24,8 @@ class FxmlResourceTest {
             "/fxml/session-branch-view.fxml",
             "/fxml/knowledge-view.fxml", "/fxml/knowledge-detail-view.fxml",
             "/fxml/history-view.fxml", "/fxml/interview-history-detail-view.fxml",
+            "/fxml/career-planning-view.fxml", "/fxml/career-plan-history-view.fxml",
+            "/fxml/career-plan-detail-view.fxml", "/fxml/career-history-view.fxml",
             "/fxml/settings-view.fxml"
     })
     void fxmlResourceIsWellFormedAndDeclaresSpringController(String resource) throws Exception {

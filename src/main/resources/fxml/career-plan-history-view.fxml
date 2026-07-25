@@ -3,21 +3,38 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<VBox xmlns="http://javafx.com/javafx"
-      xmlns:fx="http://javafx.com/fxml"
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.inin.aiinterviewer.ui.controller.CareerPlanHistoryController"
-      spacing="12" styleClass="container">
+      spacing="18" styleClass="page-content, career-history-page">
+    <padding><Insets top="22" right="24" bottom="24" left="24"/></padding>
 
-    <padding>
-        <Insets topRightBottomLeft="20"/>
-    </padding>
-
-    <HBox spacing="12" alignment="CENTER_LEFT">
-        <Button text="&lt; 返回" onAction="#handleBack" styleClass="btn-secondary"/>
-        <Label text="职业规划历史" styleClass="heading-2"/>
+    <HBox alignment="CENTER_LEFT" spacing="14" styleClass="standard-page-header">
+        <Button onAction="#handleBack" styleClass="back-icon-button" accessibleText="返回职业规划">
+            <graphic><FontIcon iconLiteral="mdi2a-arrow-left" iconSize="18"/></graphic>
+            <tooltip><Tooltip text="返回职业规划"/></tooltip>
+        </Button>
+        <VBox spacing="4">
+            <Label text="职业规划历史" styleClass="page-title"/>
+            <Label text="回顾已生成的发展路线，继续查看每个阶段的行动建议" styleClass="secondary-text"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <VBox alignment="CENTER_RIGHT" spacing="2" styleClass="career-history-count-box">
+            <Label fx:id="countLabel" text="0 份" styleClass="career-history-count"/>
+            <Label text="已保存规划" styleClass="caption-text"/>
+        </VBox>
     </HBox>
 
-    <ListView fx:id="historyList" VBox.vgrow="ALWAYS" styleClass="card"/>
-
+    <VBox spacing="0" VBox.vgrow="ALWAYS" styleClass="content-card, career-history-panel">
+        <HBox alignment="CENTER_LEFT" spacing="10" styleClass="career-history-panel-header">
+            <FontIcon iconLiteral="mdi2m-map-outline" iconSize="20" styleClass="career-section-icon"/>
+            <VBox spacing="2">
+                <Label text="规划记录" styleClass="module-title"/>
+                <Label text="双击记录或点击「查看规划」进入完整详情" styleClass="caption-text"/>
+            </VBox>
+        </HBox>
+        <ListView fx:id="historyList" VBox.vgrow="ALWAYS" styleClass="career-history-list"/>
+    </VBox>
 </VBox>
