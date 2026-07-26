@@ -27,23 +27,43 @@ function Start-AndVerifyApplication {
 
     $process = $null
     try {
-        $process = Start-Process -FilePath $executable -PassThru -WindowStyle Hidden
+        $process = Start-Process -FilePath $executable -WorkingDirectory $appImagePath -PassThru
         $deadline = (Get-Date).AddSeconds($StartupTimeoutSeconds)
         $started = $false
+        $windowShown = $false
         while ((Get-Date) -lt $deadline -and -not $process.HasExited) {
             if ((Test-Path -LiteralPath $database) -and (Test-Path -LiteralPath $log)) {
                 $content = Get-Content -LiteralPath $log -Raw -ErrorAction SilentlyContinue
                 $startupCount = [regex]::Matches($content, 'Started application').Count
                 if ($startupCount -ge $ExpectedStartupCount) {
                     $started = $true
-                    break
                 }
+            }
+            $process.Refresh()
+            $candidateProcessIds = @($process.Id)
+            $candidateProcessIds += @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($process.Id)" |
+                Select-Object -ExpandProperty ProcessId)
+            foreach ($candidateProcessId in $candidateProcessIds) {
+                $candidateProcess = Get-Process -Id $candidateProcessId -ErrorAction SilentlyContinue
+                if ($null -ne $candidateProcess) {
+                    $candidateProcess.Refresh()
+                    if ($candidateProcess.MainWindowTitle -eq 'AI Interviewer') {
+                        $windowShown = $true
+                        break
+                    }
+                }
+            }
+            if ($started -and $windowShown) {
+                break
             }
             Start-Sleep -Milliseconds 500
         }
 
         if (-not $started) {
             throw "Packaged application did not finish startup #$ExpectedStartupCount. Inspect: $smokeRoot"
+        }
+        if (-not $windowShown) {
+            throw "Packaged application did not show its JavaFX main window during startup #$ExpectedStartupCount. Inspect: $smokeRoot"
         }
         return (Get-Content -LiteralPath $log -Raw)
     } finally {

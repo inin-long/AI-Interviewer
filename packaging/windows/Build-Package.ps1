@@ -112,7 +112,7 @@ try {
 
     $runtimeModules = @(
         'java.base', 'java.desktop', 'java.logging', 'java.management', 'java.naming',
-        'java.net.http', 'java.prefs', 'java.security.jgss', 'java.sql', 'java.xml',
+        'java.net.http', 'java.prefs', 'java.scripting', 'java.security.jgss', 'java.sql', 'java.xml',
         'jdk.charsets', 'jdk.crypto.ec', 'jdk.jsobject', 'jdk.unsupported', 'jdk.zipfs'
     ) -join ','
 
